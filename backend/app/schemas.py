@@ -1,10 +1,10 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 from enum import Enum
 
-class Role(str, Enum):
-    USER = "USER"
-    ADMIN = "ADMIN"
+class RoleEnum(str, Enum):
+    USER = 'USER'
+    ADMIN = 'ADMIN'
 
 class UserCreate(BaseModel):
     username: str
@@ -19,43 +19,46 @@ class UserOut(BaseModel):
     id: int
     username: str
     email: EmailStr
-    role: Role
+    role: RoleEnum
     is_active: bool
 
     class Config:
         orm_mode = True
 
-class Token(BaseModel):
+class UserInfo(BaseModel):
+    id: int
+    username: str
+    email: str
+    role: RoleEnum
+    is_active: bool
+
+    class Config:
+        orm_mode = True
+
+class TokenResponse(BaseModel):
     access_token: str
     token_type: str
+    user: UserInfo
 
 
 
+class RoomTypeSchema(BaseModel):
+    room_type_id: int
+    type_name: str
+    description: Optional[str]
+    price_per_month: float
+
+    class Config:
+        orm_mode = True
 
 class RoomSchema(BaseModel):
     room_id: int
     room_number: str
-    room_type_id: int
     max_occupants: int
     is_available: bool
     floor_number: Optional[int]
     description: Optional[str]
-
-    class Config:
-        orm_mode = True
-class RoomBase(BaseModel):
-    room_number: str
-    room_type_id: int
-    max_occupants: Optional[int] = 1
-    is_available: Optional[bool] = True
-    floor_number: Optional[int] = None
-    description: Optional[str] = None
-
-class RoomCreate(RoomBase):
-    pass
-
-class RoomSchema(RoomBase):
-    room_id: int
+    room_type: RoomTypeSchema   # <-- Thêm quan hệ room_type vào đây
 
     class Config:
         orm_mode = True

@@ -1,6 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 
-export default function Table({ columns, data, onRowClick, rowsPerPage = 5 }) {
+// Hỗ trợ lấy giá trị lồng như "room_type.type_name"
+const getNestedValue = (obj, path) =>
+  path.split(".").reduce((acc, part) => acc && acc[part], obj);
+
+export default function Table({ columns, data, rowsPerPage = 5 }) {
   const [search, setSearch] = useState("");
   const [filteredData, setFilteredData] = useState(data);
   const [currentPage, setCurrentPage] = useState(1);
@@ -11,7 +15,9 @@ export default function Table({ columns, data, onRowClick, rowsPerPage = 5 }) {
     const keyword = search.toLowerCase();
     const filtered = data.filter((row) =>
       columns.some((col) =>
-        String(row[col.accessor]).toLowerCase().includes(keyword)
+        String(getNestedValue(row, col.accessor))
+          .toLowerCase()
+          .includes(keyword)
       )
     );
     setFilteredData(filtered);
@@ -27,21 +33,19 @@ export default function Table({ columns, data, onRowClick, rowsPerPage = 5 }) {
 
   const isChecked = (row) => selectedRows.includes(row);
 
-  // Sorting function
-  const sortedData = React.useMemo(() => {
+  const sortedData = useMemo(() => {
     if (!sortConfig.key) return filteredData;
 
     const sorted = [...filteredData].sort((a, b) => {
-      const valA = a[sortConfig.key];
-      const valB = b[sortConfig.key];
+      const valA = getNestedValue(a, sortConfig.key);
+      const valB = getNestedValue(b, sortConfig.key);
 
       if (typeof valA === "number" && typeof valB === "number") {
         return sortConfig.direction === "asc" ? valA - valB : valB - valA;
-      } else {
-        return sortConfig.direction === "asc"
-          ? String(valA).localeCompare(String(valB))
-          : String(valB).localeCompare(String(valA));
       }
+      return sortConfig.direction === "asc"
+        ? String(valA).localeCompare(String(valB))
+        : String(valB).localeCompare(String(valA));
     });
     return sorted;
   }, [filteredData, sortConfig]);
@@ -53,15 +57,11 @@ export default function Table({ columns, data, onRowClick, rowsPerPage = 5 }) {
   );
 
   const handleSort = (key) => {
-    setSortConfig((prev) => {
-      if (prev.key === key) {
-        return {
-          key,
-          direction: prev.direction === "asc" ? "desc" : "asc",
-        };
-      }
-      return { key, direction: "asc" };
-    });
+    setSortConfig((prev) =>
+      prev.key === key
+        ? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
+        : { key, direction: "asc" }
+    );
   };
 
   return (
@@ -82,7 +82,7 @@ export default function Table({ columns, data, onRowClick, rowsPerPage = 5 }) {
         <table className="table table-bordered table-hover align-middle">
           <thead className="table-primary">
             <tr>
-              <th className="text-center">#</th>
+              <th className="text-center">STT</th>
               {columns.map((col, i) => (
                 <th
                   key={i}
@@ -109,23 +109,18 @@ export default function Table({ columns, data, onRowClick, rowsPerPage = 5 }) {
               </tr>
             ) : (
               paginatedData.map((row, rowIndex) => (
-                <tr
-                  key={rowIndex}
-                  onClick={() => onRowClick?.(row)}
-                  className="cursor-pointer"
-                >
+                <tr key={rowIndex}>
                   <td className="text-center">
-                    <input
-                      type="checkbox"
-                      checked={isChecked(row)}
-                      onChange={() => toggleRow(row)}
-                    />
+                    {(currentPage - 1) * rowsPerPage + rowIndex + 1}
                   </td>
-                  {columns.map((col, i) => (
-                    <td key={i} className="text-center">
-                      {row[col.accessor]}
-                    </td>
-                  ))}
+                  {columns.map((col, i) => {
+                    const value = getNestedValue(row, col.accessor);
+                    return (
+                      <td key={i} className="text-center">
+                        {col.render ? col.render(value, row) : value}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))
             )}

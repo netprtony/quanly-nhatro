@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship
 from .database import Base
 import enum
 import datetime
-
+from sqlalchemy.types import JSON
 # --- ENUM DEFINITIONS ---
 class RoleEnum(str, enum.Enum):
     USER = 'USER'
@@ -71,30 +71,25 @@ class Tenant(Base):
     id_card_back_base64 = Column(Text)
     address = Column(Text)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
-
 class RoomType(Base):
     __tablename__ = "RoomTypes"
-
     room_type_id = Column(Integer, primary_key=True, index=True)
     type_name = Column(String(100), unique=True, nullable=False)
     description = Column(Text)
     price_per_month = Column(DECIMAL(10, 2), nullable=False)
 
-    # ✅ Relationship
-    rooms = relationship("Room", back_populates="room_type", cascade="all, delete")
+    rooms = relationship("Room", back_populates="room_type")
 
 class Room(Base):
     __tablename__ = "Rooms"
-
     room_id = Column(Integer, primary_key=True, index=True)
     room_number = Column(String(50), unique=True, nullable=False)
-    room_type_id = Column(Integer, ForeignKey("RoomTypes.room_type_id", ondelete="CASCADE", onupdate="CASCADE"))
+    room_type_id = Column(Integer, ForeignKey("RoomTypes.room_type_id"), nullable=False)
     max_occupants = Column(Integer, default=1)
     is_available = Column(Boolean, default=True)
     floor_number = Column(Integer)
     description = Column(Text)
 
-    # ✅ Relationship
     room_type = relationship("RoomType", back_populates="rooms")
 
 class Contract(Base):

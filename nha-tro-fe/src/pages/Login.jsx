@@ -9,10 +9,17 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(""); // reset lỗi cũ
     try {
       const res = await axios.post("http://localhost:8000/auth/login", form);
-      localStorage.setItem("token", res.data.access_token);
-      navigate("/dashboard");
+
+      if (res.data?.access_token && res.data?.user) {
+        localStorage.setItem("token", res.data.access_token);
+        localStorage.setItem("user", JSON.stringify(res.data.user));
+        navigate("/dashboard");
+      } else {
+        setError("Phản hồi từ server không hợp lệ.");
+      }
     } catch (err) {
       if (err.response && err.response.data?.detail) {
         setError(err.response.data.detail);

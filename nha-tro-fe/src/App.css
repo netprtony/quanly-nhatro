@@ -58,3 +58,6 @@
 .sidebar-item.active svg {
   color: #fff;
 }
+.hover\:bg-light:hover {
+  background-color: #f8f9fa;
+}

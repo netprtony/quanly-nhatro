@@ -1,40 +1,54 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-const SidebarItem = ({ iconClass, label, dropdown, children }) => {
+export default function SidebarItem({ iconClass, label, path, dropdown, children }) {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    if (dropdown) {
+      setOpen(!open);
+    } else if (path) {
+      navigate(path);
+    }
+  };
 
   return (
-    <div className="mb-2">
+    <div>
       <div
-        className={`d-flex align-items-center justify-content-between px-3 py-2 sidebar-item ${
-          open ? "active" : ""
-        }`}
-        onClick={() => dropdown && setOpen(!open)}
-        style={{ cursor: dropdown ? "pointer" : "default" }}
+        className="d-flex align-items-center justify-content-between cursor-pointer py-2 px-2 rounded hover:bg-light"
+        onClick={handleClick}
+        style={{ cursor: "pointer" }}
       >
-        <div className="d-flex align-items-center gap-2">
-          <i className={iconClass}></i>
+        <div>
+          <i className={`${iconClass} me-2`} />
           <span>{label}</span>
         </div>
         {dropdown && (
-          open ? <i className="fas fa-chevron-up" style={{ fontSize: "12px" }} />
-               : <i className="fas fa-chevron-down" style={{ fontSize: "12px" }} />
+          <i className={`fas fa-chevron-${open ? "up" : "down"}`} />
         )}
       </div>
-      {open && dropdown && (
-        <ul className="list-unstyled ps-4">
-          {children?.map((child, index) => (
-            <li key={index} className="py-1 text-muted">
-              <Link to={child.path} className="text-decoration-none text-muted">
-                {child.label}
-              </Link>
-            </li>
+
+      {dropdown && (
+        <div
+          className="dropdown-children overflow-hidden transition-all"
+          style={{
+            maxHeight: open ? `${children.length * 40}px` : "0",
+            transition: "max-height 0.3s ease",
+          }}
+        >
+          {children.map((item, index) => (
+            <div
+              key={index}
+              className="ps-4 py-2 text-secondary hover:text-dark"
+              style={{ cursor: "pointer" }}
+              onClick={() => navigate(item.path)}
+            >
+              {item.label}
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
-};
-
-export default SidebarItem;
+}
