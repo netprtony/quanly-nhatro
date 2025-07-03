@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import models, database
 from .auth_routes import router as auth_router
 from .room_routes import router as room_router
+from .roomtype_routes import router as roomtype_router
 app = FastAPI()
 
 # ✅ Cấu hình CORS:
@@ -22,6 +23,7 @@ app.add_middleware(
 # Đăng ký router
 app.include_router(auth_router)
 app.include_router(room_router)
+app.include_router(roomtype_router)
 @app.get("/")
 def root():
     return {"message": "CORS đã bật thành công"}

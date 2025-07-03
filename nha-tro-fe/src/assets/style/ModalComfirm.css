@@ -1,0 +1,32 @@
+.modal-backdrop-custom {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+}
+
+.modal-custom {
+  background-color: white;
+  padding: 20px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+}
+
+.modal-header-custom h5 {
+  margin: 0;
+}
+
+.modal-body-custom {
+  margin-top: 10px;
+}
+
+.modal-footer-custom button {
+  min-width: 80px;
+}

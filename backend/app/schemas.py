@@ -50,6 +50,7 @@ class RoomTypeSchema(BaseModel):
 
     class Config:
         orm_mode = True
+        
 class RoomCreate(BaseModel):
     room_number: str
     max_occupants: int
