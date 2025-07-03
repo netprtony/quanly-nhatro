@@ -84,7 +84,7 @@ const AdminHeader = ({ setUser }) => {
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
               >
-                <FaAngleDown />
+              <FaAngleDown />
               </button>
               <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                 <li><a className="dropdown-item" href="#">Thông tin cá nhân</a></li>

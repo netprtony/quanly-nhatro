@@ -61,10 +61,17 @@ export default function Register() {
       {/* Register Form */}
       <div className="container d-flex align-items-center justify-content-center min-vh-100 position-relative">
         <div
-          className="card shadow-lg p-4 bg-white bg-opacity-75"
-          style={{ width: "100%", maxWidth: "400px", borderRadius: "1rem" }}
+          className="card shadow-lg p-4 bg-opacity-75"
+          style={{
+              width: "100%",
+              maxWidth: "400px",
+              borderRadius: "1rem",
+              backgroundColor: "rgba(145, 145, 145, 0.73)", // trắng mờ hơn
+              backdropFilter: "blur(0px)",               // hiệu ứng mờ nền sau (nếu muốn)
+              WebkitBackdropFilter: "blur(0px)",         // hỗ trợ Safari
+            }}
         >
-          <h3 className="text-center text-primary fw-bold mb-3">
+          <h3 className="text-center text-warning fw-bold mb-3">
             Đăng ký tài khoản
           </h3>
 
@@ -135,20 +142,20 @@ export default function Register() {
 
             <button
               type="submit"
-              className="btn btn-primary w-100 py-2 fs-5 fw-semibold"
+              className="btn btn-warning w-100 py-2 fs-5 fw-semibold"
             >
               Đăng ký
             </button>
           </form>
 
-          <p className="text-center text-muted mt-4 mb-0" style={{ fontSize: "0.9rem" }}>
+          <p className="text-center text-white mt-4 mb-0" style={{ fontSize: "0.9rem" }}>
             Đã có tài khoản?{" "}
-            <a href="/login" className="text-primary text-decoration-none">
+            <a href="/login" className="text-warning text-decoration-none">
               Đăng nhập
             </a>
           </p>
-          <p className="text-center text-muted mt-2 mb-0" style={{ fontSize: "0.9rem" }}>
-            © {new Date().getFullYear()} Nhà Trọ Admin
+          <p className="text-center text-white mt-2 mb-0" style={{ fontSize: "0.9rem" }}>
+            © {new Date().getFullYear()} Nhà Trọ Bảo Bảo. All rights reserved.
           </p>
         </div>
       </div>
