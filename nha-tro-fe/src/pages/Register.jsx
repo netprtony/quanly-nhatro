@@ -7,22 +7,46 @@ export default function Register() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const validateForm = () => {
+    if (!form.username || !form.email || !form.password || !form.confirmPassword) {
+      setError("Vui lòng điền đầy đủ thông tin.");
+      return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
+      setError("Email không hợp lệ.");
+      return false;
+    }
+
+    if (form.password.length < 6) {
+      setError("Mật khẩu phải có ít nhất 6 ký tự.");
+      return false;
+    }
+
     if (form.password !== form.confirmPassword) {
       setError("Mật khẩu và xác nhận mật khẩu không khớp.");
-      return;
+      return false;
     }
+
+    return true;
+  };
+ const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    if (!validateForm()) return;
+
     try {
       await axios.post("http://localhost:8000/auth/register", {
         username: form.username,
         email: form.email,
-        password: form.password
+        password: form.password,
       });
       alert("Đăng ký thành công!");
       navigate("/");
     } catch (err) {
-      if (err.response && err.response.data?.detail) {
+      if (err.response?.data?.detail) {
         setError(err.response.data.detail);
       } else {
         setError("Đăng ký thất bại. Vui lòng thử lại sau.");

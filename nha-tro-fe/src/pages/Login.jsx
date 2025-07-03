@@ -82,52 +82,82 @@ export default function Login() {
             <div className="alert alert-danger text-center py-2">{error}</div>
           )}
 
-          <form onSubmit={handleSubmit}>
-            <div className="form-floating mb-3">
-              <input
-                type="text"
-                className="form-control"
-                id="username"
-                placeholder="Username"
-                value={form.username}
-                onChange={(e) =>
-                  setForm({ ...form, username: e.target.value })
-                }
-                required
-              />
-              <label htmlFor="username">Tài khoản</label>
-            </div>
+         <div className="card shadow-sm">
+          <div className="card-body">
+            <h5 className="card-title mb-4">Nhập thông tin phòng</h5>
+              <form>
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <label className="form-label">Số phòng</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={form.room_number}
+                      onChange={(e) => setForm({ ...form, room_number: e.target.value })}
+                      required
+                    />
+                  </div>
 
-            <div className="form-floating mb-4">
-              <input
-                type="password"
-                className="form-control"
-                id="password"
-                placeholder="Password"
-                value={form.password}
-                onChange={(e) =>
-                  setForm({ ...form, password: e.target.value })
-                }
-                required
-              />
-              <label htmlFor="password">Mật khẩu</label>
-            </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Tầng</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={form.floor_number}
+                      onChange={(e) => setForm({ ...form, floor_number: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
 
-            <button
-              type="submit"
-              className="btn btn-warning w-100 py-2 fs-5 fw-semibold d-flex align-items-center justify-content-center"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <span class="loader"></span>
-                </>
-              ) : (
-                "Đăng nhập"
-              )}
-            </button>
-          </form>
+                  <div className="col-md-6">
+                    <label className="form-label">Số người tối đa</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={form.max_occupants}
+                      onChange={(e) => setForm({ ...form, max_occupants: parseInt(e.target.value) || 0 })}
+                      required
+                    />
+                  </div>
 
+                  <div className="col-md-6">
+                    <label className="form-label">Mã loại phòng (room_type_id)</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={form.room_type_id}
+                      onChange={(e) => setForm({ ...form, room_type_id: parseInt(e.target.value) || 0 })}
+                      required
+                    />
+                  </div>
+
+                  <div className="col-12">
+                    <label className="form-label">Mô tả</label>
+                    <textarea
+                      className="form-control"
+                      value={form.description}
+                      onChange={(e) => setForm({ ...form, description: e.target.value })}
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="col-12">
+                    <div className="form-check">
+                      <input
+                        type="checkbox"
+                        className="form-check-input"
+                        id="isAvailable"
+                        checked={form.is_available}
+                        onChange={(e) => setForm({ ...form, is_available: e.target.checked })}
+                      />
+                      <label className="form-check-label" htmlFor="isAvailable">
+                        Còn trống
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </form>
+          </div>
+        </div>
           <p className="text-center text-white mt-4 mb-0" style={{ fontSize: "0.9rem" }}>
             Chưa có tài khoản?{" "}
             <a href="/register" className="text-warning text-decoration-none">

@@ -26,7 +26,7 @@ const AdminHeader = ({ setUser }) => {
       <div className="container-fluid">
         <a className="navbar-brand" href="#">
           <img
-            src="/images/logo.png"
+            src="/images/Store.svg"
             alt="Logo"
             width="50"
             height="50"
@@ -69,7 +69,7 @@ const AdminHeader = ({ setUser }) => {
           {currentUser && (
             <div className="dropdown d-flex align-items-center">
               <img
-                src={currentUser.avatar || '/images/user.png'}
+                src={currentUser.avatar || '/images/Manager.svg'}
                 alt="Avatar"
                 width="32"
                 height="32"

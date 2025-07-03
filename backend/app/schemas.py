@@ -50,7 +50,13 @@ class RoomTypeSchema(BaseModel):
 
     class Config:
         orm_mode = True
-
+class RoomCreate(BaseModel):
+    room_number: str
+    max_occupants: int
+    is_available: bool
+    floor_number: Optional[int]
+    description: Optional[str]
+    room_type_id: int
 class RoomSchema(BaseModel):
     room_id: int
     room_number: str
@@ -62,3 +68,11 @@ class RoomSchema(BaseModel):
 
     class Config:
         orm_mode = True
+# ✅ Schema khi tạo hoặc cập nhật phòng
+class RoomCreateUpdateSchema(BaseModel):
+    room_number: str
+    max_occupants: int
+    is_available: bool
+    floor_number: Optional[int]
+    description: Optional[str]
+    room_type_id: int

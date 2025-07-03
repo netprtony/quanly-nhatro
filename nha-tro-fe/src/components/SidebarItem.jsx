@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-export default function SidebarItem({ iconClass, label, path, dropdown, children }) {
+export default function SidebarItem({ icon, label, path, dropdown, children }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -16,12 +16,18 @@ export default function SidebarItem({ iconClass, label, path, dropdown, children
   return (
     <div>
       <div
-        className="d-flex align-items-center justify-content-between cursor-pointer py-2 px-2 rounded hover:bg-light"
+        className="d-flex align-items-center justify-content-between py-2 px-2 rounded"
         onClick={handleClick}
         style={{ cursor: "pointer" }}
       >
-        <div>
-          <i className={`${iconClass} me-2`} />
+        <div className="d-flex align-items-center">
+          <img
+            src={`/images/icons/${icon}`}
+            alt={label}
+            width={20}
+            height={20}
+            className="me-2"
+          />
           <span>{label}</span>
         </div>
         {dropdown && (
