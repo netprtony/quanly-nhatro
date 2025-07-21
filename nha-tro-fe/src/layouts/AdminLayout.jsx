@@ -2,7 +2,7 @@ import React from "react";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/AdminHeader";
 
-export default function DashboardLayout({ children }) {
+export default function AdminLayout({ children }) {
   return (
     <div className="d-flex">
       {/* Sidebar bên trái */}

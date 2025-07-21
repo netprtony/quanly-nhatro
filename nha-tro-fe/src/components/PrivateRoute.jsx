@@ -1,17 +1,22 @@
 import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
+import { useUser } from "../contexts/UserContext";
 
 export default function PrivateRoute({ children }) {
- const user = JSON.parse(localStorage.getItem("user"));
-  const token = localStorage.getItem("token");
+  const { currentUser } = useUser();
+  const location = useLocation();
 
-  if (!token || !user) {
+  if (!currentUser) {
     return <Navigate to="/login" replace />;
   }
 
-  if (user.role !== "ADMIN") {
+  const role = currentUser.role;
+
+  // Nếu là route admin thì chỉ cho ADMIN vào
+  if (location.pathname.startsWith("/admin") && role !== "ADMIN") {
     return <Navigate to="/unauthorized" replace />;
   }
 
+  // Nếu không phải admin, vẫn cho vào các route khác
   return children;
 }

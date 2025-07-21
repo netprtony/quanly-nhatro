@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import Table from "../components/Table.jsx";
-import DashboardLayout from "../layouts/DashboardLayout";
-import Modal from "../components/Modal.jsx";
-import ModalConfirm from "../components/ModalConfirm.jsx";
+import Table from "/src/components/Table.jsx";
+import AdminLayout from "/src/layouts/AdminLayout.jsx";
+import Modal from "/src/components/Modal.jsx";
+import ModalConfirm from "/src/components/ModalConfirm.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -159,7 +159,7 @@ export default function Rooms() {
   };
 
   return (
-    <DashboardLayout>
+    <AdminLayout>
       <div className="container mt-4 position-relative">
         <div className="p-4 rounded shadow bg-white">
           <h3 className="mb-3">📦 Danh sách phòng</h3>
@@ -285,6 +285,6 @@ export default function Rooms() {
       </div>
 
       <ToastContainer position="top-right" autoClose={3000} />
-    </DashboardLayout>
+    </AdminLayout>
   );
 }

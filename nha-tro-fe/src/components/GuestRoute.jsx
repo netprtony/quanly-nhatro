@@ -1,13 +1,15 @@
-// src/components/GuestRoute.jsx
-import React from "react";
+import { useUser } from "../contexts/UserContext";
 import { Navigate } from "react-router-dom";
 
-/**
- * Chặn người đã đăng nhập truy cập các route như: /login, /register, v.v.
- * Nếu đã có token => redirect đến /dashboard (hoặc bất kỳ trang chính nào).
- */
-export default function GuestRoute({ children, redirectTo = "/dashboard" }) {
-  const token = localStorage.getItem("token");
+export default function GuestRoute({ children }) {
+  const { currentUser } = useUser();
 
-  return token ? <Navigate to={redirectTo} replace /> : children;
+  if (currentUser) {
+    // Nếu là admin, chuyển hướng về dashboard admin
+    if (currentUser.role === "ADMIN") return <Navigate to="/admin/dashboard" />;
+    // Nếu là user thường, chuyển hướng về trang home (hoặc trang user riêng)
+    return <Navigate to="/home" />;
+  }
+
+  return children;
 }

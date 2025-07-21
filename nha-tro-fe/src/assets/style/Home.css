@@ -1,0 +1,59 @@
+/* Cập nhật lại tone nền */
+.home-wrapper {
+  position: relative;
+  min-height: 100vh;
+  background-color: #004643;
+  background-image: none; /* Hoặc giữ lại nếu muốn */
+  background-size: cover;
+  background-attachment: fixed;
+  background-position: center;
+  overflow: hidden;
+}
+
+/* Overlay với màu nền tối hơn */
+.background-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background: rgba(0, 70, 67, 0.8); /* tuỳ chỉnh */
+  z-index: 0; /* Quan trọng: nhỏ hơn Header */
+}
+
+/* Card hiệu ứng kính - chỉnh border, màu sắc */
+.glass-card {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+/* Heading */
+.text-white {
+  color: #ffffff !important;
+}
+
+/* Paragraph text */
+.text-light {
+  color: #abd1c6 !important;
+}
+
+/* Button */
+.btn-outline-light {
+  color: #001e1d;
+  border-color: #f9bc60;
+  background-color: #f9bc60;
+}
+
+.btn-outline-light:hover {
+  background-color: #f7b446;
+  border-color: #f7b446;
+  color: #001e1d;
+}
+header, .navbar, .navbar-expand-lg {
+  position: relative;
+  z-index: 1000; /* Cao hơn overlay */
+}

@@ -1,30 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { FaAngleDown } from 'react-icons/fa';
-
-const AdminHeader = ({ setUser }) => {
-  const [currentUser, setCurrentUser] = useState(null);
-
-  // Lấy user từ localStorage khi component mount
-  useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem('user'));
-    if (storedUser) {
-      setCurrentUser(storedUser);
-    }
-  }, []);
-
-  // Xử lý đăng xuất
+import { motion } from 'framer-motion';
+import { useUser } from "../contexts/UserContext"; // đường dẫn tùy cấu trúc của bạn
+const AdminHeader = () => {
+  const { currentUser, logout } = useUser();
+  const navigate = useNavigate();
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    setCurrentUser(null);
-    if (setUser) setUser(null);
-    // Có thể chuyển hướng sau khi logout nếu cần
-    window.location.href = '/login';
+    logout();
+    window.location.href = "/login"; // hoặc dùng useNavigate
   };
 
   return (
     <nav className="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
       <div className="container-fluid">
-        <a className="navbar-brand" href="#">
+        <Link className="navbar-brand" to="/dashboard">
           <img
             src="/images/Store.svg"
             alt="Logo"
@@ -32,71 +22,41 @@ const AdminHeader = ({ setUser }) => {
             height="50"
             className="d-inline-block align-text-top"
           />
-        </a>
+        </Link>
 
-        <button
-          className="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-          aria-controls="navbarNav"
-          aria-expanded="false"
-          aria-label="Toggle navigation"
-        >
-          <span className="navbar-toggler-icon"></span>
-        </button>
-
-        <div className="collapse navbar-collapse" id="navbarNav">
-          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-            <li className="nav-item">
-              <a className="nav-link active" href="#">Home</a>
-            </li>
-            <li className="nav-item">
-              <a className="nav-link" href="#">Explore</a>
-            </li>
-            <li className="nav-item">
-              <a className="nav-link" href="#">My Accounts</a>
-            </li>
-            <li className="nav-item">
-              <a className="nav-link" href="#">Accountants</a>
-            </li>
-            <li className="nav-item">
-              <a className="nav-link" href="#">Stakeholders</a>
-            </li>
+        <div className="collapse navbar-collapse justify-content-between">
+          <ul className="navbar-nav">
+            {/* ... các nav-link */}
           </ul>
 
-          {/* Avatar, name and dropdown */}
           {currentUser && (
-            <div className="dropdown d-flex align-items-center">
+            <motion.div
+              className="dropdown d-flex align-items-center"
+              whileHover={{ scale: 1.03 }}
+            >
               <img
                 src={currentUser.avatar || '/images/Manager.svg'}
                 alt="Avatar"
                 width="32"
                 height="32"
                 className="rounded-circle me-2"
-                style={{ objectFit: 'cover' }}
               />
-              <span className="me-2">{currentUser.username || 'Người dùng'}</span>
+              <span className="me-2">{currentUser.username}</span>
               <button
                 className="btn btn-sm btn-light"
                 type="button"
                 id="userDropdown"
                 data-bs-toggle="dropdown"
-                aria-expanded="false"
               >
-              <FaAngleDown />
+                <FaAngleDown />
               </button>
-              <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                <li><a className="dropdown-item" href="#">Thông tin cá nhân</a></li>
-                <li><a className="dropdown-item" href="#">Đổi mật khẩu</a></li>
+              <ul className="dropdown-menu dropdown-menu-end">
+                <li><Link className="dropdown-item" to="#">Thông tin cá nhân</Link></li>
+                <li><Link className="dropdown-item" to="#">Đổi mật khẩu</Link></li>
                 <li><hr className="dropdown-divider" /></li>
-                <li>
-                  <button className="dropdown-item text-danger" onClick={handleLogout}>
-                    Đăng xuất
-                  </button>
-                </li>
+                <li><button className="dropdown-item text-danger" onClick={handleLogout}>Đăng xuất</button></li>
               </ul>
-            </div>
+            </motion.div>
           )}
         </div>
       </div>

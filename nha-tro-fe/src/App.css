@@ -80,3 +80,7 @@
       letter-spacing: 4px;
     }
   }
+  .dropdown-menu {
+  z-index: 1055 !important; /* hoặc cao hơn nếu vẫn bị che */
+  position: absolute !important;
+}
