@@ -1,14 +1,58 @@
-import React, { useContext } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaAngleDown } from 'react-icons/fa';
 import { motion } from 'framer-motion';
-import { useUser } from "../contexts/UserContext"; // đường dẫn tùy cấu trúc của bạn
+import { useUser } from "../contexts/UserContext";
+import Modal from "./Modal.jsx";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 const AdminHeader = () => {
   const { currentUser, logout } = useUser();
   const navigate = useNavigate();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    oldPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+  React.useEffect(() => {
+    const handleClick = (e) => {
+      if (!e.target.closest('.dropdown')) setDropdownOpen(false);
+    };
+    if (dropdownOpen) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [dropdownOpen]);
   const handleLogout = () => {
     logout();
-    window.location.href = "/login"; // hoặc dùng useNavigate
+    window.location.href = "/login";
+  };
+
+  const handleOpenProfile = () => {
+    setShowProfile(true);
+  };
+
+  const handleOpenChangePassword = () => {
+    setShowChangePassword(true);
+    setShowProfile(false);
+  };
+
+  const handleChangePassword = (e) => {
+    e.preventDefault();
+    if (!passwordForm.oldPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      toast.error("Vui lòng nhập đầy đủ thông tin!");
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error("Mật khẩu mới không khớp!");
+      return;
+    }
+    // Thực tế sẽ gọi API đổi mật khẩu ở đây
+    setShowChangePassword(false);
+    setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+    toast.success("✅ Đổi mật khẩu thành công!");
   };
 
   return (
@@ -36,13 +80,15 @@ const AdminHeader = () => {
                 Quản lý phòng
               </Link>
             </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/admin/type-rooms">
+                Quản lý loại phòng
+              </Link>
+            </li>
           </ul>
 
           {currentUser && (
-            <motion.div
-              className="dropdown d-flex align-items-center"
-              whileHover={{ scale: 1.03 }}
-            >
+            <div className="dropdown d-flex align-items-center position-relative">
               <img
                 src={currentUser.avatar || '/images/Manager.svg'}
                 alt="Avatar"
@@ -55,20 +101,108 @@ const AdminHeader = () => {
                 className="btn btn-sm btn-light"
                 type="button"
                 id="userDropdown"
-                data-bs-toggle="dropdown"
+                onClick={() => {
+                  // Toggle dropdown menu
+                  setShowProfile(false);
+                  setShowChangePassword(false);
+                  setDropdownOpen((open) => !open);
+                }}
               >
                 <FaAngleDown />
               </button>
-              <ul className="dropdown-menu dropdown-menu-end">
-                <li><Link className="dropdown-item" to="#">Thông tin cá nhân</Link></li>
-                <li><Link className="dropdown-item" to="#">Đổi mật khẩu</Link></li>
+              {/* Dropdown menu */}
+              <ul
+                className={`dropdown-menu dropdown-menu-end${dropdownOpen ? " show" : ""}`}
+                style={{ position: "absolute", top: "100%", right: 0, zIndex: 1000 }}
+              >
+                <li>
+                  <button className="dropdown-item" onClick={() => { setShowProfile(true); setDropdownOpen(false); }}>
+                    Thông tin cá nhân
+                  </button>
+                </li>
+                <li>
+                  <button className="dropdown-item" onClick={() => { setShowChangePassword(true); setDropdownOpen(false); }}>
+                    Đổi mật khẩu
+                  </button>
+                </li>
                 <li><hr className="dropdown-divider" /></li>
-                <li><button className="dropdown-item text-danger" onClick={handleLogout}>Đăng xuất</button></li>
+                <li>
+                  <button className="dropdown-item text-danger" onClick={handleLogout}>
+                    Đăng xuất
+                  </button>
+                </li>
               </ul>
-            </motion.div>
+            </div>
           )}
         </div>
       </div>
+
+      {/* Modal Thông tin cá nhân */}
+      <Modal
+        isOpen={showProfile}
+        onClose={() => setShowProfile(false)}
+        title="👤 Thông tin cá nhân"
+        showConfirm={false}
+      >
+        {currentUser ? (
+          <div>
+            <div className="mb-2"><b>Tên đăng nhập:</b> {currentUser.username}</div>
+            <div className="mb-2"><b>Họ tên:</b> {currentUser.full_name}</div>
+            <div className="mb-2"><b>Email:</b> {currentUser.email}</div>
+            <div className="mb-2"><b>Quyền:</b> {currentUser.role}</div>
+            <button className="btn btn-link p-0" onClick={() => { setShowProfile(false); setShowChangePassword(true); }}>
+              Đổi mật khẩu
+            </button>
+          </div>
+        ) : (
+          <div>Không có thông tin người dùng.</div>
+        )}
+      </Modal>
+
+      {/* Modal Đổi mật khẩu */}
+      <Modal
+        isOpen={showChangePassword}
+        onClose={() => setShowChangePassword(false)}
+        title="🔒 Đổi mật khẩu"
+        showConfirm={false}
+      >
+        <form onSubmit={handleChangePassword}>
+          <div className="mb-3">
+            <label className="form-label">Mật khẩu cũ</label>
+            <input
+              type="password"
+              className="form-control"
+              value={passwordForm.oldPassword}
+              onChange={e => setPasswordForm(f => ({ ...f, oldPassword: e.target.value }))}
+              required
+            />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Mật khẩu mới</label>
+            <input
+              type="password"
+              className="form-control"
+              value={passwordForm.newPassword}
+              onChange={e => setPasswordForm(f => ({ ...f, newPassword: e.target.value }))}
+              required
+            />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Nhập lại mật khẩu mới</label>
+            <input
+              type="password"
+              className="form-control"
+              value={passwordForm.confirmPassword}
+              onChange={e => setPasswordForm(f => ({ ...f, confirmPassword: e.target.value }))}
+              required
+            />
+          </div>
+          <button type="submit" className="btn btn-primary">
+            Đổi mật khẩu
+          </button>
+        </form>
+      </Modal>
+      <ToastContainer position="top-right" autoClose={3000} />
     </nav>
   );
 };

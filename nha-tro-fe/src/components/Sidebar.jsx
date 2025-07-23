@@ -7,37 +7,40 @@ export default function Sidebar() {
 
       <SidebarItem icon="building.svg" label="Phòng" dropdown children={[
         { label: "Phòng trọ", path: "/admin/rooms" },
-        { label: "Loại Phòng", path: "/admin/room-types" }
+        { label: "Loại Phòng", path: "/admin/type-rooms" }
       ]} />
 
       <SidebarItem icon="user.svg" label="Tài khoản" dropdown children={[
-        { label: "Tài khoản", path: "/admin/users" },
-        { label: "Add", path: "/admin/users/add" }
+        { label: "Tài khoản", path: "/admin/accounts" },
       ]} />
 
       <SidebarItem icon="tenant.svg" label="Khách Thuê" dropdown children={[
         { label: "Khách Thuê", path: "/admin/tenants" },
-        { label: "Add New", path: "/admin/tenants/add" }
+        { label: "Quản lý đặt phòng online", path: "/admin/reservations" }
       ]} />
 
       <SidebarItem icon="contract.svg" label="Hợp Đồng" dropdown children={[
         { label: "Hợp Đồng", path: "/admin/contracts" },
-        { label: "Monthly", path: "/admin/contracts/monthly" }
       ]} />
 
-      <SidebarItem icon="electricity.svg" label="Điện" dropdown children={[
-        { label: "Số điện theo phòng", path: "/admin/electricity" },
-        { label: "Reorder", path: "/admin/electricity/reorder" }
+      <SidebarItem icon="electricity.svg" label="Dịch vụ" dropdown children={[
+        { label: "Điện", path: "/admin/electricity" },
+        { label: "Nước", path: "/admin/water" },
+        { label: "Wifi", path: "/admin/internet" },
+        { label: "Khác", path: "/admin/other" }
       ]} />
 
-      <SidebarItem icon="receipt.svg" label="Phiếu Thu" dropdown children={[
-        { label: "Phiếu thu", path: "/admin/receipts" },
-        { label: "Chi tiết phiếu thu", path: "/admin/receipts/detail" }
+      <SidebarItem icon="receipt.svg" label="Hóa Đơn" dropdown children={[
+        { label: "Hóa đơn", path: "/admin/invoices" },
+        { label: "Thanh toán", path: "/admin/payments" }
       ]} />
-
+      <SidebarItem icon="device.svg" label="Thiết bị" dropdown children={[
+        { label: "Quản lý thiết bị", path: "/admin/devices" },
+      ]} />
       <SidebarItem icon="settings.svg" label="Cài Đặt" dropdown children={[
         { label: "Cài đặt chung", path: "/admin/settings" },
-        { label: "Cài đặt nâng cao", path: "/admin/settings/advanced" }
+        { label: "Sao lưu dữ liệu", path: "/admin/backup" },
+        { label: "Khôi phục dữ liệu", path: "/admin/restore" }
       ]} />
     </div>
   );
