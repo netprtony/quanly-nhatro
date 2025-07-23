@@ -159,132 +159,130 @@ export default function Rooms() {
   };
 
   return (
-    <AdminLayout>
-      <div className="container mt-4 position-relative">
-        <div className="p-4 rounded shadow bg-white">
-          <h3 className="mb-3">📦 Danh sách phòng</h3>
-          <button className="btn btn-success mb-3" onClick={handleAdd}>
-            ➕ Thêm phòng
-          </button>
+    <div className="container mt-4 position-relative">
+      <div className="p-4 rounded shadow bg-white">
+        <h3 className="mb-3">📦 Danh sách phòng</h3>
+        <button className="btn btn-success mb-3" onClick={handleAdd}>
+          ➕ Thêm phòng
+        </button>
 
-          <Table columns={columns} data={rooms} />
+        <Table columns={columns} data={rooms} />
 
-          {/* Modal Thêm / Sửa */}
-          <Modal
-            isOpen={showModal}
-            onClose={handleCloseModal}
-            title={editingRoom ? "✏️ Chỉnh sửa phòng" : "➕ Thêm phòng"}
-            showConfirm
-            onConfirm={handleSubmitRoom}
-          >
-            <form>
-              <div className="row g-3">
-                <div className="col-md-6">
-                  <label className="form-label">Số phòng</label>
+        {/* Modal Thêm / Sửa */}
+        <Modal
+          isOpen={showModal}
+          onClose={handleCloseModal}
+          title={editingRoom ? "✏️ Chỉnh sửa phòng" : "➕ Thêm phòng"}
+          showConfirm
+          onConfirm={handleSubmitRoom}
+        >
+          <form>
+            <div className="row g-3">
+              <div className="col-md-6">
+                <label className="form-label">Số phòng</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={form.room_number}
+                  onChange={(e) => handleFormChange("room_number", e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">Tầng</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={form.floor_number}
+                  onChange={(e) => handleFormChange("floor_number", parseInt(e.target.value) || 0)}
+                />
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">Số người tối đa</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={form.max_occupants}
+                  onChange={(e) => handleFormChange("max_occupants", parseInt(e.target.value) || 0)}
+                  required
+                />
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">Loại phòng</label>
+                <select
+                  className="form-select"
+                  value={form.room_type_id}
+                  onChange={(e) => handleFormChange("room_type_id", parseInt(e.target.value))}
+                  required
+                >
+                  <option value="">-- Chọn loại phòng --</option>
+                  {roomTypes.map((type) => (
+                    <option key={type.room_type_id} value={type.room_type_id}>
+                      {type.type_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="col-12">
+                <label className="form-label">Mô tả</label>
+                <textarea
+                  className="form-control"
+                  value={form.description}
+                  onChange={(e) => handleFormChange("description", e.target.value)}
+                  rows={3}
+                />
+              </div>
+
+              <div className="col-12">
+                <div className="form-check">
                   <input
-                    type="text"
-                    className="form-control"
-                    value={form.room_number}
-                    onChange={(e) => handleFormChange("room_number", e.target.value)}
-                    required
+                    type="checkbox"
+                    className="form-check-input"
+                    id="isAvailable"
+                    checked={form.is_available}
+                    onChange={(e) => handleFormChange("is_available", e.target.checked)}
                   />
-                </div>
-
-                <div className="col-md-6">
-                  <label className="form-label">Tầng</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={form.floor_number}
-                    onChange={(e) => handleFormChange("floor_number", parseInt(e.target.value) || 0)}
-                  />
-                </div>
-
-                <div className="col-md-6">
-                  <label className="form-label">Số người tối đa</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={form.max_occupants}
-                    onChange={(e) => handleFormChange("max_occupants", parseInt(e.target.value) || 0)}
-                    required
-                  />
-                </div>
-
-                <div className="col-md-6">
-                  <label className="form-label">Loại phòng</label>
-                  <select
-                    className="form-select"
-                    value={form.room_type_id}
-                    onChange={(e) => handleFormChange("room_type_id", parseInt(e.target.value))}
-                    required
-                  >
-                    <option value="">-- Chọn loại phòng --</option>
-                    {roomTypes.map((type) => (
-                      <option key={type.room_type_id} value={type.room_type_id}>
-                        {type.type_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="col-12">
-                  <label className="form-label">Mô tả</label>
-                  <textarea
-                    className="form-control"
-                    value={form.description}
-                    onChange={(e) => handleFormChange("description", e.target.value)}
-                    rows={3}
-                  />
-                </div>
-
-                <div className="col-12">
-                  <div className="form-check">
-                    <input
-                      type="checkbox"
-                      className="form-check-input"
-                      id="isAvailable"
-                      checked={form.is_available}
-                      onChange={(e) => handleFormChange("is_available", e.target.checked)}
-                    />
-                    <label className="form-check-label" htmlFor="isAvailable">
-                      Còn trống
-                    </label>
-                  </div>
+                  <label className="form-check-label" htmlFor="isAvailable">
+                    Còn trống
+                  </label>
                 </div>
               </div>
-            </form>
-          </Modal>
+            </div>
+          </form>
+        </Modal>
 
-          {/* Modal xác nhận xóa */}
-          <ModalConfirm
-            isOpen={showConfirmDelete}
-            title="Xác nhận xóa"
-            message="Bạn có chắc chắn muốn xóa phòng này không?"
-            confirmText="Xóa"
-            cancelText="Hủy"
-            onConfirm={confirmDelete}
-            onClose={() => setShowConfirmDelete(false)}
-          />
+        {/* Modal xác nhận xóa */}
+        <ModalConfirm
+          isOpen={showConfirmDelete}
+          title="Xác nhận xóa"
+          message="Bạn có chắc chắn muốn xóa phòng này không?"
+          confirmText="Xóa"
+          cancelText="Hủy"
+          onConfirm={confirmDelete}
+          onClose={() => setShowConfirmDelete(false)}
+        />
 
-          {/* Modal xác nhận thoát khi có thay đổi */}
-          <ModalConfirm
-            isOpen={showConfirmExit}
-            title="Thoát mà chưa lưu?"
-            message="Bạn có thay đổi chưa được lưu. Thoát không?"
-            confirmText="Thoát"
-            cancelText="Ở lại"
-            onConfirm={() => {
-              setShowModal(false);
-              setShowConfirmExit(false);
-              setUnsavedChanges(false);
-            }}
-            onClose={() => setShowConfirmExit(false)}
-          />
-        </div>
+        {/* Modal xác nhận thoát khi có thay đổi */}
+        <ModalConfirm
+          isOpen={showConfirmExit}
+          title="Thoát mà chưa lưu?"
+          message="Bạn có thay đổi chưa được lưu. Thoát không?"
+          confirmText="Thoát"
+          cancelText="Ở lại"
+          onConfirm={() => {
+            setShowModal(false);
+            setShowConfirmExit(false);
+            setUnsavedChanges(false);
+          }}
+          onClose={() => setShowConfirmExit(false)}
+        />
       </div>
 
       <ToastContainer position="top-right" autoClose={3000} />
-    </AdminLayout>
+    </div>
   );
 }

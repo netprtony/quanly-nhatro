@@ -2,7 +2,7 @@ import AdminLayout from "/src/layouts/AdminLayout.jsx";
 
 export default function Dashboard() {
   return (
-    <AdminLayout>
+    <>
       <h2 className="mb-4">Tổng quan hệ thống</h2>
       <div className="row">
         <div className="col-md-4">
@@ -24,6 +24,6 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </>
   );
 }

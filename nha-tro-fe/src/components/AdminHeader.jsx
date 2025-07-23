@@ -26,7 +26,16 @@ const AdminHeader = () => {
 
         <div className="collapse navbar-collapse justify-content-between">
           <ul className="navbar-nav">
-            {/* ... các nav-link */}
+            <li className="nav-item">
+              <Link className="nav-link" to="/admin/dashboard">
+                Bảng điều khiển
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/admin/rooms">
+                Quản lý phòng
+              </Link>
+            </li>
           </ul>
 
           {currentUser && (
