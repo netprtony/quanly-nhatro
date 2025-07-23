@@ -15,22 +15,31 @@ import GuestRoute from "./components/GuestRoute";
 function App() {
   return (
     <Routes>
+      {/* ----------- LOGIN & REGISTER (NO LAYOUT) ----------- */}
+      <Route
+        path="/login"
+        element={
+          <GuestRoute>
+            <Login />
+          </GuestRoute>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <GuestRoute>
+            <Register />
+          </GuestRoute>
+        }
+      />
+
       {/* ----------- CLIENT LAYOUT ----------- */}
       <Route path="/" element={<Layout />}>
-        <Route index element={<Home />} />
         <Route
-          path="login"
+          index
           element={
             <GuestRoute>
-              <Login />
-            </GuestRoute>
-          }
-        />
-        <Route
-          path="register"
-          element={
-            <GuestRoute>
-              <Register />
+              <Home />
             </GuestRoute>
           }
         />
@@ -46,7 +55,7 @@ function App() {
           </PrivateRoute>
         }
       >
-        <Route index element={<Dashboard />} />
+        <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="rooms" element={<Rooms />} />
         {/* Các route admin khác */}
