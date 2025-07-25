@@ -19,7 +19,7 @@ export default function Login() {
     try {
       const res = await axios.post("http://localhost:8000/auth/login", form);
       const { access_token, token_type, user } = res.data;
-
+      console.log("Token:", access_token);
       if (access_token && user) {
         // Lưu token để axios dùng
         localStorage.setItem("token", access_token);
@@ -32,6 +32,7 @@ export default function Login() {
           navigate("/admin/dashboard");
           return;
         }
+        console.log("navigating...")
         navigate("/home");
       } else {
         setError("Phản hồi từ server không hợp lệ.");

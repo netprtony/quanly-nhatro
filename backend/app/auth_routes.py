@@ -49,3 +49,21 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
             "is_active": db_user.is_active,
         }
     }
+
+# api đổi mật khẩu
+@router.post("/change-password", response_model=schemas.UserOut)
+def change_password(
+    user: schemas.ChangePassword,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(utils.get_current_user)
+):
+    # Truy vấn lại user từ session db
+    db_user = db.query(User).filter(User.id == current_user.id).first()
+    if not utils.verify_password(user.old_password, db_user.password):
+        raise HTTPException(status_code=400, detail="Old password is incorrect")
+
+    hashed_new_pw = utils.hash_password(user.new_password)
+    db_user.password = hashed_new_pw
+    db.commit()
+    db.refresh(db_user)
+    return db_user

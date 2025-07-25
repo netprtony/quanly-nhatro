@@ -7,8 +7,7 @@ export default function GuestRoute({ children }) {
   if (currentUser) {
     // Nếu là admin, chuyển hướng về dashboard admin
     if (currentUser.role === "ADMIN") return <Navigate to="/admin/dashboard" />;
-    // Nếu là user thường, chuyển hướng về trang home (hoặc trang user riêng)
-    return <Navigate to="/home" />;
+    // Nếu là user thường, cho phép xem Home (không chuyển hướng)
   }
 
   return children;

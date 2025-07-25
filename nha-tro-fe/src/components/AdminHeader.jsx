@@ -18,6 +18,11 @@ const AdminHeader = () => {
     newPassword: "",
     confirmPassword: ""
   });
+  const [loading, setLoading] = useState(false);
+
+  // Lấy token từ localStorage mỗi lần đổi mật khẩu
+  const getToken = () => localStorage.getItem("token");
+
   React.useEffect(() => {
     const handleClick = (e) => {
       if (!e.target.closest('.dropdown')) setDropdownOpen(false);
@@ -25,6 +30,7 @@ const AdminHeader = () => {
     if (dropdownOpen) document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [dropdownOpen]);
+
   const handleLogout = () => {
     logout();
     window.location.href = "/login";
@@ -39,8 +45,11 @@ const AdminHeader = () => {
     setShowProfile(false);
   };
 
-  const handleChangePassword = (e) => {
+  // Tích hợp API đổi mật khẩu
+  const handleChangePassword = async (e) => {
     e.preventDefault();
+    const token = getToken();
+    console.log("Token:", token);
     if (!passwordForm.oldPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
       toast.error("Vui lòng nhập đầy đủ thông tin!");
       return;
@@ -49,10 +58,31 @@ const AdminHeader = () => {
       toast.error("Mật khẩu mới không khớp!");
       return;
     }
-    // Thực tế sẽ gọi API đổi mật khẩu ở đây
-    setShowChangePassword(false);
-    setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
-    toast.success("✅ Đổi mật khẩu thành công!");
+    setLoading(true);
+    try {
+      const res = await fetch("http://localhost:8000/auth/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify({
+          old_password: passwordForm.oldPassword,
+          new_password: passwordForm.newPassword,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.detail || "Đổi mật khẩu thất bại!");
+      }
+      setShowChangePassword(false);
+      setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+      toast.success("✅ Đổi mật khẩu thành công!");
+    } catch (err) {
+      toast.error(err.message || "Đổi mật khẩu thất bại!");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -102,7 +132,6 @@ const AdminHeader = () => {
                 type="button"
                 id="userDropdown"
                 onClick={() => {
-                  // Toggle dropdown menu
                   setShowProfile(false);
                   setShowChangePassword(false);
                   setDropdownOpen((open) => !open);
@@ -197,8 +226,8 @@ const AdminHeader = () => {
               required
             />
           </div>
-          <button type="submit" className="btn btn-primary">
-            Đổi mật khẩu
+          <button type="submit" className="btn btn-primary" disabled={loading}>
+            {loading ? "Đang đổi..." : "Đổi mật khẩu"}
           </button>
         </form>
       </Modal>

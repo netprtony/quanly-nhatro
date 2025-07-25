@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useInView } from "react-intersection-observer";
 import "/src/assets/style/Home.css"; // CSS đã chỉnh màu
+
 const features = [
   {
     title: "Xem phòng",
@@ -23,10 +24,16 @@ const features = [
     link: "/payments",
   },
   {
-    title: "Yêu cầu sửa chữa",
-    description: "Gửi yêu cầu khi gặp sự cố trong phòng ở.",
-    icon: "🛠️",
-    link: "/support",
+    title: "Đặt phòng online",
+    description: "Gửi yêu cầu đặt phòng trực tuyến.",
+    icon: "📅",
+    link: "/reservations",
+  },
+  {
+    title: "Lịch sử thanh toán",
+    description: "Xem lịch sử thanh toán tiền trọ, điện, nước.",
+    icon: "📊",
+    link: "/payment-history",
   },
 ];
 
@@ -39,6 +46,83 @@ export default function Home() {
     navigate(isLoggedIn ? link : "/login");
   };
 
+  if (isLoggedIn) {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    // Thêm feature thông tin cá nhân lên đầu
+    const userFeatures = [
+      {
+        title: "Thông tin cá nhân",
+        description: (
+          <>
+            <div><b>Họ tên:</b> {user.full_name || user.name || "Chưa cập nhật"}</div>
+            <div><b>Email:</b> {user.email || "Chưa có email"}</div>
+            <div><b>Quyền:</b> {user.role || "USER"}</div>
+          </>
+        ),
+        icon: "👤",
+        link: "#",
+        isProfile: true,
+      },
+      ...features,
+    ];
+
+    return (
+      <div className="home-wrapper">
+        <motion.div
+          className="background-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1 }}
+        />
+        <div className="container py-5 position-relative z-2">
+          <div className="row justify-content-center" ref={ref}>
+            {userFeatures.map((feature, i) => (
+              <motion.div
+                key={i}
+                className="col-md-6 col-lg-3 mb-4"
+                initial={{ opacity: 0, y: 30 }}
+                animate={inView ? { opacity: 1, y: 0 } : {}}
+                transition={{ delay: 0.2 + i * 0.2 }}
+              >
+                <div
+                  className={`glass-card text-center h-100 p-3 shadow${feature.isProfile ? " border border-warning" : ""}`}
+                  style={feature.isProfile ? { background: "#f9bc60", color: "#001e1d" } : {}}
+                >
+                  <motion.div
+                    className="display-4 mb-2"
+                    animate={{ rotate: [0, 15, -15, 0] }}
+                    transition={{ repeat: Infinity, duration: 3 }}
+                  >
+                    {feature.icon}
+                  </motion.div>
+                  <h5 className="fw-semibold" style={feature.isProfile ? { color: "#001e1d" } : { color: "#ffffff" }}>
+                    {feature.title}
+                  </h5>
+                  <div className="small mb-2" style={feature.isProfile ? { color: "#001e1d" } : { color: "#abd1c6" }}>
+                    {feature.description}
+                  </div>
+                  {!feature.isProfile && (
+                    <button
+                      className="btn btn-outline-light btn-sm mt-2"
+                      style={{
+                        backgroundColor: "#f9bc60",
+                        color: "#001e1d",
+                        border: "none",
+                      }}
+                      onClick={() => handleAccess(feature.link)}
+                    >
+                      Truy cập
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="home-wrapper">
       <motion.div
@@ -50,7 +134,7 @@ export default function Home() {
       <div className="container py-5 position-relative z-2">
         <motion.h1
           className="text-center fw-bold mb-4"
-          style={{ color: "#ffffff" }} // Headline color
+          style={{ color: "#ffffff" }}
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.8 }}
@@ -60,7 +144,7 @@ export default function Home() {
 
         <motion.p
           className="text-center fs-5 mb-5"
-          style={{ color: "#abd1c6" }} // Paragraph color
+          style={{ color: "#abd1c6" }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}

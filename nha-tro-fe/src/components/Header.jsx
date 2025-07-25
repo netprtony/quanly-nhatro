@@ -7,22 +7,94 @@ import {
   Form,
   FormControl,
   Button,
-  NavDropdown,
   Container,
 } from "react-bootstrap";
-import { useUser } from "../contexts/UserContext"; // Nếu dùng context
+import { FaAngleDown } from "react-icons/fa";
+import { useUser } from "../contexts/UserContext";
+import Modal from "./Modal.jsx";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function Header() {
   const navigate = useNavigate();
-  const { currentUser, logout } = useUser(); // Nếu không dùng context, hãy dùng localStorage như bên dưới
+  const { currentUser, logout } = useUser();
+
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    oldPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+  const [loading, setLoading] = useState(false);
+
+  // Lấy token từ localStorage mỗi lần đổi mật khẩu
+  const getToken = () => localStorage.getItem("token");
+
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (!e.target.closest('.dropdown-user-header')) setDropdownOpen(false);
+    };
+    if (dropdownOpen) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [dropdownOpen]);
 
   const handleNavigate = (path) => {
     navigate(path);
   };
 
   const handleLogout = () => {
-    logout(); // dùng context
+    logout();
     navigate("/login");
+  };
+
+  const handleOpenProfile = () => {
+    setShowProfile(true);
+  };
+
+  const handleOpenChangePassword = () => {
+    setShowChangePassword(true);
+    setShowProfile(false);
+  };
+
+  // Tích hợp API đổi mật khẩu
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    const token = getToken();
+    if (!passwordForm.oldPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      toast.error("Vui lòng nhập đầy đủ thông tin!");
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error("Mật khẩu mới không khớp!");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("http://localhost:8000/auth/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify({
+          old_password: passwordForm.oldPassword,
+          new_password: passwordForm.newPassword,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.detail || "Đổi mật khẩu thất bại!");
+      }
+      setShowChangePassword(false);
+      setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+      toast.success("✅ Đổi mật khẩu thành công!");
+    } catch (err) {
+      toast.error(err.message || "Đổi mật khẩu thất bại!");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -80,20 +152,19 @@ export default function Header() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                 >
-                  <NavDropdown
-                      title={<span style={{ color: "#ffffff" }}>Tài khoản</span>}
-                      id="basic-nav-dropdown"
-                      align="end"
-                      menuVariant="dark"
-                      style={{ zIndex: 1055, position: "relative" }} // <- không hiệu quả lắm với menu, nhưng có thể dùng thử
-                    >
-                    <NavDropdown.Item onClick={() => handleNavigate("/login")}>
-                      Đăng nhập
-                    </NavDropdown.Item>
-                    <NavDropdown.Item onClick={() => handleNavigate("/register")}>
-                      Đăng ký
-                    </NavDropdown.Item>
-                  </NavDropdown>
+                  <Button
+                    variant="outline-light"
+                    className="me-2"
+                    onClick={() => handleNavigate("/login")}
+                  >
+                    Đăng nhập
+                  </Button>
+                  <Button
+                    variant="warning"
+                    onClick={() => handleNavigate("/register")}
+                  >
+                    Đăng ký
+                  </Button>
                 </motion.div>
               ) : (
                 <motion.div
@@ -104,25 +175,113 @@ export default function Header() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                 >
-                  <NavDropdown
-                    title={
+                  <div className="dropdown dropdown-user-header d-inline-block position-relative">
+                    <Button
+                      variant="link"
+                      className="text-white d-flex align-items-center"
+                      style={{ textDecoration: "none" }}
+                      onClick={() => setDropdownOpen((open) => !open)}
+                    >
                       <span style={{ color: "#ffffff" }}>
                         👤 {currentUser?.username || "User"}
                       </span>
-                    }
-                    id="user-nav-dropdown"
-                    align="end"
-                  >
-                    <NavDropdown.Item onClick={handleLogout}>
-                      Đăng xuất
-                    </NavDropdown.Item>
-                  </NavDropdown>
+                      <FaAngleDown className="ms-1" />
+                    </Button>
+                    <ul
+                      className={`dropdown-menu dropdown-menu-end${dropdownOpen ? " show" : ""}`}
+                      style={{ position: "absolute", top: "100%", right: 0, zIndex: 1000 }}
+                    >
+                      <li>
+                        <button className="dropdown-item" onClick={() => { setShowProfile(true); setDropdownOpen(false); }}>
+                          Thông tin cá nhân
+                        </button>
+                      </li>
+                      <li>
+                        <button className="dropdown-item" onClick={() => { setShowChangePassword(true); setDropdownOpen(false); }}>
+                          Đổi mật khẩu
+                        </button>
+                      </li>
+                      <li><hr className="dropdown-divider" /></li>
+                      <li>
+                        <button className="dropdown-item text-danger" onClick={handleLogout}>
+                          Đăng xuất
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </Navbar.Collapse>
         </Container>
       </Navbar>
+
+      {/* Modal Thông tin cá nhân */}
+      <Modal
+        isOpen={showProfile}
+        onClose={() => setShowProfile(false)}
+        title="👤 Thông tin cá nhân"
+        showConfirm={false}
+      >
+        {currentUser ? (
+          <div>
+            <div className="mb-2"><b>Tên đăng nhập:</b> {currentUser.username}</div>
+            <div className="mb-2"><b>Họ tên:</b> {currentUser.full_name}</div>
+            <div className="mb-2"><b>Email:</b> {currentUser.email}</div>
+            <div className="mb-2"><b>Quyền:</b> {currentUser.role}</div>
+            <button className="btn btn-link p-0" onClick={() => { setShowProfile(false); setShowChangePassword(true); }}>
+              Đổi mật khẩu
+            </button>
+          </div>
+        ) : (
+          <div>Không có thông tin người dùng.</div>
+        )}
+      </Modal>
+
+      {/* Modal Đổi mật khẩu */}
+      <Modal
+        isOpen={showChangePassword}
+        onClose={() => setShowChangePassword(false)}
+        title="🔒 Đổi mật khẩu"
+        showConfirm={false}
+      >
+        <form onSubmit={handleChangePassword}>
+          <div className="mb-3">
+            <label className="form-label">Mật khẩu cũ</label>
+            <input
+              type="password"
+              className="form-control"
+              value={passwordForm.oldPassword}
+              onChange={e => setPasswordForm(f => ({ ...f, oldPassword: e.target.value }))}
+              required
+            />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Mật khẩu mới</label>
+            <input
+              type="password"
+              className="form-control"
+              value={passwordForm.newPassword}
+              onChange={e => setPasswordForm(f => ({ ...f, newPassword: e.target.value }))}
+              required
+            />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Nhập lại mật khẩu mới</label>
+            <input
+              type="password"
+              className="form-control"
+              value={passwordForm.confirmPassword}
+              onChange={e => setPasswordForm(f => ({ ...f, confirmPassword: e.target.value }))}
+              required
+            />
+          </div>
+          <button type="submit" className="btn btn-primary" disabled={loading}>
+            {loading ? "Đang đổi..." : "Đổi mật khẩu"}
+          </button>
+        </form>
+      </Modal>
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop={false} closeOnClick={true} rtl={false} pauseOnFocusLoss={true} draggable={true} pauseOnHover={true} />
     </motion.div>
   );
 }

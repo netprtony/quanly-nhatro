@@ -1,7 +1,9 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from enum import Enum
-
+class ChangePassword(BaseModel):
+    old_password: str
+    new_password: str
 class RoleEnum(str, Enum):
     USER = 'USER'
     ADMIN = 'ADMIN'
@@ -18,12 +20,12 @@ class UserLogin(BaseModel):
 class UserOut(BaseModel):
     id: int
     username: str
-    email: EmailStr
-    role: RoleEnum
+    email: str
+    role: str
     is_active: bool
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class UserInfo(BaseModel):
     id: int
@@ -33,7 +35,7 @@ class UserInfo(BaseModel):
     is_active: bool
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -49,7 +51,7 @@ class RoomTypeSchema(BaseModel):
     price_per_month: float
 
     class Config:
-        orm_mode = True
+        from_attributes = True
         
 class RoomCreate(BaseModel):
     room_number: str
@@ -68,7 +70,7 @@ class RoomSchema(BaseModel):
     room_type: RoomTypeSchema   # <-- Thêm quan hệ room_type vào đây
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 # ✅ Schema khi tạo hoặc cập nhật phòng
 class RoomCreateUpdateSchema(BaseModel):
     room_number: str

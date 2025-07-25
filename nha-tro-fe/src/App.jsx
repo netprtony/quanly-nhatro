@@ -5,6 +5,7 @@ import AdminLayout from "./layouts/AdminLayout";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Home from "./pages/user/Home";
+import RoomUser from "./pages/user/Rooms";
 
 import Dashboard from "./pages/admin/Dashboard";
 import Rooms from "./pages/admin/Rooms";
@@ -56,6 +57,8 @@ function App() {
             </GuestRoute>
           }
         />
+        <Route path="/home" element={<Home />} />
+        <Route path="/rooms" element={<RoomUser />} />
         {/* Thêm các route người dùng khác ở đây nếu cần */}
       </Route>
 
