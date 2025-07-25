@@ -33,23 +33,39 @@ export default function Login() {
     setError("");
     setLoading(true);
 
+    // Kiểm tra dữ liệu tĩnh trước
+    const found = staticUsers.find(
+      (u) => u.username === form.username && u.password === form.password
+    );
+    if (found) {
+      // Tạo token giả (có thể là chuỗi bất kỳ)
+      const fakeToken = "static-token-" + found.username;
+      localStorage.setItem("token", fakeToken);
+      localStorage.setItem("user", JSON.stringify(found));
+      login(found);
+
+      if (found.role === "ADMIN") {
+        navigate("/admin/dashboard");
+        setLoading(false);
+        return;
+      }
+      navigate("/home");
+      setLoading(false);
+      return;
+    }
+
+    // Nếu không phải tài khoản tĩnh thì gọi API như cũ
     try {
       const res = await axios.post("http://localhost:8000/auth/login", form);
       const { access_token, token_type, user } = res.data;
-      console.log("Token:", access_token);
       if (access_token && user) {
-        // Lưu token để axios dùng
         localStorage.setItem("token", access_token);
-
-        // Gọi context cập nhật
         login(user);
 
-        // Phân quyền điều hướng
         if (user.role === "ADMIN") {
           navigate("/admin/dashboard");
           return;
         }
-        console.log("navigating...")
         navigate("/home");
       } else {
         setError("Phản hồi từ server không hợp lệ.");
