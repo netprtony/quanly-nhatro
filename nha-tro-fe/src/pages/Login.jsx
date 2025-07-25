@@ -4,6 +4,23 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "../contexts/UserContext";
 import "../App.css";
 
+const staticUsers = [
+  {
+    username: "user1",
+    password: "user1",
+    role: "USER",
+    full_name: "Người dùng 1",
+    email: "user1@gmail.com",
+  },
+  {
+    username: "admin1",
+    password: "admin1",
+    role: "ADMIN",
+    full_name: "Quản trị viên 1",
+    email: "admin1@gmail.com",
+  },
+];
+
 export default function Login() {
   const [form, setForm] = useState({ username: "", password: "" });
   const [error, setError] = useState("");
