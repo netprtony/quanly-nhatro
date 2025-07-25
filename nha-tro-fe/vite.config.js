@@ -4,7 +4,7 @@ import path from 'path'
 
 export default defineConfig(({ mode }) => ({
   plugins: [react()],
-  base: mode === 'production' ? '/NhaTroBaoBao/' : '/', // 👈 Tự động đổi base
+  base: './', 
   server: {
     port: 3000,
     open: true,
