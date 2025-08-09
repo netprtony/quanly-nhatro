@@ -6,6 +6,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Home from "./pages/user/Home";
 import RoomUser from "./pages/user/Rooms";
+import DetailRoom from "./pages/user/DetailRoom";
 
 import Dashboard from "./pages/admin/Dashboard";
 import Rooms from "./pages/admin/Rooms";
@@ -59,6 +60,7 @@ function App() {
         />
         <Route path="/home" element={<Home />} />
         <Route path="/rooms" element={<RoomUser />} />
+        <Route path="/rooms/:roomId" element={<DetailRoom />} />
         {/* Thêm các route người dùng khác ở đây nếu cần */}
       </Route>
 
