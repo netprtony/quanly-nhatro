@@ -197,17 +197,17 @@ INSERT INTO Tenants (tenant_id, full_name, gender, date_of_birth, phone_number, 
 ('079203029615', 'Le Thi Lan', 'Female', '1994-04-18', '0989012345', 'lan.le@example.com', '/idcards/T009_front.jpg', '/idcards/T009_back.jpg', '606 Cach Mang Thang 8, Q3, HCMC'),
 ('079203029616', 'Pham Van Minh', 'Male', '1989-06-12', '0990123456', 'minh.pham@example.com', '/idcards/T010_front.jpg', '/idcards/T010_back.jpg', '707 Nguyen Dinh Chieu, Q3, HCMC');
 INSERT INTO Users (username, email, password, tenant_id, role, is_active) VALUES
-('an.nguyen', 'an.nguyen@example.com', 'hashed_password_1', '079203029607', 'USER', TRUE),
-('bich.tran', 'bich.tran@example.com', 'hashed_password_2', '079203029608', 'USER', TRUE),
-('cuong.le', 'cuong.le@example.com', 'hashed_password_3', '079203029609', 'USER', TRUE),
-('dung.pham', 'dung.pham@example.com', 'hashed_password_4', '079203029610', 'USER', TRUE),
-('em.hoang', 'em.hoang@example.com', 'hashed_password_5', '079203029611', 'USER', TRUE),
-('phuong.vo', 'phuong.vo@example.com', 'hashed_password_6', '079203029612', 'USER', TRUE),
-('hung.nguyen', 'hung.nguyen@example.com', 'hashed_password_7', '079203029613', 'USER', TRUE),
-('khanh.tran', 'khanh.tran@example.com', 'hashed_password_8', '079203029614', 'USER', TRUE),
-('lan.le', 'lan.le@example.com', 'hashed_password_9', '079203029615', 'USER', TRUE),
-('minh.pham', 'minh.pham@example.com', 'hashed_password_10', '079203029616', 'USER', TRUE),
-('admin1', 'admin1@example.com', 'hashed_password_admin1', NULL, 'ADMIN', TRUE);
+('an.nguyen', 'an.nguyen@example.com', '$2a$12$YbgMrDVLpsncrlxrjam0EO4yosTojsqK5nqs1sIhgW/aGz5QsHO0e', '079203029607', 'USER', TRUE),
+('bich.tran', 'bich.tran@example.com', '$2a$12$YbgMrDVLpsncrlxrjam0EO4yosTojsqK5nqs1sIhgW/aGz5QsHO0e', '079203029608', 'USER', TRUE),
+('cuong.le', 'cuong.le@example.com', '$2a$12$YbgMrDVLpsncrlxrjam0EO4yosTojsqK5nqs1sIhgW/aGz5QsHO0e', '079203029609', 'USER', TRUE),
+('dung.pham', 'dung.pham@example.com', '$2a$12$YbgMrDVLpsncrlxrjam0EO4yosTojsqK5nqs1sIhgW/aGz5QsHO0e', '079203029610', 'USER', TRUE),
+('em.hoang', 'em.hoang@example.com', '$2a$12$YbgMrDVLpsncrlxrjam0EO4yosTojsqK5nqs1sIhgW/aGz5QsHO0e', '079203029611', 'USER', TRUE),
+('phuong.vo', 'phuong.vo@example.com', '$2a$12$YbgMrDVLpsncrlxrjam0EO4yosTojsqK5nqs1sIhgW/aGz5QsHO0e', '079203029612', 'USER', TRUE),
+('hung.nguyen', 'hung.nguyen@example.com', '$2a$12$YbgMrDVLpsncrlxrjam0EO4yosTojsqK5nqs1sIhgW/aGz5QsHO0e', '079203029613', 'USER', TRUE),
+('duc.hieu', 'nguyenduchieu@example.com', '$2a$12$YbgMrDVLpsncrlxrjam0EO4yosTojsqK5nqs1sIhgW/aGz5QsHO0e', '079203029614', 'USER', TRUE),
+('gia.hieu', 'giahieu@example.com', '$2a$12$YbgMrDVLpsncrlxrjam0EO4yosTojsqK5nqs1sIhgW/aGz5QsHO0e', '079203029615', 'USER', TRUE),
+('dinh.khoa', 'minh.pham@example.com', '$2a$12$YbgMrDVLpsncrlxrjam0EO4yosTojsqK5nqs1sIhgW/aGz5QsHO0e', '079203029616', 'USER', TRUE),
+('admin1', 'admin1@example.com', '$2a$12$YbgMrDVLpsncrlxrjam0EO4yosTojsqK5nqs1sIhgW/aGz5QsHO0e', NULL, 'ADMIN', TRUE);
 
 -- Thêm hợp đồng
 INSERT INTO Contracts (tenant_id, room_id, start_date, end_date, deposit_amount, monthly_rent, contract_status) VALUES

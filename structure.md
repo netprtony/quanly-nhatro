@@ -1,9 +1,10 @@
-# File Tree: NhaTroBaoBao
+# File Tree: quanly-nhatro
 
-Generated on: 8/13/2025, 12:24:31 PM
-Root path: `d:\NhaTroBaoBao`
+Generated on: 8/17/2025, 7:38:14 PM
+Root path: `d:\DoAnTotNghie_QLNT\quanly-nhatro`
 
 ```
+├── 📁 .env/ 🚫 (auto-hidden)
 ├── 📁 .git/ 🚫 (auto-hidden)
 ├── 📁 .github/
 │   └── 📁 ISSUE_TEMPLATE/
@@ -18,10 +19,15 @@ Root path: `d:\NhaTroBaoBao`
 │       ├── 📝 test-ready.md
 │       ├── 📝 test-wip.md
 │       └── 📝 user-story.md
-├── 📁 .venv/ 🚫 (auto-hidden)
 ├── 📁 backend/
 │   ├── 📁 app/
 │   │   ├── 📁 __pycache__/ 🚫 (auto-hidden)
+│   │   ├── 📁 schemas/
+│   │   │   ├── 📁 __pycache__/ 🚫 (auto-hidden)
+│   │   │   ├── 🐍 __init__.py
+│   │   │   ├── 🐍 auth.py
+│   │   │   ├── 🐍 room.py
+│   │   │   └── 🐍 user.py
 │   │   ├── 🐍 auth_dependency.py
 │   │   ├── 🐍 auth_routes.py
 │   │   ├── 🐍 database.py
@@ -30,14 +36,12 @@ Root path: `d:\NhaTroBaoBao`
 │   │   ├── 🐍 protected_route.py
 │   │   ├── 🐍 room_routes.py
 │   │   ├── 🐍 roomtype_routes.py
-│   │   ├── 🐍 schemas.py
 │   │   ├── 🐍 tenant_routes.py
 │   │   └── 🐍 utils.py
 │   ├── 🔒 .env 🚫 (auto-hidden)
 │   ├── 📄 runtime.txt
 │   └── 🐚 start.sh
 ├── 📁 nha-tro-fe/
-│   ├── 📁 dist/ 🚫 (auto-hidden)
 │   ├── 📁 node_modules/ 🚫 (auto-hidden)
 │   ├── 📁 public/
 │   │   ├── 📁 cccd/
@@ -96,6 +100,7 @@ Root path: `d:\NhaTroBaoBao`
 │   │   │       └── 🎨 ModalComfirm.css
 │   │   ├── 📁 components/
 │   │   │   ├── 📄 AdminHeader.jsx
+│   │   │   ├── 📄 AdvancedFilters.jsx
 │   │   │   ├── 📄 Footer.jsx
 │   │   │   ├── 📄 GuestRoute.jsx
 │   │   │   ├── 📄 Header.jsx
