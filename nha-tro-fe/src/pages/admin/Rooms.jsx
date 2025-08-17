@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Table from "/src/components/Table.jsx";
+import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
 import AdminLayout from "/src/layouts/AdminLayout.jsx";
 import Modal from "/src/components/Modal.jsx";
 import ModalConfirm from "/src/components/ModalConfirm.jsx";
@@ -25,6 +26,17 @@ export default function Rooms() {
   const [showConfirmExit, setShowConfirmExit] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState(null);
+  // Advanced filters state
+  const [filters, setFilters] = useState([]);
+  const [newFilter, setNewFilter] = useState({ field: "floor_number", operator: ">=", value: "" });
+
+  const fieldOptions = [
+    { value: "floor_number", label: "Tầng", type: "number" },
+    { value: "max_occupants", label: "Số người tối đa", type: "number" },
+    { value: "room_type.price_per_month", label: "Giá phòng", type: "number" },
+    { value: "room_number", label: "Số phòng", type: "string" },
+    { value: "is_available", label: "Còn trống", type: "boolean" },
+  ];
 
   const columns = [
     { label: "Mã phòng", accessor: "room_id" },
@@ -158,6 +170,70 @@ export default function Rooms() {
     setUnsavedChanges(true);
   };
 
+  const addFilter = () => {
+    if (!newFilter.field || newFilter.value === "") {
+      toast.warn("Vui lòng chọn trường và nhập giá trị lọc");
+      return;
+    }
+    setFilters((prev) => [...prev, { ...newFilter }]);
+    setNewFilter((prev) => ({ ...prev, value: "" }));
+  };
+
+  const removeFilter = (index) => {
+    setFilters((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const getValueByPath = (obj, path) => {
+    return path.split('.').reduce((o, p) => (o ? o[p] : undefined), obj);
+  };
+
+  const evaluateFilter = (f, room) => {
+    const raw = getValueByPath(room, f.field);
+    if (raw === undefined || raw === null) return false;
+
+    // normalize boolean field input
+    if (f.field === 'is_available') {
+      const target = f.value === 'true' || f.value === true || f.value === '1';
+      if (f.operator === '=') return raw === target;
+      if (f.operator === '!=') return raw !== target;
+      return false;
+    }
+
+    // numeric comparison when possible
+    const maybeNum = Number(raw);
+    const targetNum = Number(f.value);
+    const isNumeric = !isNaN(maybeNum) && !isNaN(targetNum);
+
+    if (isNumeric) {
+      switch (f.operator) {
+        case '>': return maybeNum > targetNum;
+        case '<': return maybeNum < targetNum;
+        case '>=': return maybeNum >= targetNum;
+        case '<=': return maybeNum <= targetNum;
+        case '=': return maybeNum === targetNum;
+        case '~': // gần bằng: within 10% or within absolute 1 if target small
+          const diff = Math.abs(maybeNum - targetNum);
+          const tol = Math.max(1, Math.abs(targetNum) * 0.1);
+          return diff <= tol;
+        default: return false;
+      }
+    }
+
+    // string operations
+    const rawStr = String(raw).toLowerCase();
+    const valStr = String(f.value).toLowerCase();
+    if (f.operator === '=') return rawStr === valStr;
+    if (f.operator === '~') return rawStr.includes(valStr);
+    return false;
+  };
+
+  const applyFilters = (list) => {
+    if (!filters || filters.length === 0) return list;
+    return list.filter((item) => filters.every((f) => evaluateFilter(f, item)));
+  };
+
+  const filteredRooms = applyFilters(rooms);
+
   return (
     <div className="container mt-4 position-relative">
       <div className="p-4 rounded shadow bg-white">
@@ -166,7 +242,14 @@ export default function Rooms() {
           ➕ Thêm phòng
         </button>
 
-        <Table columns={columns} data={rooms} />
+        <AdvancedFilters
+          fieldOptions={fieldOptions}
+          filters={filters}
+          onAddFilter={(f) => setFilters((prev) => [...prev, f])}
+          onRemoveFilter={(i) => setFilters((prev) => prev.filter((_, idx) => idx !== i))}
+        />
+
+        <Table columns={columns} data={filteredRooms} />
 
         {/* Modal Thêm / Sửa */}
         <Modal

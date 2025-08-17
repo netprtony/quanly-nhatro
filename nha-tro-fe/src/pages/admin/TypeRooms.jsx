@@ -1,32 +1,29 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Table from "/src/components/Table.jsx";
 import Modal from "/src/components/Modal.jsx";
 import ModalConfirm from "/src/components/ModalConfirm.jsx";
+import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 export default function TypeRooms() {
-  // Mock dữ liệu loại phòng
-  const [typeRooms, setTypeRooms] = useState([
-    {
-      room_type_id: 1,
-      type_name: "Phòng đơn",
-      price_per_month: 2500000,
-      description: "Phòng cho 1 người, đầy đủ tiện nghi.",
-    },
-    {
-      room_type_id: 2,
-      type_name: "Phòng đôi",
-      price_per_month: 3500000,
-      description: "Phòng cho 2 người, rộng rãi, có ban công.",
-    },
-    {
-      room_type_id: 3,
-      type_name: "Phòng gia đình",
-      price_per_month: 5000000,
-      description: "Phòng lớn cho gia đình, có bếp riêng.",
-    },
-  ]);
+  const [typeRooms, setTypeRooms] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  // API base URL
+  const API_URL = "http://localhost:8000/roomtypes";
+  // Fetch room types from backend
+  useEffect(() => {
+    setLoading(true);
+    fetch(API_URL)
+      .then((res) => {
+        if (!res.ok) throw new Error("Không thể lấy dữ liệu loại phòng");
+        return res.json();
+      })
+      .then((data) => setTypeRooms(data))
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
 
   const [showModal, setShowModal] = useState(false);
   const [editingType, setEditingType] = useState(null);
@@ -40,6 +37,61 @@ export default function TypeRooms() {
   const [showConfirmExit, setShowConfirmExit] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [typeToDelete, setTypeToDelete] = useState(null);
+
+  // Advanced filters
+  const [filters, setFilters] = useState([]);
+
+  const fieldOptions = [
+    { value: "room_type_id", label: "Mã loại", type: "number" },
+    { value: "type_name", label: "Tên loại", type: "string" },
+    { value: "price_per_month", label: "Giá phòng", type: "number" },
+    { value: "description", label: "Mô tả", type: "string" },
+  ];
+
+  const getValueByPath = (obj, path) =>
+    path.split(".").reduce((o, p) => (o ? o[p] : undefined), obj);
+
+  const evaluateFilter = (f, item) => {
+    const raw = getValueByPath(item, f.field);
+    if (raw === undefined || raw === null) return false;
+
+    const maybeNum = Number(raw);
+    const targetNum = Number(f.value);
+    const isNumeric = !isNaN(maybeNum) && !isNaN(targetNum);
+
+    if (isNumeric) {
+      switch (f.operator) {
+        case ">":
+          return maybeNum > targetNum;
+        case "<":
+          return maybeNum < targetNum;
+        case ">=":
+          return maybeNum >= targetNum;
+        case "<=":
+          return maybeNum <= targetNum;
+        case "=":
+          return maybeNum === targetNum;
+        case "~": {
+          const diff = Math.abs(maybeNum - targetNum);
+          const tol = Math.max(1, Math.abs(targetNum) * 0.1);
+          return diff <= tol;
+        }
+        default:
+          return false;
+      }
+    }
+
+    const rawStr = String(raw).toLowerCase();
+    const valStr = String(f.value).toLowerCase();
+    if (f.operator === "=") return rawStr === valStr;
+    if (f.operator === "~") return rawStr.includes(valStr);
+    return false;
+  };
+
+  const applyFilters = (list) => {
+    if (!filters || filters.length === 0) return list;
+    return list.filter((item) => filters.every((f) => evaluateFilter(f, item)));
+  };
 
   const columns = [
     { label: "Mã loại", accessor: "room_type_id" },
@@ -61,8 +113,18 @@ export default function TypeRooms() {
       accessor: "actions",
       render: (_, type) => (
         <div className="d-flex gap-2 justify-content-center">
-          <button className="btn btn-sm btn-warning" onClick={() => handleEdit(type)}>Sửa</button>
-          <button className="btn btn-sm btn-danger" onClick={() => handleDelete(type.room_type_id)}>Xóa</button>
+          <button
+            className="btn btn-sm btn-warning"
+            onClick={() => handleEdit(type)}
+          >
+            Sửa
+          </button>
+          <button
+            className="btn btn-sm btn-danger"
+            onClick={() => handleDelete(type.room_type_id)}
+          >
+            Xóa
+          </button>
         </div>
       ),
     },
@@ -95,36 +157,59 @@ export default function TypeRooms() {
     setShowConfirmDelete(true);
   };
 
-  const confirmDelete = () => {
-    setTypeRooms((prev) => prev.filter((t) => t.room_type_id !== typeToDelete));
-    toast.success("🗑️ Xóa loại phòng thành công!");
+  // Delete room type
+  const confirmDelete = async () => {
+    try {
+      const res = await fetch(`${API_URL}/${typeToDelete}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Xóa loại phòng thất bại");
+      setTypeRooms((prev) =>
+        prev.filter((t) => t.room_type_id !== typeToDelete)
+      );
+      toast.success("🗑️ Xóa loại phòng thành công!");
+    } catch (err) {
+      toast.error(err.message);
+    }
     setShowConfirmDelete(false);
     setTypeToDelete(null);
   };
 
-  const handleSubmitType = () => {
-    if (editingType) {
-      // Sửa loại phòng
-      setTypeRooms((prev) =>
-        prev.map((t) =>
-          t.room_type_id === editingType.room_type_id
-            ? { ...t, ...form }
-            : t
-        )
-      );
-      toast.success("✏️ Cập nhật loại phòng thành công!");
-    } else {
-      // Thêm loại phòng mới
-      setTypeRooms((prev) => [
-        ...prev,
-        {
-          ...form,
-          room_type_id: prev.length ? Math.max(...prev.map((t) => t.room_type_id)) + 1 : 1,
-        },
-      ]);
-      toast.success("✅ Thêm loại phòng thành công!");
+  // Add or update room type
+  const handleSubmitType = async () => {
+    try {
+      let res, data;
+      if (editingType) {
+        // Update
+        res = await fetch(`${API_URL}/${editingType.room_type_id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+        if (!res.ok) throw new Error("Cập nhật loại phòng thất bại");
+        data = await res.json();
+        setTypeRooms((prev) =>
+          prev.map((t) =>
+            t.room_type_id === editingType.room_type_id ? data : t
+          )
+        );
+        toast.success("✏️ Cập nhật loại phòng thành công!");
+      } else {
+        // Add
+        res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+        if (!res.ok) throw new Error("Thêm loại phòng thất bại");
+        data = await res.json();
+        setTypeRooms((prev) => [...prev, data]);
+        toast.success("✅ Thêm loại phòng thành công!");
+      }
+      setShowModal(false);
+    } catch (err) {
+      toast.error(err.message);
     }
-    setShowModal(false);
   };
 
   const handleCloseModal = () => {
@@ -148,7 +233,20 @@ export default function TypeRooms() {
           ➕ Thêm loại phòng
         </button>
 
-        <Table columns={columns} data={typeRooms} />
+        {/* Advanced Filters */}
+        <AdvancedFilters
+          fieldOptions={fieldOptions}
+          filters={filters}
+          setFilters={setFilters}
+        />
+
+        {loading ? (
+          <div>Đang tải dữ liệu...</div>
+        ) : error ? (
+          <div className="text-danger">{error}</div>
+        ) : (
+          <Table columns={columns} data={applyFilters(typeRooms)} />
+        )}
 
         {/* Modal Thêm / Sửa */}
         <Modal
@@ -166,7 +264,9 @@ export default function TypeRooms() {
                   type="text"
                   className="form-control"
                   value={form.type_name}
-                  onChange={(e) => handleFormChange("type_name", e.target.value)}
+                  onChange={(e) =>
+                    handleFormChange("type_name", e.target.value)
+                  }
                   required
                 />
               </div>
@@ -177,7 +277,9 @@ export default function TypeRooms() {
                   type="number"
                   className="form-control"
                   value={form.price_per_month}
-                  onChange={(e) => handleFormChange("price_per_month", parseInt(e.target.value) || 0)}
+                  onChange={(e) =>
+                    handleFormChange("price_per_month", parseInt(e.target.value) || 0)
+                  }
                   required
                 />
               </div>
@@ -187,7 +289,9 @@ export default function TypeRooms() {
                 <textarea
                   className="form-control"
                   value={form.description}
-                  onChange={(e) => handleFormChange("description", e.target.value)}
+                  onChange={(e) =>
+                    handleFormChange("description", e.target.value)
+                  }
                   rows={3}
                 />
               </div>

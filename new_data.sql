@@ -151,12 +151,12 @@ INSERT INTO KhachThue (ma_khach_thue, ho_ten, gioi_tinh, ngay_sinh, so_dien_thoa
 
 -- Thêm dữ liệu mẫu cho bảng NguoiDung
 INSERT INTO NguoiDung (ten_dang_nhap, email, mat_khau, ma_khach_thue, vai_tro, hoat_dong) VALUES
-('nguyenvanan', 'an.nguyen@gmail.com', 'hashed_password_123', 'KT001', 'NGUOIDUNG', TRUE),
-('tranbinh', 'binh.tran@gmail.com', 'hashed_password_456', 'KT002', 'NGUOIDUNG', TRUE),
-('leminhchau', 'chau.le@gmail.com', 'hashed_password_789', 'KT003', 'NGUOIDUNG', TRUE),
-('phamduc', 'duc.pham@gmail.com', 'hashed_password_101', 'KT004', 'NGUOIDUNG', TRUE),
-('hoangmai', 'mai.hoang@gmail.com', 'hashed_password_102', 'KT005', 'NGUOIDUNG', TRUE),
-('admin1', 'admin1@xai.com', 'hashed_password_admin', NULL, 'QUANTRI', TRUE);
+('luudinhkhoa', 'an.nguyen@gmail.com', '$2a$12$XgjG8xy8yQC9/DBZRPl9lO65iqOb/IAav3VbPEuiGZFeJQW6bpo8y', 'KT001', 'USER', TRUE),
+('huynhvikhang', 'binh.tran@gmail.com', '$2a$12$XgjG8xy8yQC9/DBZRPl9lO65iqOb/IAav3VbPEuiGZFeJQW6bpo8y', 'KT002', 'USER', TRUE),
+('huynhgiabao', 'chau.le@gmail.com', '$2a$12$XgjG8xy8yQC9/DBZRPl9lO65iqOb/IAav3VbPEuiGZFeJQW6bpo8y', 'KT003', 'USER', TRUE),
+('nguyenthanhtruc', 'duc.pham@gmail.com', '$2a$12$XgjG8xy8yQC9/DBZRPl9lO65iqOb/IAav3VbPEuiGZFeJQW6bpo8y', 'KT004', 'USER', TRUE),
+('dominhson', 'mai.hoang@gmail.com', '$2a$12$XgjG8xy8yQC9/DBZRPl9lO65iqOb/IAav3VbPEuiGZFeJQW6bpo8y', 'KT005', 'USER', TRUE),
+('admin', 'admin1@xai.com', '$2a$12$QmqPZUIHgqGmrDAdYwf7SuIg3Qx.v1jWiZ0lMJ5ZqYgJ7Ij.lLM.K', NULL, 'ADMIN', TRUE);
 
 -- Thêm dữ liệu mẫu cho bảng LoaiPhong
 INSERT INTO LoaiPhong (ten_loai, mo_ta, gia_thang) VALUES
