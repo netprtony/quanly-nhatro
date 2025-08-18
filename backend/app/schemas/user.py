@@ -44,3 +44,12 @@ class UserInfo(BaseModel):
 
     class Config:
         from_attributes = True
+
+class UserUpdate(BaseModel):
+    username: Optional[str]
+    email: Optional[EmailStr]
+    role: Optional[RoleEnum]
+    is_active: Optional[bool]
+    password: Optional[str]
+    class Config:
+        from_attributes = True

@@ -67,8 +67,8 @@ class Tenant(Base):
     date_of_birth = Column(Date)
     phone_number = Column(String(20))
     email = Column(String(100))
-    id_card_front_base64 = Column(Text)
-    id_card_back_base64 = Column(Text)
+    id_card_front_path = Column(String(255))
+    id_card_back_path = Column(String(255))
     address = Column(Text)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 class RoomType(Base):

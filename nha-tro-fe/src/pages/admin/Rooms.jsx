@@ -237,17 +237,24 @@ export default function Rooms() {
   return (
     <div className="container mt-4 position-relative">
       <div className="p-4 rounded shadow bg-white">
-        <h3 className="mb-3">📦 Danh sách phòng</h3>
-        <button className="btn btn-success mb-3" onClick={handleAdd}>
-          ➕ Thêm phòng
-        </button>
+        {/* Header: Tiêu đề và nút Thêm phòng ở góc phải */}
+        <div className="d-flex align-items-center justify-content-between mb-3">
+          <h3 className="mb-0">📦 Danh sách phòng</h3>
+          <button className="btn btn-success" onClick={handleAdd}>
+            ➕ Thêm phòng
+          </button>
+        </div>
 
-        <AdvancedFilters
-          fieldOptions={fieldOptions}
-          filters={filters}
-          onAddFilter={(f) => setFilters((prev) => [...prev, f])}
-          onRemoveFilter={(i) => setFilters((prev) => prev.filter((_, idx) => idx !== i))}
-        />
+        {/* Bộ lọc nâng cao nằm ngang, nút thêm bộ lọc cùng hàng với các trường */}
+        <div className="mb-3">
+          <AdvancedFilters
+            fieldOptions={fieldOptions}
+            filters={filters}
+            onAddFilter={(f) => setFilters((prev) => [...prev, f])}
+            onRemoveFilter={(i) => setFilters((prev) => prev.filter((_, idx) => idx !== i))}
+            compact
+          />
+        </div>
 
         <Table columns={columns} data={filteredRooms} />
 
@@ -364,7 +371,6 @@ export default function Rooms() {
           onClose={() => setShowConfirmExit(false)}
         />
       </div>
-
       <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );

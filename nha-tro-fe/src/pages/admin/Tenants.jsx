@@ -1,50 +1,26 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Table from "/src/components/Table.jsx";
 import Modal from "/src/components/Modal.jsx";
 import ModalConfirm from "/src/components/ModalConfirm.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-export default function Tenants() {
-  // Mock dữ liệu khách thuê
-  const [tenants, setTenants] = useState([
-    {
-      tenant_id: 1,
-      full_name: "Nguyễn Văn D",
-      phone: "0901234567",
-      email: "tenant1@example.com",
-      id_number: "123456789",
-      address: "Hà Nội",
-      is_active: true,
-    },
-    {
-      tenant_id: 2,
-      full_name: "Trần Thị E",
-      phone: "0912345678",
-      email: "tenant2@example.com",
-      id_number: "987654321",
-      address: "Hồ Chí Minh",
-      is_active: true,
-    },
-    {
-      tenant_id: 3,
-      full_name: "Lê Văn F",
-      phone: "0987654321",
-      email: "tenant3@example.com",
-      id_number: "456789123",
-      address: "Đà Nẵng",
-      is_active: false,
-    },
-  ]);
+const API_URL = "http://localhost:8000/tenants";
 
+export default function Tenants() {
+  const [tenants, setTenants] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingTenant, setEditingTenant] = useState(null);
   const [form, setForm] = useState({
+    tenant_id: "",
     full_name: "",
-    phone: "",
+    phone_number: "",
     email: "",
-    id_number: "",
     address: "",
+    gender: "Other",
+    date_of_birth: "",
+    id_card_front_path: "",
+    id_card_back_path: "",
     is_active: true,
   });
 
@@ -53,12 +29,76 @@ export default function Tenants() {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [tenantToDelete, setTenantToDelete] = useState(null);
 
+  // Lấy danh sách tenants từ API
+  const fetchTenants = async () => {
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
+      setTenants(data);
+    } catch (err) {
+      toast.error("Không thể tải danh sách khách thuê!");
+    }
+  };
+
+  useEffect(() => {
+    fetchTenants();
+  }, []);
+
+  // Thêm mới tenant
+  const createTenant = async () => {
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchTenants();
+      toast.success("✅ Thêm khách thuê thành công!");
+      setShowModal(false);
+    } catch (err) {
+      toast.error("Thêm khách thuê thất bại! " + err.message);
+    }
+  };
+
+  // Sửa tenant
+  const updateTenant = async () => {
+    try {
+      const res = await fetch(`${API_URL}/${editingTenant.tenant_id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchTenants();
+      toast.success("✏️ Cập nhật khách thuê thành công!");
+      setShowModal(false);
+    } catch (err) {
+      toast.error("Cập nhật khách thuê thất bại! " + err.message);
+    }
+  };
+
+  // Xóa tenant
+  const deleteTenant = async () => {
+    try {
+      const res = await fetch(`${API_URL}/${tenantToDelete}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchTenants();
+      toast.success("🗑️ Xóa khách thuê thành công!");
+      setShowConfirmDelete(false);
+      setTenantToDelete(null);
+    } catch (err) {
+      toast.error("Xóa khách thuê thất bại! " + err.message);
+    }
+  };
+
   const columns = [
     { label: "ID", accessor: "tenant_id" },
     { label: "Họ tên", accessor: "full_name" },
-    { label: "Số điện thoại", accessor: "phone" },
+    { label: "Số điện thoại", accessor: "phone_number" },
     { label: "Email", accessor: "email" },
-    { label: "CMND/CCCD", accessor: "id_number" },
     { label: "Địa chỉ", accessor: "address" },
     {
       label: "Trạng thái",
@@ -79,11 +119,15 @@ export default function Tenants() {
 
   const handleAdd = () => {
     setForm({
+      tenant_id: "",
       full_name: "",
-      phone: "",
+      phone_number: "",
       email: "",
-      id_number: "",
       address: "",
+      gender: "Other",
+      date_of_birth: "",
+      id_card_front_path: "",
+      id_card_back_path: "",
       is_active: true,
     });
     setEditingTenant(null);
@@ -93,11 +137,15 @@ export default function Tenants() {
 
   const handleEdit = (tenant) => {
     setForm({
+      tenant_id: tenant.tenant_id,
       full_name: tenant.full_name,
-      phone: tenant.phone,
-      email: tenant.email,
-      id_number: tenant.id_number,
-      address: tenant.address,
+      phone_number: tenant.phone_number || "",
+      email: tenant.email || "",
+      address: tenant.address || "",
+      gender: tenant.gender || "Other",
+      date_of_birth: tenant.date_of_birth || "",
+      id_card_front_path: tenant.id_card_front_path || "",
+      id_card_back_path: tenant.id_card_back_path || "",
       is_active: tenant.is_active,
     });
     setEditingTenant(tenant);
@@ -111,35 +159,15 @@ export default function Tenants() {
   };
 
   const confirmDelete = () => {
-    setTenants((prev) => prev.filter((t) => t.tenant_id !== tenantToDelete));
-    toast.success("🗑️ Xóa khách thuê thành công!");
-    setShowConfirmDelete(false);
-    setTenantToDelete(null);
+    deleteTenant();
   };
 
   const handleSubmitTenant = () => {
     if (editingTenant) {
-      // Sửa khách thuê
-      setTenants((prev) =>
-        prev.map((t) =>
-          t.tenant_id === editingTenant.tenant_id
-            ? { ...t, ...form }
-            : t
-        )
-      );
-      toast.success("✏️ Cập nhật khách thuê thành công!");
+      updateTenant();
     } else {
-      // Thêm khách thuê mới
-      setTenants((prev) => [
-        ...prev,
-        {
-          ...form,
-          tenant_id: prev.length ? Math.max(...prev.map((t) => t.tenant_id)) + 1 : 1,
-        },
-      ]);
-      toast.success("✅ Thêm khách thuê thành công!");
+      createTenant();
     }
-    setShowModal(false);
   };
 
   const handleCloseModal = () => {
@@ -176,6 +204,17 @@ export default function Tenants() {
           <form>
             <div className="row g-3">
               <div className="col-md-6">
+                <label className="form-label">Mã khách thuê</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={form.tenant_id}
+                  onChange={(e) => handleFormChange("tenant_id", e.target.value)}
+                  required
+                  disabled={!!editingTenant}
+                />
+              </div>
+              <div className="col-md-6">
                 <label className="form-label">Họ tên</label>
                 <input
                   type="text"
@@ -190,8 +229,8 @@ export default function Tenants() {
                 <input
                   type="text"
                   className="form-control"
-                  value={form.phone}
-                  onChange={(e) => handleFormChange("phone", e.target.value)}
+                  value={form.phone_number}
+                  onChange={(e) => handleFormChange("phone_number", e.target.value)}
                   required
                 />
               </div>
@@ -205,21 +244,51 @@ export default function Tenants() {
                 />
               </div>
               <div className="col-md-6">
-                <label className="form-label">CMND/CCCD</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={form.id_number}
-                  onChange={(e) => handleFormChange("id_number", e.target.value)}
-                />
-              </div>
-              <div className="col-12">
                 <label className="form-label">Địa chỉ</label>
                 <input
                   type="text"
                   className="form-control"
                   value={form.address}
                   onChange={(e) => handleFormChange("address", e.target.value)}
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Giới tính</label>
+                <select
+                  className="form-select"
+                  value={form.gender}
+                  onChange={(e) => handleFormChange("gender", e.target.value)}
+                >
+                  <option value="Male">Nam</option>
+                  <option value="Female">Nữ</option>
+                  <option value="Other">Khác</option>
+                </select>
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Ngày sinh</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={form.date_of_birth ? form.date_of_birth.substring(0, 10) : ""}
+                  onChange={(e) => handleFormChange("date_of_birth", e.target.value)}
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Ảnh CMND/CCCD mặt trước</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={form.id_card_front_path}
+                  onChange={(e) => handleFormChange("id_card_front_path", e.target.value)}
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Ảnh CMND/CCCD mặt sau</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={form.id_card_back_path}
+                  onChange={(e) => handleFormChange("id_card_back_path", e.target.value)}
                 />
               </div>
               <div className="col-12">

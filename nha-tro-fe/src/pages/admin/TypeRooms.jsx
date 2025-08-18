@@ -228,10 +228,12 @@ export default function TypeRooms() {
   return (
     <div className="container mt-4 position-relative">
       <div className="p-4 rounded shadow bg-white">
-        <h3 className="mb-3">🏷️ Danh sách loại phòng</h3>
-        <button className="btn btn-success mb-3" onClick={handleAdd}>
-          ➕ Thêm loại phòng
-        </button>
+        <div className="d-flex align-items-center justify-content-between mb-3">
+          <h3 className="mb-3">🏷️ Danh sách loại phòng</h3>
+          <button className="btn btn-success mb-3" onClick={handleAdd}>
+            ➕ Thêm loại phòng
+          </button>
+        </div>
 
         {/* Advanced Filters */}
         <AdvancedFilters

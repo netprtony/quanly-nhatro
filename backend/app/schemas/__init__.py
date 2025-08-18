@@ -4,7 +4,8 @@ from .user import (
     UserCreate,
     UserLogin,
     UserOut,
-    UserInfo
+    UserInfo,
+    UserUpdate
 )
 from .auth import TokenResponse
 from .room import (
@@ -14,4 +15,9 @@ from .room import (
     RoomCreateUpdateSchema,
     RoomTypeCreate
     
+)
+from .tenant import (
+    TenantCreate,
+    TenantUpdate,
+    TenantOut
 )

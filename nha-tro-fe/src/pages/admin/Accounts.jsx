@@ -1,39 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Table from "/src/components/Table.jsx";
 import Modal from "/src/components/Modal.jsx";
 import ModalConfirm from "/src/components/ModalConfirm.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-export default function Accounts() {
-  // Mock dữ liệu tài khoản
-  const [accounts, setAccounts] = useState([
-    {
-      account_id: 1,
-      username: "admin",
-      full_name: "Nguyễn Văn A",
-      email: "admin@example.com",
-      role: "ADMIN",
-      is_active: true,
-    },
-    {
-      account_id: 2,
-      username: "user1",
-      full_name: "Trần Thị B",
-      email: "user1@example.com",
-      role: "USER",
-      is_active: true,
-    },
-    {
-      account_id: 3,
-      username: "user2",
-      full_name: "Lê Văn C",
-      email: "user2@example.com",
-      role: "USER",
-      is_active: false,
-    },
-  ]);
+const API_URL = "http://localhost:8000/auth/accounts";
 
+export default function Accounts() {
+  const [accounts, setAccounts] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
   const [form, setForm] = useState({
@@ -42,6 +17,7 @@ export default function Accounts() {
     email: "",
     role: "USER",
     is_active: true,
+    password: "",
   });
 
   const [unsavedChanges, setUnsavedChanges] = useState(false);
@@ -49,8 +25,73 @@ export default function Accounts() {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [accountToDelete, setAccountToDelete] = useState(null);
 
+  // Lấy danh sách tài khoản từ API
+  const fetchAccounts = async () => {
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
+      setAccounts(data);
+    } catch (err) {
+      toast.error("Không thể tải danh sách tài khoản!");
+    }
+  };
+
+  useEffect(() => {
+    fetchAccounts();
+  }, []);
+
+  // Thêm tài khoản mới
+  const createAccount = async () => {
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchAccounts();
+      toast.success("✅ Thêm tài khoản thành công!");
+      setShowModal(false);
+    } catch (err) {
+      toast.error("Thêm tài khoản thất bại! " + err.message);
+    }
+  };
+
+  // Sửa tài khoản
+  const updateAccount = async () => {
+    try {
+      const res = await fetch(`${API_URL}/${editingAccount.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchAccounts();
+      toast.success("✏️ Cập nhật tài khoản thành công!");
+      setShowModal(false);
+    } catch (err) {
+      toast.error("Cập nhật tài khoản thất bại! " + err.message);
+    }
+  };
+
+  // Xóa tài khoản
+  const deleteAccount = async () => {
+    try {
+      const res = await fetch(`${API_URL}/${accountToDelete}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchAccounts();
+      toast.success("🗑️ Xóa tài khoản thành công!");
+      setShowConfirmDelete(false);
+      setAccountToDelete(null);
+    } catch (err) {
+      toast.error("Xóa tài khoản thất bại! " + err.message);
+    }
+  };
+
   const columns = [
-    { label: "ID", accessor: "account_id" },
+    { label: "ID", accessor: "id" },
     { label: "Tên đăng nhập", accessor: "username" },
     { label: "Họ tên", accessor: "full_name" },
     { label: "Email", accessor: "email" },
@@ -66,7 +107,7 @@ export default function Accounts() {
       render: (_, account) => (
         <div className="d-flex gap-2 justify-content-center">
           <button className="btn btn-sm btn-warning" onClick={() => handleEdit(account)}>Sửa</button>
-          <button className="btn btn-sm btn-danger" onClick={() => handleDelete(account.account_id)}>Xóa</button>
+          <button className="btn btn-sm btn-danger" onClick={() => handleDelete(account.id)}>Xóa</button>
         </div>
       ),
     },
@@ -79,6 +120,7 @@ export default function Accounts() {
       email: "",
       role: "USER",
       is_active: true,
+      password: "",
     });
     setEditingAccount(null);
     setUnsavedChanges(false);
@@ -88,10 +130,11 @@ export default function Accounts() {
   const handleEdit = (account) => {
     setForm({
       username: account.username,
-      full_name: account.full_name,
+      full_name: account.full_name || "",
       email: account.email,
       role: account.role,
       is_active: account.is_active,
+      password: "",
     });
     setEditingAccount(account);
     setUnsavedChanges(false);
@@ -104,35 +147,15 @@ export default function Accounts() {
   };
 
   const confirmDelete = () => {
-    setAccounts((prev) => prev.filter((a) => a.account_id !== accountToDelete));
-    toast.success("🗑️ Xóa tài khoản thành công!");
-    setShowConfirmDelete(false);
-    setAccountToDelete(null);
+    deleteAccount();
   };
 
   const handleSubmitAccount = () => {
     if (editingAccount) {
-      // Sửa tài khoản
-      setAccounts((prev) =>
-        prev.map((a) =>
-          a.account_id === editingAccount.account_id
-            ? { ...a, ...form }
-            : a
-        )
-      );
-      toast.success("✏️ Cập nhật tài khoản thành công!");
+      updateAccount();
     } else {
-      // Thêm tài khoản mới
-      setAccounts((prev) => [
-        ...prev,
-        {
-          ...form,
-          account_id: prev.length ? Math.max(...prev.map((a) => a.account_id)) + 1 : 1,
-        },
-      ]);
-      toast.success("✅ Thêm tài khoản thành công!");
+      createAccount();
     }
-    setShowModal(false);
   };
 
   const handleCloseModal = () => {
@@ -176,6 +199,7 @@ export default function Accounts() {
                   value={form.username}
                   onChange={(e) => handleFormChange("username", e.target.value)}
                   required
+                  disabled={!!editingAccount}
                 />
               </div>
               <div className="col-md-6">
@@ -224,6 +248,18 @@ export default function Accounts() {
                   </label>
                 </div>
               </div>
+              {!editingAccount && (
+                <div className="col-12">
+                  <label className="form-label">Mật khẩu</label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    value={form.password}
+                    onChange={(e) => handleFormChange("password", e.target.value)}
+                    required
+                  />
+                </div>
+              )}
             </div>
           </form>
         </Modal>
