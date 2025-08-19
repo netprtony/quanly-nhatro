@@ -1,65 +1,95 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Table from "/src/components/Table.jsx";
 import Modal from "/src/components/Modal.jsx";
 import ModalConfirm from "/src/components/ModalConfirm.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
+
+const INVOICE_API = "http://localhost:8000/invoices";
+const ROOMS_API = "http://localhost:8000/rooms";
 
 export default function Invoices() {
-  // Mock dữ liệu phiếu thu
-  const [invoices, setInvoices] = useState([
-    {
-      invoice_id: 1,
-      contract_id: 1,
-      tenant_name: "Nguyễn Văn D",
-      amount: 2500000,
-      date: "2024-06-01",
-      status: "Đã thanh toán",
-      note: "Tiền phòng tháng 6",
-    },
-    {
-      invoice_id: 2,
-      contract_id: 2,
-      tenant_name: "Trần Thị E",
-      amount: 3500000,
-      date: "2024-06-01",
-      status: "Chưa thanh toán",
-      note: "Tiền phòng tháng 6",
-    },
-    {
-      invoice_id: 3,
-      contract_id: 3,
-      tenant_name: "Lê Văn F",
-      amount: 1800000,
-      date: "2024-05-01",
-      status: "Đã thanh toán",
-      note: "Tiền phòng tháng 5",
-    },
-  ]);
-
+  const [invoices, setInvoices] = useState([]);
+  const [rooms, setRooms] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState(null);
   const [form, setForm] = useState({
-    contract_id: "",
-    tenant_name: "",
-    amount: "",
-    date: "",
-    status: "Chưa thanh toán",
-    note: "",
+    room_id: "",
+    month: "",
+    total_amount: "",
+    is_paid: false,
   });
 
   const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [showConfirmExit, setShowConfirmExit] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState(null);
+  const [filters, setFilters] = useState([]);
+
+  // Các trường cho bộ lọc nâng cao
+  const fieldOptions = [
+    { label: "Phòng", value: "room_id" },
+    { label: "Tháng", value: "month" },
+    { label: "Số tiền", value: "total_amount" },
+    { label: "Trạng thái", value: "is_paid" },
+  ];
+
+  // Lấy danh sách hóa đơn từ API
+  const fetchInvoices = async () => {
+    try {
+      let query = "";
+      if (filters.length > 0) {
+        query =
+          "?" +
+          filters
+            .map(
+              (f) =>
+                `filter_${f.field}=${encodeURIComponent(
+                  f.operator + f.value
+                )}`
+            )
+            .join("&");
+      }
+      const res = await fetch(INVOICE_API + query);
+      const data = await res.json();
+      setInvoices(data);
+    } catch (err) {
+      toast.error("Không thể tải danh sách hóa đơn!");
+    }
+  };
+
+  // Lấy danh sách phòng
+  const fetchRooms = async () => {
+    try {
+      const res = await fetch(ROOMS_API);
+      const data = await res.json();
+      setRooms(data);
+    } catch (err) {
+      toast.error("Không thể tải danh sách phòng!");
+    }
+  };
+
+  useEffect(() => {
+    fetchInvoices();
+    fetchRooms();
+    // eslint-disable-next-line
+  }, [filters]);
 
   const columns = [
     { label: "ID", accessor: "invoice_id" },
-    { label: "Hợp đồng", accessor: "contract_id" },
-    { label: "Khách thuê", accessor: "tenant_name" },
+    {
+      label: "Phòng",
+      accessor: "room_id",
+      render: (room_id) => {
+        const room = rooms.find((r) => r.room_id === room_id);
+        return room ? room.room_number : room_id;
+      },
+    },
+    { label: "Tháng", accessor: "month" },
     {
       label: "Số tiền",
-      accessor: "amount",
+      accessor: "total_amount",
       render: (value) =>
         typeof value === "number"
           ? new Intl.NumberFormat("vi-VN", {
@@ -68,9 +98,12 @@ export default function Invoices() {
             }).format(value)
           : "N/A",
     },
-    { label: "Ngày thu", accessor: "date" },
-    { label: "Trạng thái", accessor: "status" },
-    { label: "Ghi chú", accessor: "note" },
+    {
+      label: "Trạng thái",
+      accessor: "is_paid",
+      render: (is_paid) => (is_paid ? "Đã thanh toán" : "Chưa thanh toán"),
+    },
+    { label: "Ngày tạo", accessor: "created_at" },
     {
       label: "Thao tác",
       accessor: "actions",
@@ -85,12 +118,10 @@ export default function Invoices() {
 
   const handleAdd = () => {
     setForm({
-      contract_id: "",
-      tenant_name: "",
-      amount: "",
-      date: "",
-      status: "Chưa thanh toán",
-      note: "",
+      room_id: "",
+      month: "",
+      total_amount: "",
+      is_paid: false,
     });
     setEditingInvoice(null);
     setUnsavedChanges(false);
@@ -99,12 +130,10 @@ export default function Invoices() {
 
   const handleEdit = (invoice) => {
     setForm({
-      contract_id: invoice.contract_id,
-      tenant_name: invoice.tenant_name,
-      amount: invoice.amount,
-      date: invoice.date,
-      status: invoice.status,
-      note: invoice.note,
+      room_id: invoice.room_id ? String(invoice.room_id) : "",
+      month: invoice.month ? invoice.month.slice(0, 7) : "",
+      total_amount: invoice.total_amount || "",
+      is_paid: invoice.is_paid,
     });
     setEditingInvoice(invoice);
     setUnsavedChanges(false);
@@ -116,36 +145,52 @@ export default function Invoices() {
     setShowConfirmDelete(true);
   };
 
-  const confirmDelete = () => {
-    setInvoices((prev) => prev.filter((i) => i.invoice_id !== invoiceToDelete));
-    toast.success("🗑️ Xóa phiếu thu thành công!");
-    setShowConfirmDelete(false);
-    setInvoiceToDelete(null);
+  const confirmDelete = async () => {
+    try {
+      const res = await fetch(`${INVOICE_API}/${invoiceToDelete}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchInvoices();
+      toast.success("🗑️ Xóa hóa đơn thành công!");
+      setShowConfirmDelete(false);
+      setInvoiceToDelete(null);
+    } catch (err) {
+      toast.error("Xóa hóa đơn thất bại! " + err.message);
+    }
   };
 
-  const handleSubmitInvoice = () => {
-    if (editingInvoice) {
-      // Sửa phiếu thu
-      setInvoices((prev) =>
-        prev.map((i) =>
-          i.invoice_id === editingInvoice.invoice_id
-            ? { ...i, ...form }
-            : i
-        )
-      );
-      toast.success("✏️ Cập nhật phiếu thu thành công!");
-    } else {
-      // Thêm phiếu thu mới
-      setInvoices((prev) => [
-        ...prev,
-        {
-          ...form,
-          invoice_id: prev.length ? Math.max(...prev.map((i) => i.invoice_id)) + 1 : 1,
-        },
-      ]);
-      toast.success("✅ Thêm phiếu thu thành công!");
+  const handleSubmitInvoice = async () => {
+    const payload = {
+      ...form,
+      room_id: form.room_id ? parseInt(form.room_id) : null,
+      total_amount: form.total_amount ? parseFloat(form.total_amount) : 0,
+      is_paid: form.is_paid,
+      month: form.month ? form.month + "-01" : "", // chuyển từ yyyy-MM sang yyyy-MM-01
+    };
+    try {
+      if (editingInvoice) {
+        const res = await fetch(`${INVOICE_API}/${editingInvoice.invoice_id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        toast.success("✏️ Cập nhật hóa đơn thành công!");
+      } else {
+        const res = await fetch(INVOICE_API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        toast.success("✅ Thêm hóa đơn thành công!");
+      }
+      await fetchInvoices();
+      setShowModal(false);
+    } catch (err) {
+      toast.error("Lưu hóa đơn thất bại! " + err.message);
     }
-    setShowModal(false);
   };
 
   const handleCloseModal = () => {
@@ -164,9 +209,17 @@ export default function Invoices() {
   return (
     <div className="container mt-4 position-relative">
       <div className="p-4 rounded shadow bg-white">
-        <h3 className="mb-3">💵 Danh sách phiếu thu</h3>
+        <h3 className="mb-3">💵 Danh sách hóa đơn</h3>
+        {/* Bộ lọc nâng cao */}
+        <AdvancedFilters
+          fieldOptions={fieldOptions}
+          filters={filters}
+          onAddFilter={(f) => setFilters((prev) => [...prev, f])}
+          onRemoveFilter={(i) => setFilters((prev) => prev.filter((_, idx) => idx !== i))}
+        />
+
         <button className="btn btn-success mb-3" onClick={handleAdd}>
-          ➕ Thêm phiếu thu
+          ➕ Thêm hóa đơn
         </button>
 
         <Table columns={columns} data={invoices} />
@@ -175,29 +228,35 @@ export default function Invoices() {
         <Modal
           isOpen={showModal}
           onClose={handleCloseModal}
-          title={editingInvoice ? "✏️ Chỉnh sửa phiếu thu" : "➕ Thêm phiếu thu"}
+          title={editingInvoice ? "✏️ Chỉnh sửa hóa đơn" : "➕ Thêm hóa đơn"}
           showConfirm
           onConfirm={handleSubmitInvoice}
         >
           <form>
             <div className="row g-3">
               <div className="col-md-6">
-                <label className="form-label">Hợp đồng</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={form.contract_id}
-                  onChange={(e) => handleFormChange("contract_id", e.target.value)}
+                <label className="form-label">Phòng</label>
+                <select
+                  className="form-select"
+                  value={form.room_id}
+                  onChange={(e) => handleFormChange("room_id", e.target.value)}
                   required
-                />
+                >
+                  <option value="">-- Chọn phòng --</option>
+                  {rooms.map(room => (
+                    <option key={room.room_id} value={room.room_id}>
+                      {room.room_number}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="col-md-6">
-                <label className="form-label">Khách thuê</label>
+                <label className="form-label">Tháng</label>
                 <input
-                  type="text"
+                  type="month"
                   className="form-control"
-                  value={form.tenant_name}
-                  onChange={(e) => handleFormChange("tenant_name", e.target.value)}
+                  value={form.month}
+                  onChange={(e) => handleFormChange("month", e.target.value)}
                   required
                 />
               </div>
@@ -206,18 +265,8 @@ export default function Invoices() {
                 <input
                   type="number"
                   className="form-control"
-                  value={form.amount}
-                  onChange={(e) => handleFormChange("amount", parseInt(e.target.value) || 0)}
-                  required
-                />
-              </div>
-              <div className="col-md-6">
-                <label className="form-label">Ngày thu</label>
-                <input
-                  type="date"
-                  className="form-control"
-                  value={form.date}
-                  onChange={(e) => handleFormChange("date", e.target.value)}
+                  value={form.total_amount}
+                  onChange={(e) => handleFormChange("total_amount", e.target.value)}
                   required
                 />
               </div>
@@ -225,22 +274,13 @@ export default function Invoices() {
                 <label className="form-label">Trạng thái</label>
                 <select
                   className="form-select"
-                  value={form.status}
-                  onChange={(e) => handleFormChange("status", e.target.value)}
+                  value={form.is_paid ? "true" : "false"}
+                  onChange={(e) => handleFormChange("is_paid", e.target.value === "true")}
                   required
                 >
-                  <option value="Đã thanh toán">Đã thanh toán</option>
-                  <option value="Chưa thanh toán">Chưa thanh toán</option>
+                  <option value="false">Chưa thanh toán</option>
+                  <option value="true">Đã thanh toán</option>
                 </select>
-              </div>
-              <div className="col-12">
-                <label className="form-label">Ghi chú</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={form.note}
-                  onChange={(e) => handleFormChange("note", e.target.value)}
-                />
               </div>
             </div>
           </form>
@@ -250,7 +290,7 @@ export default function Invoices() {
         <ModalConfirm
           isOpen={showConfirmDelete}
           title="Xác nhận xóa"
-          message="Bạn có chắc chắn muốn xóa phiếu thu này không?"
+          message="Bạn có chắc chắn muốn xóa hóa đơn này không?"
           confirmText="Xóa"
           cancelText="Hủy"
           onConfirm={confirmDelete}
