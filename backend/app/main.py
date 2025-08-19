@@ -1,15 +1,21 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from . import models, database
-from .auth_routes import router as auth_router
-from .room_routes import router as room_router
-from .roomtype_routes import router as roomtype_router
-from .tenant_routes import router as tenant_router
-from .contract_routes import router as contract_routes
-from .device_routes import router as device_router
-from .payment_routes import router as payment_router
-from .electricity_routes import router as electricity_router
-from .account_routes import router as account_router
+from fastapi import FastAPI
+from app.routers import (
+    auth_router,
+    account_router,
+    # contract_router,
+    # device_router,
+    # electricity_router,
+    # invoice_router,
+    # payment_router,
+    # protected_router,
+    # reservation_router,
+    room_router,
+    roomtype_router,
+    tenant_router,
+)
 app = FastAPI()
 
 # ✅ Cấu hình CORS:
@@ -28,14 +34,17 @@ app.add_middleware(
 
 # Đăng ký router
 app.include_router(auth_router)
+app.include_router(account_router)
+# app.include_router(contract_router)
+# app.include_router(device_router)
+# app.include_router(electricity_router)
+# app.include_router(invoice_router)
+# app.include_router(payment_router)
+# app.include_router(protected_router)
+# app.include_router(reservation_router)
 app.include_router(room_router)
 app.include_router(roomtype_router)
-app.include_router(contract_routes)
-app.include_router(device_router)
-app.include_router(payment_router)
-app.include_router(electricity_router)
 app.include_router(tenant_router)
-app.include_router(account_router)
 @app.get("/")
 def root():
     return {"message": "CORS đã bật thành công"}

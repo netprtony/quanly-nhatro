@@ -1,17 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from . import models, schemas, database
-
+from app import models, utils, database
+from app.schemas import room as room_schema
 router = APIRouter(prefix="/rooms", tags=["Rooms"])
 
 # ✅ Get all rooms
-@router.get("/", response_model=List[schemas.RoomSchema])
+@router.get("/", response_model=List[room_schema.RoomSchema])
 def get_all_rooms(db: Session = Depends(database.get_db)):
     return db.query(models.Room).join(models.RoomType).all()
 
 # ✅ Get single room
-@router.get("/{room_id}", response_model=schemas.RoomSchema)
+@router.get("/{room_id}", response_model=room_schema.RoomSchema)
 def get_room(room_id: int, db: Session = Depends(database.get_db)):
     room = db.query(models.Room).filter(models.Room.room_id == room_id).first()
     if not room:
@@ -19,8 +19,8 @@ def get_room(room_id: int, db: Session = Depends(database.get_db)):
     return room
 
 # ✅ Create a new room
-@router.post("/", response_model=schemas.RoomSchema)
-def create_room(room: schemas.RoomCreate, db: Session = Depends(database.get_db)):
+@router.post("/", response_model=room_schema.RoomSchema)
+def create_room(room: room_schema.RoomCreate, db: Session = Depends(database.get_db)):
     new_room = models.Room(**room.dict())
     db.add(new_room)
     db.commit()
@@ -28,8 +28,8 @@ def create_room(room: schemas.RoomCreate, db: Session = Depends(database.get_db)
     return new_room
 
 # ✅ Update existing room
-@router.put("/{room_id}", response_model=schemas.RoomSchema)
-def update_room(room_id: int, room_data: schemas.RoomCreate, db: Session = Depends(database.get_db)):
+@router.put("/{room_id}", response_model=room_schema.RoomSchema)
+def update_room(room_id: int, room_data: room_schema.RoomCreate, db: Session = Depends(database.get_db)):
     room = db.query(models.Room).filter(models.Room.room_id == room_id).first()
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")

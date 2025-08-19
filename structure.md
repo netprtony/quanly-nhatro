@@ -1,10 +1,9 @@
-# File Tree: quanly-nhatro
+# File Tree: NhaTroBaoBao
 
-Generated on: 8/17/2025, 7:38:14 PM
-Root path: `d:\DoAnTotNghie_QLNT\quanly-nhatro`
+Generated on: 8/19/2025, 11:51:31 AM
+Root path: `d:\NhaTroBaoBao`
 
 ```
-├── 📁 .env/ 🚫 (auto-hidden)
 ├── 📁 .git/ 🚫 (auto-hidden)
 ├── 📁 .github/
 │   └── 📁 ISSUE_TEMPLATE/
@@ -19,29 +18,42 @@ Root path: `d:\DoAnTotNghie_QLNT\quanly-nhatro`
 │       ├── 📝 test-ready.md
 │       ├── 📝 test-wip.md
 │       └── 📝 user-story.md
+├── 📁 .venv/ 🚫 (auto-hidden)
 ├── 📁 backend/
 │   ├── 📁 app/
 │   │   ├── 📁 __pycache__/ 🚫 (auto-hidden)
+│   │   ├── 📁 routers/
+│   │   │   ├── 📁 __pycache__/ 🚫 (auto-hidden)
+│   │   │   ├── 🐍 __init__.py
+│   │   │   ├── 🐍 account.py
+│   │   │   ├── 🐍 auth.py
+│   │   │   ├── 🐍 contract.py
+│   │   │   ├── 🐍 device.py
+│   │   │   ├── 🐍 electricity.py
+│   │   │   ├── 🐍 invoice.py
+│   │   │   ├── 🐍 payment.py
+│   │   │   ├── 🐍 protected.py
+│   │   │   ├── 🐍 reservation.py
+│   │   │   ├── 🐍 room.py
+│   │   │   ├── 🐍 roomtype.py
+│   │   │   └── 🐍 tenant.py
 │   │   ├── 📁 schemas/
 │   │   │   ├── 📁 __pycache__/ 🚫 (auto-hidden)
 │   │   │   ├── 🐍 __init__.py
 │   │   │   ├── 🐍 auth.py
 │   │   │   ├── 🐍 room.py
+│   │   │   ├── 🐍 tenant.py
 │   │   │   └── 🐍 user.py
 │   │   ├── 🐍 auth_dependency.py
-│   │   ├── 🐍 auth_routes.py
 │   │   ├── 🐍 database.py
 │   │   ├── 🐍 main.py
 │   │   ├── 🐍 models.py
-│   │   ├── 🐍 protected_route.py
-│   │   ├── 🐍 room_routes.py
-│   │   ├── 🐍 roomtype_routes.py
-│   │   ├── 🐍 tenant_routes.py
 │   │   └── 🐍 utils.py
 │   ├── 🔒 .env 🚫 (auto-hidden)
 │   ├── 📄 runtime.txt
 │   └── 🐚 start.sh
 ├── 📁 nha-tro-fe/
+│   ├── 📁 dist/ 🚫 (auto-hidden)
 │   ├── 📁 node_modules/ 🚫 (auto-hidden)
 │   ├── 📁 public/
 │   │   ├── 📁 cccd/
@@ -151,8 +163,10 @@ Root path: `d:\DoAnTotNghie_QLNT\quanly-nhatro`
 │   └── 📄 vite.config.js
 ├── 🚫 .gitignore
 ├── 🗄️ data.sql
+├── 📄 digram.mwb
 ├── 🗄️ new_data.sql
-└── 📄 requirements.txt
+├── 📄 requirements.txt
+└── 📝 start.md
 ```
 
 ---

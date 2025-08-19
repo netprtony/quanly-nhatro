@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from fastapi import Query
 from typing import List
-from . import models, schemas, utils, database
-from app.schemas import UserLogin, TokenResponse, UserOut, UserCreate, UserUpdate
+from app import models, utils, database
+from app.schemas import user as user_chema 
+from app.schemas import auth as auth_schema
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 from app.models import User
 def get_db():
@@ -13,8 +14,8 @@ def get_db():
     finally:
         db.close()
 
-@router.post("/register", response_model=schemas.UserOut)
-def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+@router.post("/register", response_model=user_chema.UserOut)
+def register(user: user_chema.UserCreate, db: Session = Depends(get_db)):
     if db.query(models.User).filter(models.User.username == user.username).first():
         raise HTTPException(status_code=400, detail="Username already exists")
     if db.query(models.User).filter(models.User.email == user.email).first():
@@ -31,9 +32,9 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
     return new_user
 
-@router.post("/login", response_model=TokenResponse)
-def login(user: UserLogin, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.username == user.username).first()
+@router.post("/login", response_model=auth_schema.TokenResponse)
+def login(user: user_chema.UserLogin, db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.username == user.username).first()
     if not db_user or not utils.verify_password(user.password, db_user.password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
     if not db_user.is_active:
@@ -53,14 +54,14 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     }
 
 # api đổi mật khẩu
-@router.post("/change-password", response_model=schemas.UserOut)
+@router.post("/change-password", response_model=user_chema.UserOut)
 def change_password(
-    user: schemas.ChangePassword,
+    user: user_chema.ChangePassword,
     db: Session = Depends(get_db),
-    current_user: User = Depends(utils.get_current_user)
+    current_user: models.User = Depends(utils.get_current_user)
 ):
     # Truy vấn lại user từ session db
-    db_user = db.query(User).filter(User.id == current_user.id).first()
+    db_user = db.query(models.User).filter(models.User.id == current_user.id).first()
     if not utils.verify_password(user.old_password, db_user.password):
         raise HTTPException(status_code=400, detail="Old password is incorrect")
 
@@ -71,7 +72,7 @@ def change_password(
     return db_user
 
 # API: Lấy danh sách tài khoản (có phân trang, tìm kiếm)
-@router.get("/accounts", response_model=List[UserOut])
+@router.get("/accounts", response_model=List[user_chema.UserOut])
 def get_accounts(
     db: Session = Depends(get_db),
     skip: int = 0,
@@ -86,19 +87,19 @@ def get_accounts(
     return query.offset(skip).limit(limit).all()
 
 # API: Lấy chi tiết tài khoản theo id
-@router.get("/accounts/{user_id}", response_model=UserOut)
+@router.get("/accounts/{user_id}", response_model=user_chema.UserOut)
 def get_account(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
 # API: Tạo tài khoản mới (admin)
-@router.post("/accounts", response_model=UserOut, status_code=201)
-def create_account(user: UserCreate, db: Session = Depends(get_db)):
-    if db.query(User).filter(User.username == user.username).first():
+@router.post("/accounts", response_model=user_chema.UserOut, status_code=201)
+def create_account(user: user_chema.UserCreate, db: Session = Depends(get_db)):
+    if db.query(models.User).filter(models.User.username == user.username).first():
         raise HTTPException(status_code=400, detail="Username already exists")
-    if db.query(User).filter(User.email == user.email).first():
+    if db.query(models.User).filter(models.User.email == user.email).first():
         raise HTTPException(status_code=400, detail="Email already exists")
     hashed_pw = utils.hash_password(user.password)
     new_user = User(
@@ -114,17 +115,17 @@ def create_account(user: UserCreate, db: Session = Depends(get_db)):
     return new_user
 
 # API: Cập nhật tài khoản
-@router.put("/accounts/{user_id}", response_model=UserOut)
-def update_account(user_id: int, user: UserUpdate, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.id == user_id).first()
+@router.put("/accounts/{user_id}", response_model=user_chema.UserOut)
+def update_account(user_id: int, user: user_chema.UserUpdate, db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
     if user.username and user.username != db_user.username:
-        if db.query(User).filter(User.username == user.username).first():
+        if db.query(models.User).filter(models.User.username == user.username).first():
             raise HTTPException(status_code=400, detail="Username already exists")
         db_user.username = user.username
     if user.email and user.email != db_user.email:
-        if db.query(User).filter(User.email == user.email).first():
+        if db.query(models.User).filter(models.User.email == user.email).first():
             raise HTTPException(status_code=400, detail="Email already exists")
         db_user.email = user.email
     if user.role:
@@ -138,7 +139,7 @@ def update_account(user_id: int, user: UserUpdate, db: Session = Depends(get_db)
 # API: Xóa tài khoản
 @router.delete("/accounts/{user_id}", response_model=dict)
 def delete_account(user_id: int, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.id == user_id).first()
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
     db.delete(db_user)
