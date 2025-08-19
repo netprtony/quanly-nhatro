@@ -21,3 +21,33 @@ from .tenant import (
     TenantUpdate,
     TenantOut
 )
+from .reservation import (
+    ReservationCreate,
+    ReservationUpdate,
+    ReservationOut
+)
+from .contract import (
+    ContractCreate,
+    ContractUpdate,
+    ContractOut
+)
+from .device import (
+    DeviceCreate,
+    DeviceUpdate,
+    DeviceOut
+)
+from .electricity import (
+    ElectricityMeterCreate,
+    ElectricityMeterUpdate,
+    ElectricityMeterOut
+)
+from .invoice import (
+    InvoiceCreate,
+    InvoiceUpdate,
+    InvoiceOut
+)
+from .payment import (
+    PaymentCreate,
+    PaymentUpdate,
+    PaymentOut
+)

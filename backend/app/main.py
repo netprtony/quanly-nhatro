@@ -5,13 +5,13 @@ from fastapi import FastAPI
 from app.routers import (
     auth_router,
     account_router,
-    # contract_router,
-    # device_router,
-    # electricity_router,
-    # invoice_router,
-    # payment_router,
+    contract_router,
+    device_router,
+    electricity_router,
+    invoice_router,
+    payment_router,
     # protected_router,
-    # reservation_router,
+    reservation_router,
     room_router,
     roomtype_router,
     tenant_router,
@@ -35,13 +35,13 @@ app.add_middleware(
 # Đăng ký router
 app.include_router(auth_router)
 app.include_router(account_router)
-# app.include_router(contract_router)
-# app.include_router(device_router)
-# app.include_router(electricity_router)
-# app.include_router(invoice_router)
-# app.include_router(payment_router)
+app.include_router(contract_router)
+app.include_router(device_router)
+app.include_router(electricity_router)
+app.include_router(invoice_router)
+app.include_router(payment_router)
 # app.include_router(protected_router)
-# app.include_router(reservation_router)
+app.include_router(reservation_router)
 app.include_router(room_router)
 app.include_router(roomtype_router)
 app.include_router(tenant_router)

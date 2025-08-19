@@ -1,10 +1,10 @@
 # models.py
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, Enum, DECIMAL, Date
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, Enum, DECIMAL, Date, func
 from sqlalchemy.orm import relationship
 from .database import Base
 import enum
 import datetime
-from sqlalchemy.types import JSON
+
 # --- ENUM DEFINITIONS ---
 class RoleEnum(str, enum.Enum):
     USER = 'USER'
@@ -41,26 +41,14 @@ class RepairStatusEnum(str, enum.Enum):
     Completed = 'Completed'
     Cancelled = 'Cancelled'
 
+class ReservationStatusEnum(str, enum.Enum):
+    Pending = "Pending"
+    Confirmed = "Confirmed"
+    Cancelled = "Cancelled"
+
 # --- MODEL DEFINITIONS ---
-class User(Base):
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(100), unique=True, nullable=False)
-    email = Column(String(255), unique=True, nullable=False)
-    password = Column(String(255), nullable=False)
-    tenant_id = Column(String(15), ForeignKey("tenants.tenant_id", ondelete="CASCADE"), unique=True)
-    token = Column(String(512))
-    otp_code = Column(String(10))
-    otp_expiry = Column(DateTime)
-    role = Column(Enum(RoleEnum), default=RoleEnum.USER)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
-
 class Tenant(Base):
-    __tablename__ = "tenants"
-
+    __tablename__ = "Tenants"
     tenant_id = Column(String(15), primary_key=True, index=True)
     full_name = Column(String(100), nullable=False)
     gender = Column(Enum(GenderEnum), default=GenderEnum.Other)
@@ -71,6 +59,24 @@ class Tenant(Base):
     id_card_back_path = Column(String(255))
     address = Column(Text)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class User(Base):
+    __tablename__ = "Users"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(100), unique=True, nullable=False)
+    email = Column(String(255), unique=True, nullable=False)
+    password = Column(String(255), nullable=False)
+    tenant_id = Column(String(15), ForeignKey("Tenants.tenant_id", ondelete="CASCADE"), unique=True)
+    token = Column(String(512))
+    otp_code = Column(String(10))
+    otp_expiry = Column(DateTime)
+    role = Column(Enum(RoleEnum), default=RoleEnum.USER)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    reservations = relationship("Reservation", back_populates="user", cascade="all, delete")
+
 class RoomType(Base):
     __tablename__ = "RoomTypes"
     room_type_id = Column(Integer, primary_key=True, index=True)
@@ -84,20 +90,20 @@ class Room(Base):
     __tablename__ = "Rooms"
     room_id = Column(Integer, primary_key=True, index=True)
     room_number = Column(String(50), unique=True, nullable=False)
-    room_type_id = Column(Integer, ForeignKey("RoomTypes.room_type_id"), nullable=False)
+    room_type_id = Column(Integer, ForeignKey("RoomTypes.room_type_id", ondelete="CASCADE"), nullable=False)
     max_occupants = Column(Integer, default=1)
     is_available = Column(Boolean, default=True)
     floor_number = Column(Integer)
     description = Column(Text)
 
     room_type = relationship("RoomType", back_populates="rooms")
+    reservations = relationship("Reservation", back_populates="room", cascade="all, delete")
 
 class Contract(Base):
-    __tablename__ = "contracts"
-
+    __tablename__ = "Contracts"
     contract_id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(15), ForeignKey("tenants.tenant_id", ondelete="CASCADE"), nullable=False)
-    room_id = Column(Integer, ForeignKey("rooms.room_id", ondelete="CASCADE"), nullable=False)
+    tenant_id = Column(String(15), ForeignKey("Tenants.tenant_id", ondelete="CASCADE"), nullable=False)
+    room_id = Column(Integer, ForeignKey("Rooms.room_id", ondelete="CASCADE"), nullable=False)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date)
     deposit_amount = Column(DECIMAL(10, 2))
@@ -106,10 +112,9 @@ class Contract(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 class ElectricityMeter(Base):
-    __tablename__ = "electricitymeters"
-
+    __tablename__ = "ElectricityMeters"
     meter_id = Column(Integer, primary_key=True, index=True)
-    room_id = Column(Integer, ForeignKey("rooms.room_id", ondelete="CASCADE"), nullable=False)
+    room_id = Column(Integer, ForeignKey("Rooms.room_id", ondelete="CASCADE"), nullable=False)
     month = Column(Date, nullable=False)
     old_reading = Column(Integer, nullable=False)
     new_reading = Column(Integer, nullable=False)
@@ -119,30 +124,27 @@ class ElectricityMeter(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 class Invoice(Base):
-    __tablename__ = "invoices"
-
+    __tablename__ = "Invoices"
     invoice_id = Column(Integer, primary_key=True, index=True)
-    room_id = Column(Integer, ForeignKey("rooms.room_id", ondelete="CASCADE"), nullable=False)
+    room_id = Column(Integer, ForeignKey("Rooms.room_id", ondelete="CASCADE"), nullable=False)
     month = Column(Date, nullable=False)
     total_amount = Column(DECIMAL(12, 2))
     is_paid = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 class InvoiceDetail(Base):
-    __tablename__ = "invoicedetails"
-
+    __tablename__ = "InvoiceDetails"
     detail_id = Column(Integer, primary_key=True, index=True)
-    invoice_id = Column(Integer, ForeignKey("invoices.invoice_id", ondelete="CASCADE"), nullable=False)
-    meter_id = Column(Integer, ForeignKey("electricitymeters.meter_id", ondelete="SET NULL"), nullable=True)
+    invoice_id = Column(Integer, ForeignKey("Invoices.invoice_id", ondelete="CASCADE"), nullable=False)
+    meter_id = Column(Integer, ForeignKey("ElectricityMeters.meter_id", ondelete="SET NULL"), nullable=True)
     fee_type = Column(Enum(FeeTypeEnum), nullable=False)
     amount = Column(DECIMAL(10, 2), nullable=False)
     note = Column(Text)
 
 class Payment(Base):
-    __tablename__ = "payments"
-
+    __tablename__ = "Payments"
     payment_id = Column(Integer, primary_key=True, index=True)
-    invoice_id = Column(Integer, ForeignKey("invoices.invoice_id", ondelete="CASCADE"), nullable=False)
+    invoice_id = Column(Integer, ForeignKey("Invoices.invoice_id", ondelete="CASCADE"), nullable=False)
     paid_amount = Column(DECIMAL(12, 2), nullable=False)
     payment_date = Column(DateTime, default=datetime.datetime.utcnow)
     payment_method = Column(Enum(PaymentMethodEnum), default=PaymentMethodEnum.Cash)
@@ -150,31 +152,41 @@ class Payment(Base):
     note = Column(Text)
 
 class RepairRequest(Base):
-    __tablename__ = "repairrequests"
-
+    __tablename__ = "RepairRequests"
     request_id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(15), ForeignKey("tenants.tenant_id", ondelete="CASCADE"), nullable=False)
-    room_id = Column(Integer, ForeignKey("rooms.room_id", ondelete="CASCADE"), nullable=False)
+    tenant_id = Column(String(15), ForeignKey("Tenants.tenant_id", ondelete="CASCADE"), nullable=False)
+    room_id = Column(Integer, ForeignKey("Rooms.room_id", ondelete="CASCADE"), nullable=False)
     request_date = Column(DateTime, default=datetime.datetime.utcnow)
     issue_description = Column(Text, nullable=False)
     status = Column(Enum(RepairStatusEnum), default=RepairStatusEnum.Pending)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
-class Notification(Base):
-    __tablename__ = "notifications"
+class Reservation(Base):
+    __tablename__ = "Reservations"
+    reservation_id = Column(Integer, primary_key=True, index=True)
+    contact_phone = Column(String(15), nullable=False)
+    room_id = Column(Integer, ForeignKey("Rooms.room_id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("Users.id", ondelete="CASCADE"), nullable=True)
+    status = Column(Enum(ReservationStatusEnum), default=ReservationStatusEnum.Pending, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
 
+    user = relationship("User", back_populates="reservations")
+    room = relationship("Room", back_populates="reservations")
+
+class Notification(Base):
+    __tablename__ = "Notifications"
     notification_id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("Users.id", ondelete="CASCADE"), nullable=False)
     title = Column(String(255), nullable=False)
     message = Column(Text, nullable=False)
     is_read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
-class AuditLog(Base):
-    __tablename__ = "auditlogs"
-
-    log_id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    action = Column(String(100), nullable=False)
+class Device(Base):
+    __tablename__ = "Devices"
+    device_id = Column(Integer, primary_key=True, index=True)
+    device_name = Column(String(100), nullable=False)
+    room_id = Column(Integer, ForeignKey("Rooms.room_id", ondelete="SET NULL"), nullable=True)
     description = Column(Text)
+    is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

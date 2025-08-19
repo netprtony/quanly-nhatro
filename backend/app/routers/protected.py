@@ -1,6 +1,6 @@
 # protected_route.py
 from fastapi import APIRouter, Depends
-from auth_dependency import get_current_user
+from aauth_dependency import get_current_user
 
 router = APIRouter()
 

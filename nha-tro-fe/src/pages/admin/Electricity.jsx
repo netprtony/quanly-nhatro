@@ -1,50 +1,26 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import Table from "/src/components/Table.jsx";
+import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
 import Modal from "/src/components/Modal.jsx";
 import ModalConfirm from "/src/components/ModalConfirm.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-export default function Electricity() {
-  // Mock dữ liệu hóa đơn điện
-  const [electricities, setElectricities] = useState([
-    {
-      electricity_id: 1,
-      room_number: "101",
-      month: "2024-06",
-      old_index: 320,
-      new_index: 350,
-      price_per_kwh: 3500,
-      note: "Chỉ số đầu tháng 6",
-    },
-    {
-      electricity_id: 2,
-      room_number: "202",
-      month: "2024-06",
-      old_index: 410,
-      new_index: 430,
-      price_per_kwh: 3500,
-      note: "",
-    },
-    {
-      electricity_id: 3,
-      room_number: "303",
-      month: "2024-06",
-      old_index: 150,
-      new_index: 170,
-      price_per_kwh: 3500,
-      note: "",
-    },
-  ]);
+const ROOMS_API = "http://localhost:8000/rooms";
+const ELECTRICITY_API = "http://localhost:8000/electricity";
 
+export default function Electricity() {
+  const [electricities, setElectricities] = useState([]);
+  const [rooms, setRooms] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingElectricity, setEditingElectricity] = useState(null);
   const [form, setForm] = useState({
-    room_number: "",
+    room_id: "",
     month: "",
-    old_index: "",
-    new_index: "",
-    price_per_kwh: 3500,
+    old_reading: "",
+    new_reading: "",
+    electricity_rate: 3500,
     note: "",
   });
 
@@ -53,31 +29,50 @@ export default function Electricity() {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [electricityToDelete, setElectricityToDelete] = useState(null);
 
+  // Advanced filters state
+  const [filters, setFilters] = useState([]);
+  const [newFilter, setNewFilter] = useState({ field: "room_id", operator: "=", value: "" });
+
+  const fieldOptions = [
+    { value: "room_id", label: "Phòng", type: "number" },
+    { value: "month", label: "Tháng", type: "string" },
+    { value: "old_reading", label: "Chỉ số cũ", type: "number" },
+    { value: "new_reading", label: "Chỉ số mới", type: "number" },
+    { value: "electricity_rate", label: "Đơn giá", type: "number" },
+  ];
+
   const columns = [
-    { label: "ID", accessor: "electricity_id" },
-    { label: "Phòng", accessor: "room_number" },
+    { label: "ID", accessor: "meter_id" },
+    {
+      label: "Phòng",
+      accessor: "room_id",
+      render: (room_id) => {
+        const room = rooms.find(r => r.room_id === room_id);
+        return room ? room.room_number : room_id;
+      }
+    },
     { label: "Tháng", accessor: "month" },
-    { label: "Chỉ số cũ", accessor: "old_index" },
-    { label: "Chỉ số mới", accessor: "new_index" },
+    { label: "Chỉ số cũ", accessor: "old_reading" },
+    { label: "Chỉ số mới", accessor: "new_reading" },
     {
       label: "Số kWh",
-      accessor: "calc_kwh",
-      render: (_, row) => row.new_index - row.old_index,
+      accessor: "usage_kwh",
+      render: (_, row) => row.new_reading - row.old_reading,
     },
     {
       label: "Thành tiền",
-      accessor: "calc_total",
-      render: (_, row) =>
-        typeof row.new_index === "number" && typeof row.old_index === "number"
+      accessor: "total_amount",
+      render: (value) =>
+        typeof value === "number"
           ? new Intl.NumberFormat("vi-VN", {
               style: "currency",
               currency: "VND",
-            }).format((row.new_index - row.old_index) * row.price_per_kwh)
+            }).format(value)
           : "N/A",
     },
     {
       label: "Đơn giá (kWh)",
-      accessor: "price_per_kwh",
+      accessor: "electricity_rate",
       render: (value) =>
         typeof value === "number"
           ? new Intl.NumberFormat("vi-VN", {
@@ -93,19 +88,42 @@ export default function Electricity() {
       render: (_, electricity) => (
         <div className="d-flex gap-2 justify-content-center">
           <button className="btn btn-sm btn-warning" onClick={() => handleEdit(electricity)}>Sửa</button>
-          <button className="btn btn-sm btn-danger" onClick={() => handleDelete(electricity.electricity_id)}>Xóa</button>
+          <button className="btn btn-sm btn-danger" onClick={() => handleDelete(electricity.meter_id)}>Xóa</button>
         </div>
       ),
     },
   ];
 
+  const fetchRooms = async () => {
+    try {
+      const res = await axios.get(ROOMS_API);
+      setRooms(res.data);
+    } catch (err) {
+      toast.error("❌ Lỗi khi lấy danh sách phòng!");
+    }
+  };
+
+  const fetchElectricities = async () => {
+    try {
+      const res = await axios.get(ELECTRICITY_API);
+      setElectricities(res.data);
+    } catch (err) {
+      toast.error("❌ Lỗi khi lấy danh sách hóa đơn điện!");
+    }
+  };
+
+  useEffect(() => {
+    fetchRooms();
+    fetchElectricities();
+  }, []);
+
   const handleAdd = () => {
     setForm({
-      room_number: "",
+      room_id: "",
       month: "",
-      old_index: "",
-      new_index: "",
-      price_per_kwh: 3500,
+      old_reading: "",
+      new_reading: "",
+      electricity_rate: 3500,
       note: "",
     });
     setEditingElectricity(null);
@@ -115,11 +133,11 @@ export default function Electricity() {
 
   const handleEdit = (electricity) => {
     setForm({
-      room_number: electricity.room_number,
+      room_id: electricity.room_id ? String(electricity.room_id) : "",
       month: electricity.month,
-      old_index: electricity.old_index,
-      new_index: electricity.new_index,
-      price_per_kwh: electricity.price_per_kwh,
+      old_reading: electricity.old_reading,
+      new_reading: electricity.new_reading,
+      electricity_rate: electricity.electricity_rate,
       note: electricity.note || "",
     });
     setEditingElectricity(electricity);
@@ -132,36 +150,40 @@ export default function Electricity() {
     setShowConfirmDelete(true);
   };
 
-  const confirmDelete = () => {
-    setElectricities((prev) => prev.filter((e) => e.electricity_id !== electricityToDelete));
-    toast.success("🗑️ Xóa hóa đơn điện thành công!");
-    setShowConfirmDelete(false);
-    setElectricityToDelete(null);
+  const confirmDelete = async () => {
+    try {
+      await axios.delete(`${ELECTRICITY_API}/${electricityToDelete}`);
+      toast.success("🗑️ Xóa hóa đơn điện thành công!");
+      fetchElectricities();
+    } catch (err) {
+      toast.error("❌ Lỗi xóa hóa đơn điện!");
+    } finally {
+      setShowConfirmDelete(false);
+      setElectricityToDelete(null);
+    }
   };
 
-  const handleSubmitElectricity = () => {
-    if (editingElectricity) {
-      // Sửa hóa đơn điện
-      setElectricities((prev) =>
-        prev.map((e) =>
-          e.electricity_id === editingElectricity.electricity_id
-            ? { ...e, ...form }
-            : e
-        )
-      );
-      toast.success("✏️ Cập nhật hóa đơn điện thành công!");
-    } else {
-      // Thêm hóa đơn điện mới
-      setElectricities((prev) => [
-        ...prev,
-        {
-          ...form,
-          electricity_id: prev.length ? Math.max(...prev.map((e) => e.electricity_id)) + 1 : 1,
-        },
-      ]);
-      toast.success("✅ Thêm hóa đơn điện thành công!");
+  const handleSubmitElectricity = async () => {
+    const payload = {
+      ...form,
+      room_id: form.room_id ? parseInt(form.room_id) : null,
+      old_reading: form.old_reading ? parseInt(form.old_reading) : 0,
+      new_reading: form.new_reading ? parseInt(form.new_reading) : 0,
+      electricity_rate: form.electricity_rate ? parseInt(form.electricity_rate) : 3500,
+    };
+    try {
+      if (editingElectricity) {
+        await axios.put(`${ELECTRICITY_API}/${editingElectricity.meter_id}`, payload);
+        toast.success("✏️ Cập nhật hóa đơn điện thành công!");
+      } else {
+        await axios.post(ELECTRICITY_API, payload);
+        toast.success("✅ Thêm hóa đơn điện thành công!");
+      }
+      setShowModal(false);
+      fetchElectricities();
+    } catch (err) {
+      toast.error("❌ Lỗi khi lưu hóa đơn điện!");
     }
-    setShowModal(false);
   };
 
   const handleCloseModal = () => {
@@ -177,17 +199,71 @@ export default function Electricity() {
     setUnsavedChanges(true);
   };
 
+  // Advanced filter logic (same as Rooms)
+  const getValueByPath = (obj, path) => {
+    return path.split('.').reduce((o, p) => (o ? o[p] : undefined), obj);
+  };
+
+  const evaluateFilter = (f, item) => {
+    const raw = getValueByPath(item, f.field);
+    if (raw === undefined || raw === null) return false;
+
+    const maybeNum = Number(raw);
+    const targetNum = Number(f.value);
+    const isNumeric = !isNaN(maybeNum) && !isNaN(targetNum);
+
+    if (isNumeric) {
+      switch (f.operator) {
+        case '>': return maybeNum > targetNum;
+        case '<': return maybeNum < targetNum;
+        case '>=': return maybeNum >= targetNum;
+        case '<=': return maybeNum <= targetNum;
+        case '=': return maybeNum === targetNum;
+        case '~':
+          const diff = Math.abs(maybeNum - targetNum);
+          const tol = Math.max(1, Math.abs(targetNum) * 0.1);
+          return diff <= tol;
+        default: return false;
+      }
+    }
+
+    // string operations
+    const rawStr = String(raw).toLowerCase();
+    const valStr = String(f.value).toLowerCase();
+    if (f.operator === '=') return rawStr === valStr;
+    if (f.operator === '~') return rawStr.includes(valStr);
+    return false;
+  };
+
+  const applyFilters = (list) => {
+    if (!filters || filters.length === 0) return list;
+    return list.filter((item) => filters.every((f) => evaluateFilter(f, item)));
+  };
+
+  const filteredElectricities = applyFilters(electricities);
+
   return (
     <div className="container mt-4 position-relative">
       <div className="p-4 rounded shadow bg-white">
-        <h3 className="mb-3">⚡ Quản lý điện</h3>
-        <button className="btn btn-success mb-3" onClick={handleAdd}>
-          ➕ Thêm hóa đơn điện
-        </button>
+        <div className="d-flex align-items-center justify-content-between mb-3">
+          <h3 className="mb-0">⚡ Quản lý điện</h3>
+          <button className="btn btn-success" onClick={handleAdd}>
+            ➕ Thêm hóa đơn điện
+          </button>
+        </div>
 
-        <Table columns={columns} data={electricities} />
+        <div className="mb-3">
+          <AdvancedFilters
+            fieldOptions={fieldOptions}
+            filters={filters}
+            onAddFilter={(f) => setFilters((prev) => [...prev, f])}
+            onRemoveFilter={(i) => setFilters((prev) => prev.filter((_, idx) => idx !== i))}
+            compact
+          />
+        </div>
 
-        {/* Modal Thêm / Sửa */}
+        <Table columns={columns} data={filteredElectricities} />
+
         <Modal
           isOpen={showModal}
           onClose={handleCloseModal}
@@ -199,13 +275,19 @@ export default function Electricity() {
             <div className="row g-3">
               <div className="col-md-6">
                 <label className="form-label">Phòng</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={form.room_number}
-                  onChange={(e) => handleFormChange("room_number", e.target.value)}
+                <select
+                  className="form-select"
+                  value={form.room_id}
+                  onChange={(e) => handleFormChange("room_id", e.target.value)}
                   required
-                />
+                >
+                  <option value="">-- Chọn phòng --</option>
+                  {rooms.map(room => (
+                    <option key={room.room_id} value={room.room_id}>
+                      {room.room_number}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="col-md-6">
                 <label className="form-label">Tháng</label>
@@ -222,8 +304,8 @@ export default function Electricity() {
                 <input
                   type="number"
                   className="form-control"
-                  value={form.old_index}
-                  onChange={(e) => handleFormChange("old_index", parseInt(e.target.value) || 0)}
+                  value={form.old_reading}
+                  onChange={(e) => handleFormChange("old_reading", e.target.value)}
                   required
                 />
               </div>
@@ -232,8 +314,8 @@ export default function Electricity() {
                 <input
                   type="number"
                   className="form-control"
-                  value={form.new_index}
-                  onChange={(e) => handleFormChange("new_index", parseInt(e.target.value) || 0)}
+                  value={form.new_reading}
+                  onChange={(e) => handleFormChange("new_reading", e.target.value)}
                   required
                 />
               </div>
@@ -242,8 +324,8 @@ export default function Electricity() {
                 <input
                   type="number"
                   className="form-control"
-                  value={form.price_per_kwh}
-                  onChange={(e) => handleFormChange("price_per_kwh", parseInt(e.target.value) || 0)}
+                  value={form.electricity_rate}
+                  onChange={(e) => handleFormChange("electricity_rate", e.target.value)}
                   required
                 />
               </div>
@@ -260,7 +342,6 @@ export default function Electricity() {
           </form>
         </Modal>
 
-        {/* Modal xác nhận xóa */}
         <ModalConfirm
           isOpen={showConfirmDelete}
           title="Xác nhận xóa"
@@ -271,7 +352,6 @@ export default function Electricity() {
           onClose={() => setShowConfirmDelete(false)}
         />
 
-        {/* Modal xác nhận thoát khi có thay đổi */}
         <ModalConfirm
           isOpen={showConfirmExit}
           title="Thoát mà chưa lưu?"
@@ -286,7 +366,6 @@ export default function Electricity() {
           onClose={() => setShowConfirmExit(false)}
         />
       </div>
-
       <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );

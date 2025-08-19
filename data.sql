@@ -131,6 +131,17 @@ CREATE TABLE RepairRequests (
     FOREIGN KEY (tenant_id) REFERENCES Tenants(tenant_id) ON DELETE CASCADE,
     FOREIGN KEY (room_id) REFERENCES Rooms(room_id) ON DELETE CASCADE
 );
+CREATE TABLE Reservations (
+    reservation_id INT AUTO_INCREMENT PRIMARY KEY,
+    contact_phone VARCHAR(15) NOT NULL, 
+    room_id INT NOT NULL,
+    user_id INT NULL,
+    status ENUM('Pending', 'Confirmed', 'Cancelled' ) DEFAULT 'Pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE,
+    FOREIGN KEY (room_id) REFERENCES Rooms(room_id) ON DELETE CASCADE,
+    INDEX idx_reservation_id (reservation_id)
+);
 CREATE TABLE Notifications (
     notification_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -140,15 +151,15 @@ CREATE TABLE Notifications (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE
 );
-CREATE TABLE AuditLogs (
-    log_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT,
-    action VARCHAR(100) NOT NULL,  -- Ví dụ: 'CreateInvoice', 'UpdateContract'
+CREATE TABLE Devices (
+    device_id INT AUTO_INCREMENT PRIMARY KEY,
+    device_name VARCHAR(100) NOT NULL,
+    room_id INT NULL,
     description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE SET NULL
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_device_room FOREIGN KEY (room_id) REFERENCES Rooms(room_id) ON DELETE SET NULL
 );
-
 INSERT INTO RoomTypes (type_name, description, price_per_month) VALUES
 ('Standard', 'Phòng cơ bản, không điều hòa', 3000000.00),
 ('Deluxe', 'Phòng có điều hòa, ban công', 5000000.00),
@@ -181,6 +192,93 @@ VALUES
 ('Phòng 7B', 1, 4, 0),
 ('Phòng 8B', 1, 4, 0),
 ('Phòng 9B', 1, 4, 0);
+INSERT INTO Devices (device_name, room_id, description, is_active)
+VALUES
+-- Phòng 1A
+('Quạt trần', 1, 'Quạt trần 3 cánh', TRUE),
+('Đèn LED', 1, 'Đèn chiếu sáng 20W', TRUE),
+('Ổ cắm điện', 1, 'Ổ cắm 3 chấu', TRUE),
+
+-- Phòng 2A
+('Quạt trần', 2, 'Quạt trần 3 cánh', TRUE),
+('Đèn LED', 2, 'Đèn chiếu sáng 20W', TRUE),
+('Ổ cắm điện', 2, 'Ổ cắm 3 chấu', TRUE),
+
+-- Phòng 3A
+('Quạt trần', 3, 'Quạt trần 3 cánh', TRUE),
+('Đèn LED', 3, 'Đèn chiếu sáng 20W', TRUE),
+('Ổ cắm điện', 3, 'Ổ cắm 3 chấu', TRUE),
+
+-- Phòng 4A
+('Quạt trần', 4, 'Quạt trần 3 cánh', TRUE),
+('Đèn LED', 4, 'Đèn chiếu sáng 20W', TRUE),
+('Ổ cắm điện', 4, 'Ổ cắm 3 chấu', TRUE),
+
+-- Phòng 5A
+('Quạt trần', 5, 'Quạt trần 3 cánh', TRUE),
+('Đèn LED', 5, 'Đèn chiếu sáng 20W', TRUE),
+('Ổ cắm điện', 5, 'Ổ cắm 3 chấu', TRUE),
+
+-- Phòng 6A
+('Quạt trần', 6, 'Quạt trần 3 cánh', TRUE),
+('Đèn LED', 6, 'Đèn chiếu sáng 20W', TRUE),
+('Ổ cắm điện', 6, 'Ổ cắm 3 chấu', TRUE),
+
+-- Phòng 7A
+('Quạt trần', 7, 'Quạt trần 3 cánh', TRUE),
+('Đèn LED', 7, 'Đèn chiếu sáng 20W', TRUE),
+('Ổ cắm điện', 7, 'Ổ cắm 3 chấu', TRUE),
+
+-- Phòng 8A
+('Quạt trần', 8, 'Quạt trần 3 cánh', TRUE),
+('Đèn LED', 8, 'Đèn chiếu sáng 20W', TRUE),
+('Ổ cắm điện', 8, 'Ổ cắm 3 chấu', TRUE),
+
+-- Phòng 1B
+('Quạt trần', 9, 'Quạt trần 3 cánh', TRUE),
+('Đèn LED', 9, 'Đèn chiếu sáng 20W', TRUE),
+('Ổ cắm điện', 9, 'Ổ cắm 3 chấu', TRUE),
+
+-- Phòng 2B
+('Quạt trần', 10, 'Quạt trần 3 cánh', TRUE),
+('Đèn LED', 10, 'Đèn chiếu sáng 20W', TRUE),
+('Ổ cắm điện', 10, 'Ổ cắm 3 chấu', TRUE),
+
+-- Phòng 3B
+('Quạt trần', 11, 'Quạt trần 3 cánh', TRUE),
+('Đèn LED', 11, 'Đèn chiếu sáng 20W', TRUE),
+('Ổ cắm điện', 11, 'Ổ cắm 3 chấu', TRUE),
+
+-- Phòng 4B
+('Quạt trần', 12, 'Quạt trần 3 cánh', TRUE),
+('Đèn LED', 12, 'Đèn chiếu sáng 20W', TRUE),
+('Ổ cắm điện', 12, 'Ổ cắm 3 chấu', TRUE),
+
+-- Phòng 5B
+('Quạt trần', 13, 'Quạt trần 3 cánh', TRUE),
+('Đèn LED', 13, 'Đèn chiếu sáng 20W', TRUE),
+('Ổ cắm điện', 13, 'Ổ cắm 3 chấu', TRUE),
+
+-- Phòng 6B
+('Quạt trần', 14, 'Quạt trần 3 cánh', TRUE),
+('Đèn LED', 14, 'Đèn chiếu sáng 20W', TRUE),
+('Ổ cắm điện', 14, 'Ổ cắm 3 chấu', TRUE),
+
+-- Phòng 7B
+('Quạt trần', 15, 'Quạt trần 3 cánh', TRUE),
+('Đèn LED', 15, 'Đèn chiếu sáng 20W', TRUE),
+('Ổ cắm điện', 15, 'Ổ cắm 3 chấu', TRUE),
+
+-- Phòng 8B
+('Quạt trần', 16, 'Quạt trần 3 cánh', TRUE),
+('Đèn LED', 16, 'Đèn chiếu sáng 20W', TRUE),
+('Ổ cắm điện', 16, 'Ổ cắm 3 chấu', TRUE),
+
+-- Phòng 9B
+('Quạt trần', 17, 'Quạt trần 3 cánh', TRUE),
+('Đèn LED', 17, 'Đèn chiếu sáng 20W', TRUE),
+('Ổ cắm điện', 17, 'Ổ cắm 3 chấu', TRUE);
+
 -- Thêm khách thuê
 INSERT INTO Tenants (tenant_id, full_name, gender, date_of_birth, phone_number, email, id_card_front_path, id_card_back_path, address)
 VALUES 
@@ -221,6 +319,9 @@ INSERT INTO Contracts (tenant_id, room_id, start_date, end_date, deposit_amount,
 ('079203029614', 8, '2025-08-01', '2026-08-01', 10000000.00, 10000000.00, 'Active'),
 ('079203029615', 9, '2025-09-01', '2026-09-01', 2000000.00, 2000000.00, 'Active'),
 ('079203029616', 10, '2025-10-01', '2026-10-01', 12000000.00, 12000000.00, 'Active');
+-- Thêm đặt chỗ trước
+
+
 -- Thêm công tơ điện
 INSERT INTO ElectricityMeters (room_id, month, old_reading, new_reading, electricity_rate) VALUES
 (1, '2025-01-01', 1000, 1200, 3500.00),

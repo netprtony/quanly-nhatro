@@ -1,67 +1,199 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Table from "/src/components/Table.jsx";
 import Modal from "/src/components/Modal.jsx";
 import ModalConfirm from "/src/components/ModalConfirm.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
+
+const API_URL = "http://localhost:8000/contracts";
+const ROOMS_API = "http://localhost:8000/rooms";
+const TENANTS_API = "http://localhost:8000/tenants";
 
 export default function Contracts() {
-  // Mock dữ liệu hợp đồng
-  const [contracts, setContracts] = useState([
-    {
-      contract_id: 1,
-      room_number: "101",
-      tenant_name: "Nguyễn Văn D",
-      start_date: "2024-01-01",
-      end_date: "2024-12-31",
-      deposit: 2000000,
-      is_active: true,
-    },
-    {
-      contract_id: 2,
-      room_number: "202",
-      tenant_name: "Trần Thị E",
-      start_date: "2024-03-01",
-      end_date: "2024-09-30",
-      deposit: 1500000,
-      is_active: true,
-    },
-    {
-      contract_id: 3,
-      room_number: "303",
-      tenant_name: "Lê Văn F",
-      start_date: "2023-05-01",
-      end_date: "2024-04-30",
-      deposit: 1800000,
-      is_active: false,
-    },
-  ]);
-
+  const [contracts, setContracts] = useState([]);
+  const [rooms, setRooms] = useState([]);
+  const [tenants, setTenants] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingContract, setEditingContract] = useState(null);
   const [form, setForm] = useState({
-    room_number: "",
-    tenant_name: "",
+    room_id: "",
+    tenant_id: "",
     start_date: "",
     end_date: "",
-    deposit: "",
-    is_active: true,
+    deposit_amount: "",
+    monthly_rent: "",
+    contract_status: "Active",
   });
 
   const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [showConfirmExit, setShowConfirmExit] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [contractToDelete, setContractToDelete] = useState(null);
+  const [filters, setFilters] = useState([]);
+
+  // Bộ lọc nâng cao: fieldOptions cho Contract
+  const fieldOptions = [
+    { label: "Phòng", value: "room_id" },
+    { label: "Khách thuê", value: "tenant_id" },
+    { label: "Ngày bắt đầu", value: "start_date" },
+    { label: "Ngày kết thúc", value: "end_date" },
+    { label: "Tiền cọc", value: "deposit_amount" },
+    { label: "Tiền thuê", value: "monthly_rent" },
+    { label: "Trạng thái", value: "contract_status" },
+  ];
+
+  // Load danh sách hợp đồng từ API
+  const fetchContracts = async () => {
+    try {
+      let query = "";
+      if (filters.length > 0) {
+        query =
+          "?" +
+          filters
+            .map(
+              (f) =>
+                `filter_${f.field}=${encodeURIComponent(
+                  f.operator + f.value
+                )}`
+            )
+            .join("&");
+      }
+      const res = await fetch(API_URL + query);
+      const data = await res.json();
+      setContracts(data);
+    } catch (err) {
+      toast.error("Không thể tải danh sách hợp đồng!");
+    }
+  };
+
+  // Load danh sách phòng cho combobox
+  const fetchRooms = async () => {
+    try {
+      const res = await fetch(ROOMS_API);
+      const data = await res.json();
+      setRooms(data);
+    } catch (err) {
+      toast.error("Không thể tải danh sách phòng!");
+    }
+  };
+
+  // Load danh sách khách thuê cho combobox
+  const fetchTenants = async () => {
+    try {
+      const res = await fetch(TENANTS_API);
+      const data = await res.json();
+      setTenants(data);
+    } catch (err) {
+      toast.error("Không thể tải danh sách khách thuê!");
+    }
+  };
+
+  useEffect(() => {
+    fetchContracts();
+    fetchRooms();
+    fetchTenants();
+    // eslint-disable-next-line
+  }, [filters]);
+
+  // Thêm mới hợp đồng
+  const createContract = async () => {
+    try {
+      const payload = {
+        ...form,
+        room_id: form.room_id ? parseInt(form.room_id) : null,
+        tenant_id: form.tenant_id,
+        deposit_amount: form.deposit_amount ? parseFloat(form.deposit_amount) : 0,
+        monthly_rent: form.monthly_rent ? parseFloat(form.monthly_rent) : 0,
+      };
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchContracts();
+      toast.success("✅ Thêm hợp đồng thành công!");
+      setShowModal(false);
+    } catch (err) {
+      toast.error("Thêm hợp đồng thất bại! " + err.message);
+    }
+  };
+
+  // Sửa hợp đồng
+  const updateContract = async () => {
+    try {
+      const payload = {
+        ...form,
+        room_id: form.room_id ? parseInt(form.room_id) : null,
+        tenant_id: form.tenant_id,
+        deposit_amount: form.deposit_amount ? parseFloat(form.deposit_amount) : 0,
+        monthly_rent: form.monthly_rent ? parseFloat(form.monthly_rent) : 0,
+      };
+      const res = await fetch(`${API_URL}/${editingContract.contract_id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchContracts();
+      toast.success("✏️ Cập nhật hợp đồng thành công!");
+      setShowModal(false);
+    } catch (err) {
+      toast.error("Cập nhật hợp đồng thất bại! " + err.message);
+    }
+  };
+
+  // Xóa hợp đồng
+  const deleteContract = async () => {
+    try {
+      const res = await fetch(`${API_URL}/${contractToDelete}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchContracts();
+      toast.success("🗑️ Xóa hợp đồng thành công!");
+      setShowConfirmDelete(false);
+      setContractToDelete(null);
+    } catch (err) {
+      toast.error("Xóa hợp đồng thất bại! " + err.message);
+    }
+  };
 
   const columns = [
     { label: "ID", accessor: "contract_id" },
-    { label: "Phòng", accessor: "room_number" },
-    { label: "Khách thuê", accessor: "tenant_name" },
+    {
+      label: "Phòng",
+      accessor: "room_id",
+      render: (room_id) => {
+        const room = rooms.find((r) => r.room_id === room_id);
+        return room ? room.room_number : room_id;
+      },
+    },
+    {
+      label: "Khách thuê",
+      accessor: "tenant_id",
+      render: (tenant_id) => {
+        const tenant = tenants.find((t) => t.tenant_id === tenant_id);
+        return tenant ? tenant.full_name : tenant_id;
+      },
+    },
     { label: "Ngày bắt đầu", accessor: "start_date" },
     { label: "Ngày kết thúc", accessor: "end_date" },
     {
       label: "Tiền cọc",
-      accessor: "deposit",
+      accessor: "deposit_amount",
+      render: (value) =>
+        typeof value === "number"
+          ? new Intl.NumberFormat("vi-VN", {
+              style: "currency",
+              currency: "VND",
+            }).format(value)
+          : "N/A",
+    },
+    {
+      label: "Tiền thuê",
+      accessor: "monthly_rent",
       render: (value) =>
         typeof value === "number"
           ? new Intl.NumberFormat("vi-VN", {
@@ -72,8 +204,8 @@ export default function Contracts() {
     },
     {
       label: "Trạng thái",
-      accessor: "is_active",
-      render: (value) => (value ? "✅ Hiệu lực" : "❌ Hết hạn"),
+      accessor: "contract_status",
+      render: (value) => (value === "Active" ? "✅ Hiệu lực" : "❌ Hết hạn"),
     },
     {
       label: "Thao tác",
@@ -89,12 +221,13 @@ export default function Contracts() {
 
   const handleAdd = () => {
     setForm({
-      room_number: "",
-      tenant_name: "",
+      room_id: "",
+      tenant_id: "",
       start_date: "",
       end_date: "",
-      deposit: "",
-      is_active: true,
+      deposit_amount: "",
+      monthly_rent: "",
+      contract_status: "Active",
     });
     setEditingContract(null);
     setUnsavedChanges(false);
@@ -103,12 +236,13 @@ export default function Contracts() {
 
   const handleEdit = (contract) => {
     setForm({
-      room_number: contract.room_number,
-      tenant_name: contract.tenant_name,
-      start_date: contract.start_date,
-      end_date: contract.end_date,
-      deposit: contract.deposit,
-      is_active: contract.is_active,
+      room_id: contract.room_id ? String(contract.room_id) : "",
+      tenant_id: contract.tenant_id || "",
+      start_date: contract.start_date || "",
+      end_date: contract.end_date || "",
+      deposit_amount: contract.deposit_amount || "",
+      monthly_rent: contract.monthly_rent || "",
+      contract_status: contract.contract_status || "Active",
     });
     setEditingContract(contract);
     setUnsavedChanges(false);
@@ -121,35 +255,15 @@ export default function Contracts() {
   };
 
   const confirmDelete = () => {
-    setContracts((prev) => prev.filter((c) => c.contract_id !== contractToDelete));
-    toast.success("🗑️ Xóa hợp đồng thành công!");
-    setShowConfirmDelete(false);
-    setContractToDelete(null);
+    deleteContract();
   };
 
   const handleSubmitContract = () => {
     if (editingContract) {
-      // Sửa hợp đồng
-      setContracts((prev) =>
-        prev.map((c) =>
-          c.contract_id === editingContract.contract_id
-            ? { ...c, ...form }
-            : c
-        )
-      );
-      toast.success("✏️ Cập nhật hợp đồng thành công!");
+      updateContract();
     } else {
-      // Thêm hợp đồng mới
-      setContracts((prev) => [
-        ...prev,
-        {
-          ...form,
-          contract_id: prev.length ? Math.max(...prev.map((c) => c.contract_id)) + 1 : 1,
-        },
-      ]);
-      toast.success("✅ Thêm hợp đồng thành công!");
+      createContract();
     }
-    setShowModal(false);
   };
 
   const handleCloseModal = () => {
@@ -165,10 +279,26 @@ export default function Contracts() {
     setUnsavedChanges(true);
   };
 
+  // Xử lý thêm/xóa filter
+  const handleAddFilter = (filter) => {
+    setFilters((prev) => [...prev, filter]);
+  };
+  const handleRemoveFilter = (index) => {
+    setFilters((prev) => prev.filter((_, i) => i !== index));
+  };
+
   return (
     <div className="container mt-4 position-relative">
       <div className="p-4 rounded shadow bg-white">
         <h3 className="mb-3">📄 Danh sách hợp đồng</h3>
+        {/* Bộ lọc nâng cao */}
+        <AdvancedFilters
+          fieldOptions={fieldOptions}
+          filters={filters}
+          onAddFilter={handleAddFilter}
+          onRemoveFilter={handleRemoveFilter}
+        />
+
         <button className="btn btn-success mb-3" onClick={handleAdd}>
           ➕ Thêm hợp đồng
         </button>
@@ -187,23 +317,35 @@ export default function Contracts() {
             <div className="row g-3">
               <div className="col-md-6">
                 <label className="form-label">Phòng</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={form.room_number}
-                  onChange={(e) => handleFormChange("room_number", e.target.value)}
+                <select
+                  className="form-select"
+                  value={form.room_id}
+                  onChange={(e) => handleFormChange("room_id", e.target.value)}
                   required
-                />
+                >
+                  <option value="">-- Chọn phòng --</option>
+                  {rooms.map((room) => (
+                    <option key={room.room_id} value={room.room_id}>
+                      {room.room_number}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="col-md-6">
                 <label className="form-label">Khách thuê</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={form.tenant_name}
-                  onChange={(e) => handleFormChange("tenant_name", e.target.value)}
+                <select
+                  className="form-select"
+                  value={form.tenant_id}
+                  onChange={(e) => handleFormChange("tenant_id", e.target.value)}
                   required
-                />
+                >
+                  <option value="">-- Chọn khách thuê --</option>
+                  {tenants.map((tenant) => (
+                    <option key={tenant.tenant_id} value={tenant.tenant_id}>
+                      {tenant.full_name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="col-md-6">
                 <label className="form-label">Ngày bắt đầu</label>
@@ -230,24 +372,33 @@ export default function Contracts() {
                 <input
                   type="number"
                   className="form-control"
-                  value={form.deposit}
-                  onChange={(e) => handleFormChange("deposit", parseInt(e.target.value) || 0)}
+                  value={form.deposit_amount}
+                  onChange={(e) => handleFormChange("deposit_amount", e.target.value)}
+                  required
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Tiền thuê (VND)</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={form.monthly_rent}
+                  onChange={(e) => handleFormChange("monthly_rent", e.target.value)}
                   required
                 />
               </div>
               <div className="col-12">
-                <div className="form-check">
-                  <input
-                    type="checkbox"
-                    className="form-check-input"
-                    id="isActive"
-                    checked={form.is_active}
-                    onChange={(e) => handleFormChange("is_active", e.target.checked)}
-                  />
-                  <label className="form-check-label" htmlFor="isActive">
-                    Hiệu lực
-                  </label>
-                </div>
+                <label className="form-label">Trạng thái</label>
+                <select
+                  className="form-select"
+                  value={form.contract_status}
+                  onChange={(e) => handleFormChange("contract_status", e.target.value)}
+                  required
+                >
+                  <option value="Active">Hiệu lực</option>
+                  <option value="Terminated">Đã kết thúc</option>
+                  <option value="Pending">Chờ hiệu lực</option>
+                </select>
               </div>
             </div>
           </form>
