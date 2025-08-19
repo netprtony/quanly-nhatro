@@ -29,52 +29,11 @@ export default function Invoices() {
 
   // Các trường cho bộ lọc nâng cao
   const fieldOptions = [
-    { label: "Phòng", value: "room_id" },
-    { label: "Tháng", value: "month" },
-    { label: "Số tiền", value: "total_amount" },
-    { label: "Trạng thái", value: "is_paid" },
+    { value: "room_id", label: "Phòng", type: "number" },
+    { value: "month", label: "Tháng", type: "string" },
+    { value: "total_amount", label: "Số tiền", type: "number" },
+    { value: "is_paid", label: "Trạng thái", type: "boolean" },
   ];
-
-  // Lấy danh sách hóa đơn từ API
-  const fetchInvoices = async () => {
-    try {
-      let query = "";
-      if (filters.length > 0) {
-        query =
-          "?" +
-          filters
-            .map(
-              (f) =>
-                `filter_${f.field}=${encodeURIComponent(
-                  f.operator + f.value
-                )}`
-            )
-            .join("&");
-      }
-      const res = await fetch(INVOICE_API + query);
-      const data = await res.json();
-      setInvoices(data);
-    } catch (err) {
-      toast.error("Không thể tải danh sách hóa đơn!");
-    }
-  };
-
-  // Lấy danh sách phòng
-  const fetchRooms = async () => {
-    try {
-      const res = await fetch(ROOMS_API);
-      const data = await res.json();
-      setRooms(data);
-    } catch (err) {
-      toast.error("Không thể tải danh sách phòng!");
-    }
-  };
-
-  useEffect(() => {
-    fetchInvoices();
-    fetchRooms();
-    // eslint-disable-next-line
-  }, [filters]);
 
   const columns = [
     { label: "ID", accessor: "invoice_id" },
@@ -115,6 +74,87 @@ export default function Invoices() {
       ),
     },
   ];
+
+  // Lấy danh sách hóa đơn từ API
+  const fetchInvoices = async () => {
+    try {
+      const res = await fetch(INVOICE_API);
+      const data = await res.json();
+      setInvoices(data);
+    } catch (err) {
+      toast.error("Không thể tải danh sách hóa đơn!");
+    }
+  };
+
+  // Lấy danh sách phòng
+  const fetchRooms = async () => {
+    try {
+      const res = await fetch(ROOMS_API);
+      const data = await res.json();
+      setRooms(data);
+    } catch (err) {
+      toast.error("Không thể tải danh sách phòng!");
+    }
+  };
+
+  useEffect(() => {
+    fetchInvoices();
+    fetchRooms();
+  }, []);
+
+  // --- Advanced filter logic giống Rooms.jsx ---
+  const getValueByPath = (obj, path) => {
+    return path.split('.').reduce((o, p) => (o ? o[p] : undefined), obj);
+  };
+
+  const evaluateFilter = (f, invoice) => {
+    const raw = getValueByPath(invoice, f.field);
+    if (raw === undefined || raw === null) return false;
+
+    // normalize boolean field input
+    if (f.field === 'is_paid') {
+      const target = f.value === 'true' || f.value === true || f.value === '1';
+      if (f.operator === '=') return raw === target;
+      if (f.operator === '!=') return raw !== target;
+      return false;
+    }
+
+    // numeric comparison when possible
+    const maybeNum = Number(raw);
+    const targetNum = Number(f.value);
+    const isNumeric = !isNaN(maybeNum) && !isNaN(targetNum);
+
+    if (isNumeric) {
+      switch (f.operator) {
+        case '>': return maybeNum > targetNum;
+        case '<': return maybeNum < targetNum;
+        case '>=': return maybeNum >= targetNum;
+        case '<=': return maybeNum <= targetNum;
+        case '=': return maybeNum === targetNum;
+        case '~':
+          const diff = Math.abs(maybeNum - targetNum);
+          const tol = Math.max(1, Math.abs(targetNum) * 0.1);
+          return diff <= tol;
+        default: return false;
+      }
+    }
+
+    // string operations
+    const rawStr = String(raw).toLowerCase();
+    const valStr = String(f.value).toLowerCase();
+    if (f.operator === '=') return rawStr === valStr;
+    if (f.operator === '~') return rawStr.includes(valStr);
+    return false;
+  };
+
+  const applyFilters = (list) => {
+    if (!filters || filters.length === 0) return list;
+    return list.filter((item) => filters.every((f) => evaluateFilter(f, item)));
+  };
+
+  const filteredInvoices = applyFilters(invoices);
+
+  // --- End advanced filter logic ---
 
   const handleAdd = () => {
     setForm({
@@ -209,22 +249,25 @@ export default function Invoices() {
   return (
     <div className="container mt-4 position-relative">
       <div className="p-4 rounded shadow bg-white">
-        <h3 className="mb-3">💵 Danh sách hóa đơn</h3>
-        {/* Bộ lọc nâng cao */}
-        <AdvancedFilters
-          fieldOptions={fieldOptions}
-          filters={filters}
-          onAddFilter={(f) => setFilters((prev) => [...prev, f])}
-          onRemoveFilter={(i) => setFilters((prev) => prev.filter((_, idx) => idx !== i))}
-        />
+        <div className="d-flex align-items-center justify-content-between mb-3">
+          <h3 className="mb-0">💵 Danh sách hóa đơn</h3>
+          <button className="btn btn-success" onClick={handleAdd}>
+            ➕ Thêm hóa đơn
+          </button>
+        </div>
 
-        <button className="btn btn-success mb-3" onClick={handleAdd}>
-          ➕ Thêm hóa đơn
-        </button>
+        <div className="mb-3">
+          <AdvancedFilters
+            fieldOptions={fieldOptions}
+            filters={filters}
+            onAddFilter={(f) => setFilters((prev) => [...prev, f])}
+            onRemoveFilter={(i) => setFilters((prev) => prev.filter((_, idx) => idx !== i))}
+            compact
+          />
+        </div>
 
-        <Table columns={columns} data={invoices} />
+        <Table columns={columns} data={filteredInvoices} />
 
-        {/* Modal Thêm / Sửa */}
         <Modal
           isOpen={showModal}
           onClose={handleCloseModal}
@@ -286,7 +329,6 @@ export default function Invoices() {
           </form>
         </Modal>
 
-        {/* Modal xác nhận xóa */}
         <ModalConfirm
           isOpen={showConfirmDelete}
           title="Xác nhận xóa"
@@ -297,7 +339,6 @@ export default function Invoices() {
           onClose={() => setShowConfirmDelete(false)}
         />
 
-        {/* Modal xác nhận thoát khi có thay đổi */}
         <ModalConfirm
           isOpen={showConfirmExit}
           title="Thoát mà chưa lưu?"
@@ -312,7 +353,6 @@ export default function Invoices() {
           onClose={() => setShowConfirmExit(false)}
         />
       </div>
-
       <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
