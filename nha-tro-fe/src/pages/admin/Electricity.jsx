@@ -181,6 +181,10 @@ export default function Electricity() {
   };
 
   const handleSubmitElectricity = async () => {
+    if (parseInt(form.old_reading) > parseInt(form.new_reading)) {
+      toast.error("❌ Chỉ số mới phải lớn hơn hoặc bằng chỉ số cũ!");
+      return;
+    }
     const payload = {
       ...form,
       room_id: form.room_id ? parseInt(form.room_id) : null,
@@ -405,6 +409,13 @@ export default function Electricity() {
           hasError = true;
           errorMessages.push(
             `Thiếu dữ liệu ở dòng ${r.rowNumber}: room_id=${r.room_id}, month=${r.month}, old_reading=${r.old_reading}, new_reading=${r.new_reading}, electricity_rate=${r.electricity_rate}`
+          );
+          continue;
+        }
+        if (parseInt(r.old_reading) > parseInt(r.new_reading)) {
+          hasError = true;
+          errorMessages.push(
+            `Lỗi ở dòng ${r.rowNumber}: Chỉ số mới phải lớn hơn hoặc bằng chỉ số cũ!`
           );
           continue;
         }
