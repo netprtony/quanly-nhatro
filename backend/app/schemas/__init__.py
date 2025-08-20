@@ -51,3 +51,8 @@ from .payment import (
     PaymentUpdate,
     PaymentOut
 )
+from .invoice_detail import (
+    InvoiceDetailCreate,
+    InvoiceDetailUpdate,
+    InvoiceDetailOut
+)

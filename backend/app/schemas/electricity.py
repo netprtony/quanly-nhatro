@@ -9,10 +9,13 @@ class ElectricityMeterBase(BaseModel):
     new_reading: int
     electricity_rate: Optional[float] = 3500
     usage_kwh: Optional[int] = None
-    total_amount: Optional[float] = None
 
-class ElectricityMeterCreate(ElectricityMeterBase):
-    pass
+class ElectricityMeterCreate(BaseModel):
+    room_id: int
+    month: date
+    old_reading: int
+    new_reading: int
+    electricity_rate: Optional[float] = 3500.0
 
 class ElectricityMeterUpdate(BaseModel):
     room_id: Optional[int] = None
@@ -23,8 +26,15 @@ class ElectricityMeterUpdate(BaseModel):
     usage_kwh: Optional[int] = None
     total_amount: Optional[float] = None
 
-class ElectricityMeterOut(ElectricityMeterBase):
+class ElectricityMeterOut(BaseModel):
     meter_id: int
+    room_id: int
+    month: date
+    old_reading: int
+    new_reading: int
+    electricity_rate: float
+    usage_kwh: int
+    total_amount: float
     created_at: datetime
 
     class Config:

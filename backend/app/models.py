@@ -1,5 +1,5 @@
 # models.py
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, Enum, DECIMAL, Date, func
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, Enum, DECIMAL, Date, func, Computed, TIMESTAMP
 from sqlalchemy.orm import relationship
 from .database import Base
 import enum
@@ -99,6 +99,9 @@ class Room(Base):
     room_type = relationship("RoomType", back_populates="rooms")
     reservations = relationship("Reservation", back_populates="room", cascade="all, delete")
 
+    # ✅ thêm dòng này để khớp với ElectricityMeter.room
+    meters = relationship("ElectricityMeter", back_populates="room", cascade="all, delete")
+
 class Contract(Base):
     __tablename__ = "Contracts"
     contract_id = Column(Integer, primary_key=True, index=True)
@@ -113,16 +116,21 @@ class Contract(Base):
 
 class ElectricityMeter(Base):
     __tablename__ = "ElectricityMeters"
-    meter_id = Column(Integer, primary_key=True, index=True)
+
+    meter_id = Column(Integer, primary_key=True, autoincrement=True)
     room_id = Column(Integer, ForeignKey("Rooms.room_id", ondelete="CASCADE"), nullable=False)
     month = Column(Date, nullable=False)
     old_reading = Column(Integer, nullable=False)
     new_reading = Column(Integer, nullable=False)
-    electricity_rate = Column(DECIMAL(10, 2), default=3500)
-    usage_kwh = Column(Integer)  # Tính phía backend
-    total_amount = Column(DECIMAL(10, 2))
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    electricity_rate = Column(DECIMAL(10,2), default=3500)
 
+    # GENERATED columns
+    usage_kwh = Column(Integer, Computed("new_reading - old_reading", persisted=True))
+    total_amount = Column(DECIMAL(10,2), Computed("(new_reading - old_reading) * electricity_rate", persisted=True))
+
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+    room = relationship("Room", back_populates="meters")
 class Invoice(Base):
     __tablename__ = "Invoices"
     invoice_id = Column(Integer, primary_key=True, index=True)

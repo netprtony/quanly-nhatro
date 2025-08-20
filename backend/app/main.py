@@ -10,6 +10,7 @@ from app.routers import (
     electricity_router,
     invoice_router,
     payment_router,
+    invoice_detail_router,
     # protected_router,
     reservation_router,
     room_router,
@@ -26,7 +27,7 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,              # Cho phép các origin này
+    allow_origins=["*"],              # Cho phép các origin này
     allow_credentials=True,
     allow_methods=["*"],                # Cho phép tất cả method: GET, POST, PUT...
     allow_headers=["*"],                # Cho phép tất cả headers
@@ -39,6 +40,7 @@ app.include_router(contract_router)
 app.include_router(device_router)
 app.include_router(electricity_router)
 app.include_router(invoice_router)
+app.include_router(invoice_detail_router)
 app.include_router(payment_router)
 # app.include_router(protected_router)
 app.include_router(reservation_router)

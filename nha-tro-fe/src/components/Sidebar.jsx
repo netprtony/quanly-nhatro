@@ -24,18 +24,18 @@ export default function Sidebar() {
       ]} />
 
       <SidebarItem icon="electricity.svg" label="Dịch vụ" dropdown children={[
-        { label: "Điện", path: "/admin/electricity" },
-        { label: "Nước", path: "/admin/water" },
-        { label: "Wifi", path: "/admin/internet" },
-        { label: "Khác", path: "/admin/other" }
+        { label: "Dịch vụ khác", path: "/admin/electricity" },
+        { label: "Công tơ điện", path: "/admin/electricity" }
       ]} />
 
       <SidebarItem icon="receipt.svg" label="Hóa Đơn" dropdown children={[
         { label: "Hóa đơn", path: "/admin/invoices" },
+        { label: "Chi tiết hóa đơn", path: "/admin/invoice-details" },
         { label: "Thanh toán", path: "/admin/payments" }
       ]} />
       <SidebarItem icon="device.svg" label="Thiết bị" dropdown children={[
         { label: "Quản lý thiết bị", path: "/admin/devices" },
+
       ]} />
       <SidebarItem icon="settings.svg" label="Cài Đặt" dropdown children={[
         { label: "Cài đặt chung", path: "/admin/settings" },

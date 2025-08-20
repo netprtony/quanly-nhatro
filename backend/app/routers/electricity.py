@@ -1,23 +1,33 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
+from sqlalchemy import cast, String
 from typing import List
 from app import models, database
 from app.schemas.electricity import ElectricityMeterCreate, ElectricityMeterUpdate, ElectricityMeterOut
-
+from datetime import date
+import pandas as pd
+from io import BytesIO
+from fastapi.responses import StreamingResponse
 router = APIRouter(prefix="/electricity", tags=["Electricity"])
 
 @router.get("/", response_model=List[ElectricityMeterOut])
 def get_meters(
     db: Session = Depends(database.get_db),
+    room_id: int = Query(None),
+    month: str = Query(None),
     skip: int = 0,
     limit: int = 20,
     search: str = Query(None, description="Tìm theo phòng hoặc tháng")
 ):
     query = db.query(models.ElectricityMeter)
+    if room_id:
+        query = query.filter(models.ElectricityMeter.room_id == room_id)
+    if month:
+        query = query.filter(models.ElectricityMeter.month == month)
     if search:
         query = query.join(models.Room).filter(
             (models.Room.room_number.ilike(f"%{search}%")) |
-            (models.ElectricityMeter.month.ilike(f"%{search}%"))
+            (cast(models.ElectricityMeter.month, String).ilike(f"%{search}%"))
         )
     return query.offset(skip).limit(limit).all()
 
@@ -30,13 +40,11 @@ def get_meter(meter_id: int, db: Session = Depends(database.get_db)):
 
 @router.post("/", response_model=ElectricityMeterOut, status_code=201)
 def create_meter(meter: ElectricityMeterCreate, db: Session = Depends(database.get_db)):
-    usage_kwh = meter.new_reading - meter.old_reading
-    total_amount = usage_kwh * (meter.electricity_rate or 3500)
-    db_meter = models.ElectricityMeter(
-        **meter.dict(),
-        usage_kwh=usage_kwh,
-        total_amount=total_amount
-    )
+    data = meter.dict()
+    # usage_kwh & total_amount là GENERATED => không set
+    data.pop("usage_kwh", None)
+    data.pop("total_amount", None)
+    db_meter = models.ElectricityMeter(**data)
     db.add(db_meter)
     db.commit()
     db.refresh(db_meter)
@@ -49,10 +57,7 @@ def update_meter(meter_id: int, meter: ElectricityMeterUpdate, db: Session = Dep
         raise HTTPException(status_code=404, detail="Meter not found")
     for key, value in meter.dict(exclude_unset=True).items():
         setattr(db_meter, key, value)
-    # Tính lại usage_kwh và total_amount nếu có thay đổi readings
-    if db_meter.old_reading is not None and db_meter.new_reading is not None:
-        db_meter.usage_kwh = db_meter.new_reading - db_meter.old_reading
-        db_meter.total_amount = db_meter.usage_kwh * (db_meter.electricity_rate or 3500)
+    # ❌ KHÔNG set usage_kwh, total_amount (MySQL sẽ tự tính)
     db.commit()
     db.refresh(db_meter)
     return db_meter
@@ -65,3 +70,23 @@ def delete_meter(meter_id: int, db: Session = Depends(database.get_db)):
     db.delete(db_meter)
     db.commit()
     return {"message": "Meter deleted successfully"}
+
+@router.get("/latest", response_model=ElectricityMeterOut)
+def get_latest_meter(invoice_id: int, db: Session = Depends(database.get_db)):
+    invoice = db.query(models.Invoice).filter(models.Invoice.invoice_id == invoice_id).first()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    meter = (
+        db.query(models.ElectricityMeter)
+        .filter(
+            models.ElectricityMeter.room_id == invoice.room_id,
+            models.ElectricityMeter.month <= invoice.month
+        )
+        .order_by(models.ElectricityMeter.month.desc())
+        .first()
+    )
+    if not meter:
+        raise HTTPException(status_code=404, detail="No electricity meter found for this room/month")
+    return meter
+
