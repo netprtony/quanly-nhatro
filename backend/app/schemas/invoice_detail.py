@@ -1,12 +1,11 @@
 from pydantic import BaseModel
 from typing import Optional
-from decimal import Decimal
 
 class InvoiceDetailBase(BaseModel):
     invoice_id: int
     meter_id: Optional[int] = None
     fee_type: str
-    amount: Decimal
+    amount: float
     note: Optional[str] = None
 
 class InvoiceDetailCreate(InvoiceDetailBase):
@@ -15,7 +14,7 @@ class InvoiceDetailCreate(InvoiceDetailBase):
 class InvoiceDetailUpdate(BaseModel):
     meter_id: Optional[int] = None
     fee_type: Optional[str] = None
-    amount: Optional[Decimal] = None
+    amount: Optional[float] = None
     note: Optional[str] = None
 
 class InvoiceDetailOut(InvoiceDetailBase):

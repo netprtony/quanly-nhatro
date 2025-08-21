@@ -380,9 +380,9 @@ export default function InvoiceDetail() {
                   <div className="col-md-6">
                     <label className="form-label">Thành tiền (VND)</label>
                     <input
-                      type="number"
+                      type="text"
                       className="form-control"
-                      value={latestMeter.total_amount}
+                      value={latestMeter.total_amount?.toLocaleString("vi-VN")}
                       readOnly
                     />
                   </div>
@@ -391,12 +391,24 @@ export default function InvoiceDetail() {
               <div className="col-md-6">
                 <label className="form-label">Số tiền (VND)</label>
                 <input
-                  type="number"
+                  type="text"
                   className="form-control"
-                  value={autoAmount !== null ? autoAmount : form.amount}
-                  onChange={(e) => handleFormChange("amount", e.target.value)}
+                  value={
+                    autoAmount !== null
+                      ? autoAmount.toLocaleString("vi-VN")
+                      : form.amount
+                        ? Number(form.amount).toLocaleString("vi-VN")
+                        : ""
+                  }
+                  onChange={(e) => {
+                    // Chỉ cho nhập số, loại bỏ ký tự không phải số
+                    const raw = e.target.value.replace(/[^\d]/g, "");
+                    handleFormChange("amount", raw);
+                  }}
                   required
                   readOnly={form.fee_type === "Electricity" && autoAmount !== null}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                 />
               </div>
               <div className="col-12">
