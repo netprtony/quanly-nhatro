@@ -10,6 +10,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 export default function Rooms() {
   const [rooms, setRooms] = useState([]);
+  const [roomTypes, setRoomTypes] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingRoom, setEditingRoom] = useState(null);
   const [form, setForm] = useState({
@@ -21,14 +22,19 @@ export default function Rooms() {
     description: "",
   });
 
-  const [roomTypes, setRoomTypes] = useState([]);
   const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [showConfirmExit, setShowConfirmExit] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState(null);
+
   // Advanced filters state
   const [filters, setFilters] = useState([]);
   const [newFilter, setNewFilter] = useState({ field: "floor_number", operator: ">=", value: "" });
+
+  // Phân trang
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalRecords, setTotalRecords] = useState(0);
 
   const fieldOptions = [
     { value: "floor_number", label: "Tầng", type: "number" },
@@ -72,12 +78,28 @@ export default function Rooms() {
     },
   ];
 
+  // Lấy danh sách phòng từ API (có phân trang)
   const fetchRooms = async () => {
     try {
-      const res = await axios.get("http://localhost:8000/rooms");
-      setRooms(res.data);
+      let query = `?page=${page}&page_size=${pageSize}`;
+      if (filters.length > 0) {
+        query += "&" + filters
+          .map(
+            (f) =>
+              `filter_${f.field}=${encodeURIComponent(
+                f.operator + f.value
+              )}`
+          )
+          .join("&");
+      }
+      const res = await axios.get("http://localhost:8000/rooms" + query);
+      const data = res.data;
+      setRooms(Array.isArray(data.items) ? data.items : []);
+      setTotalRecords(data.total || 0);
     } catch (err) {
       toast.error("❌ Lỗi khi lấy danh sách phòng!");
+      setRooms([]);
+      setTotalRecords(0);
     }
   };
 
@@ -93,7 +115,7 @@ export default function Rooms() {
   useEffect(() => {
     fetchRooms();
     fetchRoomTypes();
-  }, []);
+  }, [filters, page, pageSize]);
 
   const handleAdd = () => {
     setForm({
@@ -183,56 +205,7 @@ export default function Rooms() {
     setFilters((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const getValueByPath = (obj, path) => {
-    return path.split('.').reduce((o, p) => (o ? o[p] : undefined), obj);
-  };
-
-  const evaluateFilter = (f, room) => {
-    const raw = getValueByPath(room, f.field);
-    if (raw === undefined || raw === null) return false;
-
-    // normalize boolean field input
-    if (f.field === 'is_available') {
-      const target = f.value === 'true' || f.value === true || f.value === '1';
-      if (f.operator === '=') return raw === target;
-      if (f.operator === '!=') return raw !== target;
-      return false;
-    }
-
-    // numeric comparison when possible
-    const maybeNum = Number(raw);
-    const targetNum = Number(f.value);
-    const isNumeric = !isNaN(maybeNum) && !isNaN(targetNum);
-
-    if (isNumeric) {
-      switch (f.operator) {
-        case '>': return maybeNum > targetNum;
-        case '<': return maybeNum < targetNum;
-        case '>=': return maybeNum >= targetNum;
-        case '<=': return maybeNum <= targetNum;
-        case '=': return maybeNum === targetNum;
-        case '~': // gần bằng: within 10% or within absolute 1 if target small
-          const diff = Math.abs(maybeNum - targetNum);
-          const tol = Math.max(1, Math.abs(targetNum) * 0.1);
-          return diff <= tol;
-        default: return false;
-      }
-    }
-
-    // string operations
-    const rawStr = String(raw).toLowerCase();
-    const valStr = String(f.value).toLowerCase();
-    if (f.operator === '=') return rawStr === valStr;
-    if (f.operator === '~') return rawStr.includes(valStr);
-    return false;
-  };
-
-  const applyFilters = (list) => {
-    if (!filters || filters.length === 0) return list;
-    return list.filter((item) => filters.every((f) => evaluateFilter(f, item)));
-  };
-
-  const filteredRooms = applyFilters(rooms);
+  // Không lọc lại ở frontend, chỉ hiển thị dữ liệu đã phân trang từ backend
 
   return (
     <div className="container mt-4 position-relative">
@@ -255,8 +228,18 @@ export default function Rooms() {
             compact
           />
         </div>
-
-        <Table columns={columns} data={filteredRooms} />
+        <Table
+          columns={columns}
+          data={rooms}
+          page={page}
+          pageSize={pageSize}
+          totalRecords={totalRecords}
+          onPageChange={(newPage) => setPage(newPage)}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+        />
 
         {/* Modal Thêm / Sửa */}
         <Modal

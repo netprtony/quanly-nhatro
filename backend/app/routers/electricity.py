@@ -3,33 +3,30 @@ from sqlalchemy.orm import Session
 from sqlalchemy import cast, String
 from typing import List
 from app import models, database
-from app.schemas.electricity import ElectricityMeterCreate, ElectricityMeterUpdate, ElectricityMeterOut
+from app.schemas.electricity import ElectricityMeterCreate, PaginatedElectricityMeterOut, ElectricityMeterUpdate, ElectricityMeterOut
 from datetime import date
 import pandas as pd
 from io import BytesIO
 from fastapi.responses import StreamingResponse
 router = APIRouter(prefix="/electricity", tags=["Electricity"])
 
-@router.get("/", response_model=List[ElectricityMeterOut])
+@router.get("/", response_model=PaginatedElectricityMeterOut)
 def get_meters(
-    db: Session = Depends(database.get_db),
-    room_id: int = Query(None),
-    month: str = Query(None),
-    skip: int = 0,
-    limit: int = 20,
+    db:Session = Depends(database.get_db),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=200),
     search: str = Query(None, description="Tìm theo phòng hoặc tháng")
 ):
     query = db.query(models.ElectricityMeter)
-    if room_id:
-        query = query.filter(models.ElectricityMeter.room_id == room_id)
-    if month:
-        query = query.filter(models.ElectricityMeter.month == month)
     if search:
         query = query.join(models.Room).filter(
             (models.Room.room_number.ilike(f"%{search}%")) |
             (cast(models.ElectricityMeter.month, String).ilike(f"%{search}%"))
         )
-    return query.offset(skip).limit(limit).all()
+
+    total = query.count()
+    items = query.offset((page - 1) * page_size).limit(page_size).all()
+    return {"total": total, "items": items}
 
 @router.get("/{meter_id}", response_model=ElectricityMeterOut)
 def get_meter(meter_id: int, db: Session = Depends(database.get_db)):

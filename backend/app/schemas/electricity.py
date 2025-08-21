@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import date, datetime
 
 class ElectricityMeterBase(BaseModel):
@@ -36,6 +36,13 @@ class ElectricityMeterOut(BaseModel):
     usage_kwh: int
     total_amount: float
     created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+class PaginatedElectricityMeterOut(BaseModel):
+    total: int
+    items: List[ElectricityMeterOut]
 
     class Config:
         orm_mode = True

@@ -1,6 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
-
+from typing import Optional, List
 
 class RoomTypeSchema(BaseModel):
     room_type_id: int
@@ -45,3 +44,9 @@ class RoomTypeCreate(BaseModel):
     type_name: str
     description: Optional[str]
     price_per_month: float
+class PaginatedRoomOut(BaseModel):
+    items: List[RoomSchema]
+    total: int
+
+    class Config:
+        orm_mode = True

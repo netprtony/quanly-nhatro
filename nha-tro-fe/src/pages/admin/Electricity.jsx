@@ -8,7 +8,8 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ExcelJS from "exceljs";
 import * as FileSaver from "file-saver";
-const ROOMS_API = "http://localhost:8000/rooms";
+
+const ROOMS_API = "http://localhost:8000/rooms/all";
 const ELECTRICITY_API = "http://localhost:8000/electricity";
 
 export default function Electricity() {
@@ -34,8 +35,12 @@ export default function Electricity() {
   // Advanced filters state
   const [filters, setFilters] = useState([]);
   const [newFilter, setNewFilter] = useState({ field: "room_id", operator: "=", value: "" });
-  // State cho textbox nhập đơn giá điện
-  
+
+  // Phân trang
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalRecords, setTotalRecords] = useState(0);
+
   const fieldOptions = [
     { value: "room_id", label: "Phòng", type: "number" },
     { value: "month", label: "Tháng", type: "string" },
@@ -96,35 +101,40 @@ export default function Electricity() {
     },
   ];
 
+  // Lấy danh sách phòng (lấy nhiều để đủ cho combobox)
   const fetchRooms = async () => {
     try {
-      const res = await axios.get(ROOMS_API);
-      setRooms(res.data);
+      // Gọi API get_all_rooms với filter_is_available=false
+      const res = await axios.get(`${ROOMS_API}?filter_is_available=false`);
+      setRooms(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       toast.error("❌ Lỗi khi lấy danh sách phòng!");
+      setRooms([]);
     }
   };
 
+  // Lấy danh sách hóa đơn điện có phân trang
   const fetchElectricities = async () => {
     try {
-      // Lấy danh sách hóa đơn điện, có thể truyền filter nâng cao
-      let query = "";
+      let query = `?page=${page}&page_size=${pageSize}`;
       if (filters.length > 0) {
-        query =
-          "?" +
-          filters
-            .map(
-              (f) =>
-                `filter_${f.field}=${encodeURIComponent(
-                  f.operator + f.value
-                )}`
-            )
-            .join("&");
+        query += "&" + filters
+          .map(
+            (f) =>
+              `filter_${f.field}=${encodeURIComponent(
+                f.operator + f.value
+              )}`
+          )
+          .join("&");
       }
       const res = await axios.get(ELECTRICITY_API + query);
-      setElectricities(res.data);
+      const data = res.data;
+      setElectricities(Array.isArray(data.items) ? data.items : []);
+      setTotalRecords(data.total || 0);
     } catch (err) {
       toast.error("❌ Lỗi khi lấy danh sách hóa đơn điện!");
+      setElectricities([]);
+      setTotalRecords(0);
     }
   };
 
@@ -132,7 +142,7 @@ export default function Electricity() {
     fetchRooms();
     fetchElectricities();
     // eslint-disable-next-line
-  }, [filters]);
+  }, [filters, page, pageSize]);
 
   const handleAdd = () => {
     setForm({
@@ -313,9 +323,9 @@ export default function Electricity() {
 
   const handleExportExcel = async () => {
     try {
-      // Lấy danh sách phòng
-      const resRooms = await axios.get(ROOMS_API);
-      const roomsData = resRooms.data;
+      // Lấy danh sách phòng đang có người ở
+      const resRooms = await axios.get(`${ROOMS_API}?filter_is_available=False`);
+      const roomsData = Array.isArray(resRooms.data) ? resRooms.data : [];
 
       // Lấy tháng hiện tại
       const now = new Date();
@@ -496,7 +506,18 @@ export default function Electricity() {
           />
         </div>
 
-        <Table columns={columns} data={filteredElectricities} />
+        <Table
+          columns={columns}
+          data={electricities}
+          page={page}
+          pageSize={pageSize}
+          totalRecords={totalRecords}
+          onPageChange={(newPage) => setPage(newPage)}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+        />
 
         <Modal
           isOpen={showModal}

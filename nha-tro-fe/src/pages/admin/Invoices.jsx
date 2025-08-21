@@ -10,7 +10,19 @@ const INVOICE_API = "http://localhost:8000/invoices";
 const ROOMS_API = "http://localhost:8000/rooms";
 const INVOICE_DETAIL_API = "http://localhost:8000/invoice-details";
 
+const FEE_TYPES = [
+  { value: "Rent", label: "Thuê phòng" },
+  { value: "Electricity", label: "Điện" },
+  { value: "Trash", label: "Rác" },
+  { value: "Water", label: "Nước" },
+  { value: "Wifi", label: "Wifi" },
+  { value: "Other", label: "Khác" },
+];
+
+const ELECTRICITY_API = "http://localhost:8000/electricity";
+
 export default function Invoices() {
+  const [electricityMeters, setElectricityMeters] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -154,9 +166,10 @@ export default function Invoices() {
   // Lấy danh sách phòng
   const fetchRooms = async () => {
     try {
-      const res = await fetch(ROOMS_API);
+      // có phân trang, mặc định lấy 1 trang lớn để đủ dữ liệu
+      const res = await fetch(`${ROOMS_API}?page=1&page_size=200`);
       const data = await res.json();
-      setRooms(Array.isArray(data) ? data : []);
+      setRooms(Array.isArray(data.items) ? data.items : []);
     } catch (err) {
       toast.error("Không thể tải danh sách phòng!");
       setRooms([]);
@@ -333,7 +346,7 @@ export default function Invoices() {
     setShowDetailModal(true);
   };
 
-  const handleAddDetail = () => {
+  const handleAddDetail = async () => {
     setDetailForm({
       invoice_id: selectedInvoiceId,
       meter_id: "",
@@ -343,6 +356,20 @@ export default function Invoices() {
     });
     setEditingDetail(null);
     setDetailUnsaved(false);
+
+    // Nếu đã biết phòng, lấy danh sách hóa đơn điện của phòng đó
+    const invoice = invoices.find(inv => inv.invoice_id === selectedInvoiceId);
+    if (invoice && invoice.room_id) {
+      try {
+        const res = await fetch(`${ELECTRICITY_API}?room_id=${invoice.room_id}`);
+        const data = await res.json();
+        setElectricityMeters(Array.isArray(data) ? data : []);
+      } catch {
+        setElectricityMeters([]);
+      }
+    } else {
+      setElectricityMeters([]);
+    }
   };
 
   const handleEditDetail = (detail) => {
@@ -412,9 +439,35 @@ export default function Invoices() {
     }
   };
 
-  const handleDetailFormChange = (field, value) => {
+  const handleDetailFormChange = async (field, value) => {
+    // Nếu chọn meter_id (hóa đơn điện) thì tự động lấy total_amount
+    if (field === "meter_id" && detailForm.fee_type === "Electricity") {
+      const meter = electricityMeters.find(m => String(m.meter_id) === String(value));
+      setDetailForm((prev) => ({
+        ...prev,
+        meter_id: value,
+        amount: meter ? meter.total_amount : "",
+      }));
+      setDetailUnsaved(true);
+      return;
+    }
+
     setDetailForm((prev) => ({ ...prev, [field]: value }));
     setDetailUnsaved(true);
+
+    // Nếu chọn loại phí là "Electricity", load lại danh sách công tơ điện nếu chưa có
+    if (field === "fee_type" && value === "Electricity") {
+      const invoice = invoices.find(inv => inv.invoice_id === selectedInvoiceId);
+      if (invoice && invoice.room_id) {
+        try {
+          const res = await fetch(`${ELECTRICITY_API}?room_id=${invoice.room_id}`);
+          const data = await res.json();
+          setElectricityMeters(Array.isArray(data) ? data : []);
+        } catch {
+          setElectricityMeters([]);
+        }
+      }
+    }
   };
 
   return (
@@ -447,87 +500,88 @@ export default function Invoices() {
           onPageSizeChange={(size) => {
             setPageSize(size);
             setPage(1);
-          }}
-        />
+            fetchRooms();
+            }}
+          />
 
-        <Modal
-          isOpen={showModal}
-          onClose={handleCloseModal}
-          title={editingInvoice ? "✏️ Chỉnh sửa hóa đơn" : "➕ Thêm hóa đơn"}
-          showConfirm
-          onConfirm={handleSubmitInvoice}
-        >
-          <form>
+          <Modal
+            isOpen={showModal}
+            onClose={handleCloseModal}
+            title={editingInvoice ? "✏️ Chỉnh sửa hóa đơn" : "➕ Thêm hóa đơn"}
+            showConfirm
+            onConfirm={handleSubmitInvoice}
+          >
+            <form>
             <div className="row g-3">
               <div className="col-md-6">
-                <label className="form-label">Phòng</label>
-                <select
-                  className="form-select"
-                  value={form.room_id}
-                  onChange={(e) => handleFormChange("room_id", e.target.value)}
-                  required
-                >
-                  <option value="">-- Chọn phòng --</option>
-                  {rooms.map(room => (
-                    <option key={room.room_id} value={room.room_id}>
-                      {room.room_number}
-                    </option>
-                  ))}
-                </select>
+              <label className="form-label">Phòng</label>
+              <select
+                className="form-select"
+                value={form.room_id}
+                onChange={(e) => handleFormChange("room_id", e.target.value)}
+                required
+              >
+                <option value="">-- Chọn phòng --</option>
+                {rooms.map(room => (
+                <option key={room.room_id} value={room.room_id}>
+                  {room.room_number}
+                </option>
+                ))}
+              </select>
               </div>
               <div className="col-md-6">
-                <label className="form-label">Tháng</label>
-                <input
-                  type="month"
-                  className="form-control"
-                  value={form.month}
-                  onChange={(e) => handleFormChange("month", e.target.value)}
-                  required
-                />
+              <label className="form-label">Tháng</label>
+              <input
+                type="month"
+                className="form-control"
+                value={form.month}
+                onChange={(e) => handleFormChange("month", e.target.value)}
+                required
+              />
               </div>
               <div className="col-md-6">
-                <label className="form-label">Số tiền (VND)</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={form.total_amount}
-                  onChange={(e) => handleFormChange("total_amount", e.target.value)}
-                  required
-                />
+              <label className="form-label">Số tiền (VND)</label>
+              <input
+                type="number"
+                className="form-control"
+                value={form.total_amount}
+                onChange={(e) => handleFormChange("total_amount", e.target.value)}
+                required
+              />
               </div>
               <div className="col-md-6">
-                <label className="form-label">Trạng thái</label>
-                <select
-                  className="form-select"
-                  value={form.is_paid ? "true" : "false"}
-                  onChange={(e) => handleFormChange("is_paid", e.target.value === "true")}
-                  required
-                >
-                  <option value="false">Chưa thanh toán</option>
-                  <option value="true">Đã thanh toán</option>
-                </select>
+              <label className="form-label">Trạng thái</label>
+              <select
+                className="form-select"
+                value={form.is_paid ? "true" : "false"}
+                onChange={(e) => handleFormChange("is_paid", e.target.value === "true")}
+                required
+              >
+                <option value="false">Chưa thanh toán</option>
+                <option value="true">Đã thanh toán</option>
+              </select>
               </div>
             </div>
-          </form>
-        </Modal>
+            </form>
+          </Modal>
 
-        <ModalConfirm
-          isOpen={showConfirmDelete}
-          title="Xác nhận xóa"
-          message="Bạn có chắc chắn muốn xóa hóa đơn này không?"
-          confirmText="Xóa"
-          cancelText="Hủy"
-          onConfirm={confirmDelete}
-          onClose={() => setShowConfirmDelete(false)}
-        />
+          <ModalConfirm
+            isOpen={showConfirmDelete}
+            title="Xác nhận xóa"
+            message="Bạn có chắc chắn muốn xóa hóa đơn này không?"
+            confirmText="Xóa"
+            cancelText="Hủy"
+            onConfirm={confirmDelete}
+            onClose={() => setShowConfirmDelete(false)}
+          />
 
-        <ModalConfirm
-          isOpen={showConfirmExit}
-          title="Thoát mà chưa lưu?"
-          message="Bạn có thay đổi chưa được lưu. Thoát không?"
-          confirmText="Thoát"
-          cancelText="Ở lại"
-          onConfirm={() => {
+          <ModalConfirm
+            isOpen={showConfirmExit}
+            title="Thoát mà chưa lưu?"
+            message="Bạn có thay đổi chưa được lưu. Thoát không?"
+            confirmText="Thoát"
+            cancelText="Ở lại"
+            onConfirm={() => {
             setShowModal(false);
             setShowConfirmExit(false);
             setUnsavedChanges(false);
@@ -550,29 +604,51 @@ export default function Invoices() {
           </div>
           <Table columns={detailColumns} data={invoiceDetails} />
 
-          {/* Form thêm/sửa chi tiết hóa đơn */}
           {(editingDetail !== null || detailForm.invoice_id) && (
             <form className="mt-3">
               <div className="row g-3">
                 <div className="col-md-6">
-                  <label className="form-label">Chỉ số điện</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={detailForm.meter_id}
-                    onChange={(e) => handleDetailFormChange("meter_id", e.target.value)}
-                  />
-                </div>
-                <div className="col-md-6">
                   <label className="form-label">Loại phí</label>
-                  <input
-                    type="text"
-                    className="form-control"
+                  <select
+                    className="form-select"
                     value={detailForm.fee_type}
                     onChange={(e) => handleDetailFormChange("fee_type", e.target.value)}
                     required
-                  />
+                  >
+                    <option value="">-- Chọn loại phí --</option>
+                    {FEE_TYPES.map(ft => (
+                      <option key={ft.value} value={ft.value}>{ft.label}</option>
+                    ))}
+                  </select>
                 </div>
+                {detailForm.fee_type === "Electricity" ? (
+                  <div className="col-md-6">
+                    <label className="form-label">Chỉ số điện</label>
+                    <select
+                      className="form-select"
+                      value={detailForm.meter_id}
+                      onChange={(e) => handleDetailFormChange("meter_id", e.target.value)}
+                      required
+                    >
+                      <option value="">-- Chọn hóa đơn điện --</option>
+                      {electricityMeters.map(meter => (
+                        <option key={meter.meter_id} value={meter.meter_id}>
+                          {`Tháng ${meter.month?.slice(0,7)} | Cũ: ${meter.old_reading} | Mới: ${meter.new_reading}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="col-md-6">
+                    <label className="form-label">Chỉ số điện</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={detailForm.meter_id}
+                      onChange={(e) => handleDetailFormChange("meter_id", e.target.value)}
+                    />
+                  </div>
+                )}
                 <div className="col-md-6">
                   <label className="form-label">Số tiền (VND)</label>
                   <input
