@@ -1,0 +1,14 @@
+.git
+.vscode
+.venv
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache
+
+# Frontend
+nha-tro-fe/node_modules
+nha-tro-fe/dist
+
+# OS / editor
+.DS_Store
+Thumbs.db

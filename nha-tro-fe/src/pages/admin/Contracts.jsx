@@ -205,7 +205,12 @@ export default function Contracts() {
     {
       label: "Trạng thái",
       accessor: "contract_status",
-      render: (value) => (value === "Active" ? "✅ Hiệu lực" : "❌ Hết hạn"),
+      render: (value) => {
+        if (value === "Active") return "✅ Hiệu lực";
+        if (value === "Terminated") return "❌ Hết hạn";
+        if (value === "Pending") return "⏳ Chờ hiệu lực";
+        return value;
+      },
     },
     {
       label: "Thao tác",
