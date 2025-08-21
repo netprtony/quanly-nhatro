@@ -57,6 +57,7 @@ class Tenant(Base):
     email = Column(String(100))
     id_card_front_path = Column(String(255))
     id_card_back_path = Column(String(255))
+    is_rent = Column(Boolean, default=True)
     address = Column(Text)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 

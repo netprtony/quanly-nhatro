@@ -21,7 +21,7 @@ export default function Tenants() {
     date_of_birth: "",
     id_card_front_path: "",
     id_card_back_path: "",
-    is_active: true,
+    is_rent: true,
   });
 
   const [unsavedChanges, setUnsavedChanges] = useState(false);
@@ -102,7 +102,7 @@ export default function Tenants() {
     { label: "Địa chỉ", accessor: "address" },
     {
       label: "Trạng thái",
-      accessor: "is_active",
+      accessor: "is_rent",
       render: (value) => (value ? "✅ Đang thuê" : "❌ Đã rời"),
     },
     {
@@ -128,7 +128,7 @@ export default function Tenants() {
       date_of_birth: "",
       id_card_front_path: "",
       id_card_back_path: "",
-      is_active: true,
+      is_rent: true,
     });
     setEditingTenant(null);
     setUnsavedChanges(false);
@@ -146,7 +146,7 @@ export default function Tenants() {
       date_of_birth: tenant.date_of_birth || "",
       id_card_front_path: tenant.id_card_front_path || "",
       id_card_back_path: tenant.id_card_back_path || "",
-      is_active: tenant.is_active,
+      is_rent: tenant.is_rent,
     });
     setEditingTenant(tenant);
     setUnsavedChanges(false);
@@ -297,8 +297,8 @@ export default function Tenants() {
                     type="checkbox"
                     className="form-check-input"
                     id="isActive"
-                    checked={form.is_active}
-                    onChange={(e) => handleFormChange("is_active", e.target.checked)}
+                    checked={form.is_rent}
+                    onChange={(e) => handleFormChange("is_rent", e.target.checked)}
                   />
                   <label className="form-check-label" htmlFor="isActive">
                     Đang thuê

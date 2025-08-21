@@ -13,6 +13,7 @@ CREATE TABLE Tenants (
     email VARCHAR(100),
     id_card_front_path VARCHAR(255),  -- ảnh CCCD mặt trước
     id_card_back_path VARCHAR(255),   -- ảnh CCCD mặt sau
+    is_rent BOOLEAN DEFAULT TRUE,
     address TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -283,17 +284,17 @@ VALUES
 INSERT INTO Tenants (tenant_id, full_name, gender, date_of_birth, phone_number, email, id_card_front_path, id_card_back_path, address)
 VALUES 
 ('079203029606', 'Huỳnh Vĩ Khang', 'Male', '2003-05-28', '0767487840', 'huynhvikhang913@gmail.com', '/public/cccd/front_079203029607.jpg', '/public/cccd/back_079203029607.jpg', '5/5A Nguyễn Thị Sóc, Bà Điểm, Hóc Môn, TP.HCM');
-INSERT INTO Tenants (tenant_id, full_name, gender, date_of_birth, phone_number, email, id_card_front_path, id_card_back_path, address) VALUES
-('079203029607', 'Nguyen Van An', 'Male', '1990-05-15', '0905123456', 'an.nguyen@example.com', '/idcards/T001_front.jpg', '/idcards/T001_back.jpg', '123 Le Loi, Q1, HCMC'),
-('079203029608', 'Tran Thi Bich', 'Female', '1995-08-22', '0912345678', 'bich.tran@example.com', '/idcards/T002_front.jpg', '/idcards/T002_back.jpg', '456 Nguyen Hue, Q1, HCMC'),
-('079203029609', 'Le Van Cuong', 'Male', '1988-03-10', '0923456789', 'cuong.le@example.com', '/idcards/T003_front.jpg', '/idcards/T003_back.jpg', '789 Tran Hung Dao, Q5, HCMC'),
-('079203029610', 'Pham Thi Dung', 'Female', '1993-11-30', '0934567890', 'dung.pham@example.com', '/idcards/T004_front.jpg', '/idcards/T004_back.jpg', '101 Vo Van Tan, Q3, HCMC'),
-('079203029611', 'Hoang Van Em', 'Male', '1992-07-25', '0945678901', 'em.hoang@example.com', '/idcards/T005_front.jpg', '/idcards/T005_back.jpg', '202 Ly Tu Trong, Q1, HCMC'),
-('079203029612', 'Vo Thi Phuong', 'Female', '1996-02-14', '0956789012', 'phuong.vo@example.com', '/idcards/T006_front.jpg', '/idcards/T006_back.jpg', '303 Hai Ba Trung, Q3, HCMC'),
-('079203029613', 'Nguyen Van Hung', 'Male', '1985-09-05', '0967890123', 'hung.nguyen@example.com', '/idcards/T007_front.jpg', '/idcards/T007_back.jpg', '404 Nguyen Trai, Q5, HCMC'),
-('079203029614', 'Tran Van Khanh', 'Male', '1991-12-20', '0978901234', 'khanh.tran@example.com', '/idcards/T008_front.jpg', '/idcards/T008_back.jpg', '505 Le Van Sy, Q3, HCMC'),
-('079203029615', 'Le Thi Lan', 'Female', '1994-04-18', '0989012345', 'lan.le@example.com', '/idcards/T009_front.jpg', '/idcards/T009_back.jpg', '606 Cach Mang Thang 8, Q3, HCMC'),
-('079203029616', 'Pham Van Minh', 'Male', '1989-06-12', '0990123456', 'minh.pham@example.com', '/idcards/T010_front.jpg', '/idcards/T010_back.jpg', '707 Nguyen Dinh Chieu, Q3, HCMC');
+INSERT INTO Tenants (tenant_id, full_name, gender, date_of_birth, phone_number, email, id_card_front_path, id_card_back_path, address, is_rent) VALUES
+('079203029607', 'Nguyen Van An', 'Male', '1990-05-15', '0905123456', 'an.nguyen@example.com', '/idcards/T001_front.jpg', '/idcards/T001_back.jpg', '123 Le Loi, Q1, HCMC', TRUE),
+('079203029608', 'Tran Thi Bich', 'Female', '1995-08-22', '0912345678', 'bich.tran@example.com', '/idcards/T002_front.jpg', '/idcards/T002_back.jpg', '456 Nguyen Hue, Q1, HCMC', TRUE),
+('079203029609', 'Le Van Cuong', 'Male', '1988-03-10', '0923456789', 'cuong.le@example.com', '/idcards/T003_front.jpg', '/idcards/T003_back.jpg', '789 Tran Hung Dao, Q5, HCMC', TRUE),
+('079203029610', 'Pham Thi Dung', 'Female', '1993-11-30', '0934567890', 'dung.pham@example.com', '/idcards/T004_front.jpg', '/idcards/T004_back.jpg', '101 Vo Van Tan, Q3, HCMC', TRUE),
+('079203029611', 'Hoang Van Em', 'Male', '1992-07-25', '0945678901', 'em.hoang@example.com', '/idcards/T005_front.jpg', '/idcards/T005_back.jpg', '202 Ly Tu Trong, Q1, HCMC', TRUE),
+('079203029612', 'Vo Thi Phuong', 'Female', '1996-02-14', '0956789012', 'phuong.vo@example.com', '/idcards/T006_front.jpg', '/idcards/T006_back.jpg', '303 Hai Ba Trung, Q3, HCMC', TRUE),
+('079203029613', 'Nguyen Van Hung', 'Male', '1985-09-05', '0967890123', 'hung.nguyen@example.com', '/idcards/T007_front.jpg', '/idcards/T007_back.jpg', '404 Nguyen Trai, Q5, HCMC', TRUE),
+('079203029614', 'Tran Van Khanh', 'Male', '1991-12-20', '0978901234', 'khanh.tran@example.com', '/idcards/T008_front.jpg', '/idcards/T008_back.jpg', '505 Le Van Sy, Q3, HCMC', TRUE),
+('079203029615', 'Le Thi Lan', 'Female', '1994-04-18', '0989012345', 'lan.le@example.com', '/idcards/T009_front.jpg', '/idcards/T009_back.jpg', '606 Cach Mang Thang 8, Q3, HCMC', TRUE),
+('079203029616', 'Pham Van Minh', 'Male', '1989-06-12', '0990123456', 'minh.pham@example.com', '/idcards/T010_front.jpg', '/idcards/T010_back.jpg', '707 Nguyen Dinh Chieu, Q3, HCMC', TRUE);
 INSERT INTO Users (username, email, password, tenant_id, role, is_active) VALUES
 ('an.nguyen', 'an.nguyen@example.com', '$2a$12$YbgMrDVLpsncrlxrjam0EO4yosTojsqK5nqs1sIhgW/aGz5QsHO0e', '079203029607', 'USER', TRUE),
 ('bich.tran', 'bich.tran@example.com', '$2a$12$YbgMrDVLpsncrlxrjam0EO4yosTojsqK5nqs1sIhgW/aGz5QsHO0e', '079203029608', 'USER', TRUE),

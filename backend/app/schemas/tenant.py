@@ -10,6 +10,7 @@ class TenantBase(BaseModel):
     email: Optional[str]
     id_card_front_path: Optional[str]
     id_card_back_path: Optional[str]
+    is_rent: Optional[bool] = True
     address: Optional[str]
 
 class TenantCreate(TenantBase):
