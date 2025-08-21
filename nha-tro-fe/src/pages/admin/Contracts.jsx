@@ -31,7 +31,10 @@ export default function Contracts() {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [contractToDelete, setContractToDelete] = useState(null);
   const [filters, setFilters] = useState([]);
-
+  // Phân trang
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalRecords, setTotalRecords] = useState(0);
   // Bộ lọc nâng cao: fieldOptions cho Contract
   const fieldOptions = [
     { label: "Phòng", value: "room_id" },
@@ -46,37 +49,41 @@ export default function Contracts() {
   // Load danh sách hợp đồng từ API
   const fetchContracts = async () => {
     try {
-      let query = "";
+      let query = `?page=${page}&page_size=${pageSize}`;
       if (filters.length > 0) {
-        query =
-          "?" +
-          filters
-            .map(
-              (f) =>
-                `filter_${f.field}=${encodeURIComponent(
-                  f.operator + f.value
-                )}`
-            )
-            .join("&");
+        query += "&" + filters
+          .map(
+            (f) =>
+              `filter_${f.field}=${encodeURIComponent(
+                f.operator + f.value
+              )}`
+          )
+          .join("&");
       }
       const res = await fetch(API_URL + query);
       const data = await res.json();
-      setContracts(data);
+      setContracts(data.items);
+      setTotalRecords(data.total);
     } catch (err) {
       toast.error("Không thể tải danh sách hợp đồng!");
+      setContracts([]);
+      setTotalRecords(0);
     }
   };
 
+
   // Load danh sách phòng cho combobox
   const fetchRooms = async () => {
-    try {
-      const res = await fetch(ROOMS_API);
-      const data = await res.json();
-      setRooms(data);
-    } catch (err) {
-      toast.error("Không thể tải danh sách phòng!");
-    }
-  };
+      try {
+        // có phân trang, mặc định lấy 1 trang lớn để đủ dữ liệu
+        const res = await fetch(`${ROOMS_API}?page=1&page_size=200`);
+        const data = await res.json();
+        setRooms(Array.isArray(data.items) ? data.items : []);
+      } catch (err) {
+        toast.error("Không thể tải danh sách phòng!");
+        setRooms([]);
+      }
+    };
 
   // Load danh sách khách thuê cho combobox
   const fetchTenants = async () => {
@@ -308,7 +315,19 @@ export default function Contracts() {
           ➕ Thêm hợp đồng
         </button>
 
-        <Table columns={columns} data={contracts} />
+        <Table
+            columns={columns}
+            data={contracts}
+            page={page}
+            pageSize={pageSize}
+            totalRecords={totalRecords}
+            onPageChange={(newPage) => setPage(newPage)}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(1);
+              fetchRooms();
+              }}
+            />
 
         {/* Modal Thêm / Sửa */}
         <Modal

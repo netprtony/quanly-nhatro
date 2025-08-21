@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import date, datetime
 
 class ContractBase(BaseModel):
@@ -26,6 +26,12 @@ class ContractUpdate(BaseModel):
 class ContractOut(ContractBase):
     contract_id: int
     created_at: datetime
+
+    class Config:
+        orm_mode = True
+class PaginatedContract(BaseModel):
+    items: List[ContractOut]
+    total: int
 
     class Config:
         orm_mode = True

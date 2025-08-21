@@ -2,25 +2,27 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List
 from app import models, database
-from app.schemas.device import DeviceCreate, DeviceUpdate, DeviceOut
+from app.schemas.device import DeviceCreate, DeviceUpdate, DeviceOut, PaginatedDevices
 
 router = APIRouter(prefix="/devices", tags=["Devices"])
-@router.get("/", response_model=List[DeviceOut])
+
+@router.get("/", response_model=PaginatedDevices)
 def get_devices(
     db: Session = Depends(database.get_db),
-    skip: int = 0,
-    limit: int = 50,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=200),
     search: str = Query(None, description="Tìm theo tên thiết bị hoặc phòng")
 ):
     query = db.query(models.Device)
     if search:
-        query = query.filter(
+        query = query.join(models.Room).filter(
             (models.Device.device_name.ilike(f"%{search}%")) |
-            (models.Device.description.ilike(f"%{search}%"))
+            (models.Room.room_number.ilike(f"%{search}%"))
         )
-    devices = query.offset(skip).limit(limit).all()
-    db.commit()  # Ensure session is up-to-date
-    return devices
+    total = query.count()
+    items = query.offset((page - 1) * page_size).limit(page_size).all()
+    return {"items": items, "total": total}
+
 
 @router.get("/{device_id}", response_model=DeviceOut)
 def get_device(device_id: int, db: Session = Depends(database.get_db)):

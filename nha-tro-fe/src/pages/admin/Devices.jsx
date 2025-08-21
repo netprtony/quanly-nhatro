@@ -21,7 +21,11 @@ export default function Devices() {
     description: "",
     is_active: true,
   });
-
+    // Phân trang
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalRecords, setTotalRecords] = useState(0);
+  
   const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [showConfirmExit, setShowConfirmExit] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
@@ -67,39 +71,44 @@ export default function Devices() {
 
   const fetchDevices = async () => {
     try {
-      let query = "";
+      let query = `?page=${page}&page_size=${pageSize}`;
       if (filters.length > 0) {
-        query =
-          "?" +
-          filters
-            .map(
-              (f) =>
-                `filter_${f.field}=${encodeURIComponent(
-                  f.operator + f.value
-                )}`
-            )
-            .join("&");
+        query += "&" + filters
+          .map(
+            (f) =>
+              `filter_${f.field}=${encodeURIComponent(
+                f.operator + f.value
+              )}`
+          )
+          .join("&");
       }
-      const res = await axios.get(DEVICES_API + query);
-      setDevices(res.data);
+       const res = await fetch(DEVICES_API + query);
+        const data = await res.json();
+        setDevices(Array.isArray(data.items) ? data.items : []);
+        setTotalRecords(data.total || 0);
     } catch (err) {
       toast.error("❌ Lỗi khi lấy danh sách thiết bị!");
+      setDevices([]);
+      setTotalRecords(0);
     }
   };
 
   const fetchRooms = async () => {
-    try {
-      const res = await axios.get(ROOMS_API);
-      setRooms(res.data);
-    } catch (err) {
-      toast.error("❌ Lỗi khi lấy danh sách phòng!");
-    }
-  };
+      try {
+        // có phân trang, mặc định lấy 1 trang lớn để đủ dữ liệu
+        const res = await fetch(`${ROOMS_API}?page=1&page_size=200`);
+        const data = await res.json();
+        setRooms(Array.isArray(data.items) ? data.items : []);
+      } catch (err) {
+        toast.error("Không thể tải danh sách phòng!");
+        setRooms([]);
+      }
+    };
 
   useEffect(() => {
     fetchDevices();
     fetchRooms();
-  }, [filters]);
+  }, [filters, page, pageSize]);
 
   const handleAdd = () => {
     setForm({
@@ -263,7 +272,19 @@ export default function Devices() {
           />
         </div>
 
-        <Table columns={columns} data={filteredDevices} />
+        <Table
+            columns={columns}
+            data={devices}
+            page={page}
+            pageSize={pageSize}
+            totalRecords={totalRecords}
+            onPageChange={(newPage) => setPage(newPage)}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(1);
+              fetchRooms();
+              }}
+            />
 
         {/* Modal Thêm / Sửa */}
         <Modal

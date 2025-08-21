@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 class DeviceBase(BaseModel):
@@ -20,6 +20,12 @@ class DeviceUpdate(BaseModel):
 class DeviceOut(DeviceBase):
     device_id: int
     created_at: datetime
+
+    class Config:
+        orm_mode = True
+class PaginatedDevices(BaseModel):
+    items: List[DeviceOut]
+    total: int
 
     class Config:
         orm_mode = True

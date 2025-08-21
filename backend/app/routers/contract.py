@@ -2,25 +2,28 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List
 from app import models, database
-from app.schemas.contract import ContractCreate, ContractUpdate, ContractOut
+from app.schemas.contract import ContractCreate, ContractUpdate, ContractOut,PaginatedContract
 
 
 router = APIRouter(prefix="/contracts", tags=["Contracts"])
 
-@router.get("/", response_model=List[ContractOut])
+@router.get("/", response_model=PaginatedContract)
 def get_contracts(
     db: Session = Depends(database.get_db),
-    skip: int = 0,
-    limit: int = 20,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=200),
     search: str = Query(None, description="Tìm theo tên khách hoặc số phòng")
 ):
     query = db.query(models.Contract)
     if search:
         query = query.join(models.Tenant).join(models.Room).filter(
-            (models.Tenant.full_name.ilike(f"%{search}%")) |
+            (models.Tenant.tenant_id.ilike(f"%{search}%")) |
             (models.Room.room_number.ilike(f"%{search}%"))
         )
-    return query.offset(skip).limit(limit).all()
+    total = query.count()
+    items = query.offset((page - 1) * page_size).limit(page_size).all()
+    return {"items": items, "total": total}
+
 
 @router.get("/{contract_id}", response_model=ContractOut)
 def get_contract(contract_id: int, db: Session = Depends(database.get_db)):
