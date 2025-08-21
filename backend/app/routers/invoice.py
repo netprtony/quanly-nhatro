@@ -1,16 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import List
 from app import models, database
-from app.schemas.invoice import InvoiceCreate, InvoiceUpdate, InvoiceOut
+from app.schemas.invoice import InvoiceCreate, InvoiceUpdate, InvoiceOut, PaginatedInvoiceOut
 
 router = APIRouter(prefix="/invoices", tags=["Invoices"])
 
-@router.get("/", response_model=List[InvoiceOut])
+@router.get("/", response_model=PaginatedInvoiceOut)
 def get_invoices(
     db: Session = Depends(database.get_db),
-    skip: int = 0,
-    limit: int = 20,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=200),
     search: str = Query(None, description="Tìm theo phòng hoặc tháng")
 ):
     query = db.query(models.Invoice)
@@ -19,7 +18,9 @@ def get_invoices(
             (models.Room.room_number.ilike(f"%{search}%")) |
             (models.Invoice.month.ilike(f"%{search}%"))
         )
-    return query.offset(skip).limit(limit).all()
+    total = query.count()
+    items = query.offset((page - 1) * page_size).limit(page_size).all()
+    return {"items": items, "total": total}
 
 @router.get("/{invoice_id}", response_model=InvoiceOut)
 def get_invoice(invoice_id: int, db: Session = Depends(database.get_db)):

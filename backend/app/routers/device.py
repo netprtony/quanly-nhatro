@@ -5,12 +5,11 @@ from app import models, database
 from app.schemas.device import DeviceCreate, DeviceUpdate, DeviceOut
 
 router = APIRouter(prefix="/devices", tags=["Devices"])
-
 @router.get("/", response_model=List[DeviceOut])
 def get_devices(
     db: Session = Depends(database.get_db),
     skip: int = 0,
-    limit: int = 20,
+    limit: int = 50,
     search: str = Query(None, description="Tìm theo tên thiết bị hoặc phòng")
 ):
     query = db.query(models.Device)
@@ -19,7 +18,9 @@ def get_devices(
             (models.Device.device_name.ilike(f"%{search}%")) |
             (models.Device.description.ilike(f"%{search}%"))
         )
-    return query.offset(skip).limit(limit).all()
+    devices = query.offset(skip).limit(limit).all()
+    db.commit()  # Ensure session is up-to-date
+    return devices
 
 @router.get("/{device_id}", response_model=DeviceOut)
 def get_device(device_id: int, db: Session = Depends(database.get_db)):

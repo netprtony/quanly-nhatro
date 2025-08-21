@@ -2,21 +2,24 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List
 from app import models, database
-from app.schemas.invoice_detail import InvoiceDetailCreate, InvoiceDetailUpdate, InvoiceDetailOut
+from app.schemas.invoice_detail import InvoiceDetailCreate, InvoiceDetailUpdate, InvoiceDetailOut, PaginatedInvoiceDetail
 
 router = APIRouter(prefix="/invoice-details", tags=["InvoiceDetails"])
 
-@router.get("/", response_model=List[InvoiceDetailOut])
+@router.get("/", response_model=PaginatedInvoiceDetail)
 def get_invoice_details(
     db: Session = Depends(database.get_db),
-    skip: int = 0,
-    limit: int = 50,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=200),
     filter_invoice_id: int = Query(None)
 ):
     query = db.query(models.InvoiceDetail)
     if filter_invoice_id is not None:
         query = query.filter(models.InvoiceDetail.invoice_id == filter_invoice_id)
-    return query.offset(skip).limit(limit).all()
+
+    total = query.count()
+    items = query.offset((page - 1) * page_size).limit(page_size).all()
+    return {"items": items, "total": total}
 
 @router.get("/{detail_id}", response_model=InvoiceDetailOut)
 def get_invoice_detail(detail_id: int, db: Session = Depends(database.get_db)):

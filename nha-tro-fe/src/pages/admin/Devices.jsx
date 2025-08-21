@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import Table from "/src/components/Table.jsx";
+import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
 import Modal from "/src/components/Modal.jsx";
 import ModalConfirm from "/src/components/ModalConfirm.jsx";
-import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -26,8 +27,8 @@ export default function Devices() {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [deviceToDelete, setDeviceToDelete] = useState(null);
   const [filters, setFilters] = useState([]);
+  const [newFilter, setNewFilter] = useState({ field: "device_name", operator: "~", value: "" });
 
-  // Bộ lọc nâng cao
   const fieldOptions = [
     { value: "device_name", label: "Tên thiết bị", type: "string" },
     { value: "room_id", label: "Phòng", type: "number" },
@@ -64,7 +65,6 @@ export default function Devices() {
     },
   ];
 
-  // Lấy danh sách thiết bị từ API, có hỗ trợ filter nâng cao
   const fetchDevices = async () => {
     try {
       let query = "";
@@ -80,29 +80,25 @@ export default function Devices() {
             )
             .join("&");
       }
-      const res = await fetch(DEVICES_API + query);
-      const data = await res.json();
-      setDevices(data);
+      const res = await axios.get(DEVICES_API + query);
+      setDevices(res.data);
     } catch (err) {
-      toast.error("Không thể tải danh sách thiết bị!");
+      toast.error("❌ Lỗi khi lấy danh sách thiết bị!");
     }
   };
 
-  // Lấy danh sách phòng cho combobox
   const fetchRooms = async () => {
     try {
-      const res = await fetch(ROOMS_API);
-      const data = await res.json();
-      setRooms(data);
+      const res = await axios.get(ROOMS_API);
+      setRooms(res.data);
     } catch (err) {
-      toast.error("Không thể tải danh sách phòng!");
+      toast.error("❌ Lỗi khi lấy danh sách phòng!");
     }
   };
 
   useEffect(() => {
     fetchDevices();
     fetchRooms();
-    // eslint-disable-next-line
   }, [filters]);
 
   const handleAdd = () => {
@@ -136,47 +132,35 @@ export default function Devices() {
 
   const confirmDelete = async () => {
     try {
-      const res = await fetch(`${DEVICES_API}/${deviceToDelete}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error(await res.text());
-      await fetchDevices();
+      await axios.delete(`${DEVICES_API}/${deviceToDelete}`);
       toast.success("🗑️ Xóa thiết bị thành công!");
+      fetchDevices();
+    } catch (err) {
+      toast.error("❌ Lỗi xóa thiết bị!");
+    } finally {
       setShowConfirmDelete(false);
       setDeviceToDelete(null);
-    } catch (err) {
-      toast.error("Xóa thiết bị thất bại! " + err.message);
     }
   };
 
   const handleSubmitDevice = async () => {
-    const payload = {
-      ...form,
-      room_id: form.room_id ? parseInt(form.room_id) : null,
-      is_active: form.is_active,
-    };
     try {
+      const payload = {
+        ...form,
+        room_id: form.room_id ? parseInt(form.room_id) : null,
+        is_active: form.is_active,
+      };
       if (editingDevice) {
-        const res = await fetch(`${DEVICES_API}/${editingDevice.device_id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) throw new Error(await res.text());
+        await axios.put(`${DEVICES_API}/${editingDevice.device_id}`, payload);
         toast.success("✏️ Cập nhật thiết bị thành công!");
       } else {
-        const res = await fetch(DEVICES_API, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) throw new Error(await res.text());
+        await axios.post(DEVICES_API, payload);
         toast.success("✅ Thêm thiết bị thành công!");
       }
-      await fetchDevices();
       setShowModal(false);
+      fetchDevices();
     } catch (err) {
-      toast.error("Lưu thiết bị thất bại! " + err.message);
+      toast.error("❌ Lỗi khi lưu thiết bị!");
     }
   };
 
@@ -193,7 +177,19 @@ export default function Devices() {
     setUnsavedChanges(true);
   };
 
-  // --- Advanced filter logic giống Rooms.jsx ---
+  const addFilter = () => {
+    if (!newFilter.field || newFilter.value === "") {
+      toast.warn("Vui lòng chọn trường và nhập giá trị lọc");
+      return;
+    }
+    setFilters((prev) => [...prev, { ...newFilter }]);
+    setNewFilter((prev) => ({ ...prev, value: "" }));
+  };
+
+  const removeFilter = (index) => {
+    setFilters((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const getValueByPath = (obj, path) => {
     return path.split('.').reduce((o, p) => (o ? o[p] : undefined), obj);
   };
@@ -245,11 +241,10 @@ export default function Devices() {
 
   const filteredDevices = applyFilters(devices);
 
-  // --- End advanced filter logic ---
-
   return (
     <div className="container mt-4 position-relative">
       <div className="p-4 rounded shadow bg-white">
+        {/* Header: Tiêu đề và nút Thêm thiết bị ở góc phải */}
         <div className="d-flex align-items-center justify-content-between mb-3">
           <h3 className="mb-0">🔌 Danh sách thiết bị</h3>
           <button className="btn btn-success" onClick={handleAdd}>
@@ -257,6 +252,7 @@ export default function Devices() {
           </button>
         </div>
 
+        {/* Bộ lọc nâng cao nằm ngang, nút thêm bộ lọc cùng hàng với các trường */}
         <div className="mb-3">
           <AdvancedFilters
             fieldOptions={fieldOptions}
@@ -269,6 +265,7 @@ export default function Devices() {
 
         <Table columns={columns} data={filteredDevices} />
 
+        {/* Modal Thêm / Sửa */}
         <Modal
           isOpen={showModal}
           onClose={handleCloseModal}
@@ -329,6 +326,7 @@ export default function Devices() {
           </form>
         </Modal>
 
+        {/* Modal xác nhận xóa */}
         <ModalConfirm
           isOpen={showConfirmDelete}
           title="Xác nhận xóa"
@@ -336,24 +334,12 @@ export default function Devices() {
           confirmText="Xóa"
           cancelText="Hủy"
           onConfirm={confirmDelete}
-          onClose={() => setShowConfirmDelete(false)}
-        />
-
-        <ModalConfirm
-          isOpen={showConfirmExit}
-          title="Thoát mà chưa lưu?"
-          message="Bạn có thay đổi chưa được lưu. Thoát không?"
-          confirmText="Thoát"
-          cancelText="Ở lại"
-          onConfirm={() => {
-            setShowModal(false);
-            setShowConfirmExit(false);
-            setUnsavedChanges(false);
-          }}
-          onClose={() => setShowConfirmExit(false)}
+          onCancel={() => setShowConfirmDelete(false)}
         />
       </div>
-      <ToastContainer position="top-right" autoClose={3000} />
+
+      {/* Toast thông báo */}
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} closeOnClick draggable pauseOnHover />
     </div>
   );
 }

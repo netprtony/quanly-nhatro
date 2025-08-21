@@ -28,7 +28,12 @@ export default function Invoices() {
   const [invoiceToDelete, setInvoiceToDelete] = useState(null);
   const [filters, setFilters] = useState([]);
 
-  // Thêm state cho modal chi tiết hóa đơn
+  // Phân trang
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalRecords, setTotalRecords] = useState(0);
+
+  // --- CRUD chi tiết hóa đơn ---
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
   const [invoiceDetails, setInvoiceDetails] = useState([]);
@@ -121,14 +126,28 @@ export default function Invoices() {
     },
   ];
 
-  // Lấy danh sách hóa đơn từ API
+  // Lấy danh sách hóa đơn từ API (có phân trang)
   const fetchInvoices = async () => {
     try {
-      const res = await fetch(INVOICE_API);
+      let query = `?page=${page}&page_size=${pageSize}`;
+      if (filters.length > 0) {
+        query += "&" + filters
+          .map(
+            (f) =>
+              `filter_${f.field}=${encodeURIComponent(
+                f.operator + f.value
+              )}`
+          )
+          .join("&");
+      }
+      const res = await fetch(INVOICE_API + query);
       const data = await res.json();
-      setInvoices(data);
+      setInvoices(Array.isArray(data.items) ? data.items : []);
+      setTotalRecords(data.total || 0);
     } catch (err) {
       toast.error("Không thể tải danh sách hóa đơn!");
+      setInvoices([]);
+      setTotalRecords(0);
     }
   };
 
@@ -137,9 +156,10 @@ export default function Invoices() {
     try {
       const res = await fetch(ROOMS_API);
       const data = await res.json();
-      setRooms(data);
+      setRooms(Array.isArray(data) ? data : []);
     } catch (err) {
       toast.error("Không thể tải danh sách phòng!");
+      setRooms([]);
     }
   };
 
@@ -148,16 +168,18 @@ export default function Invoices() {
     try {
       const res = await fetch(`${INVOICE_DETAIL_API}/by-invoice/${invoice_id}`);
       const data = await res.json();
-      setInvoiceDetails(data);
+      setInvoiceDetails(Array.isArray(data) ? data : []);
     } catch (err) {
       toast.error("Không thể tải chi tiết hóa đơn!");
+      setInvoiceDetails([]);
     }
   };
 
   useEffect(() => {
     fetchInvoices();
     fetchRooms();
-  }, []);
+    // eslint-disable-next-line
+  }, [filters, page, pageSize]);
 
   // --- Advanced filter logic giống Rooms.jsx ---
   const getValueByPath = (obj, path) => {
@@ -209,7 +231,8 @@ export default function Invoices() {
     return list.filter((item) => filters.every((f) => evaluateFilter(f, item)));
   };
 
-  const filteredInvoices = applyFilters(invoices);
+  // Không lọc lại ở frontend, chỉ hiển thị dữ liệu đã phân trang từ backend
+  // const filteredInvoices = applyFilters(invoices);
 
   // --- End advanced filter logic ---
 
@@ -414,7 +437,18 @@ export default function Invoices() {
           />
         </div>
 
-        <Table columns={columns} data={filteredInvoices} />
+        <Table
+          columns={columns}
+          data={invoices}
+          page={page}
+          pageSize={pageSize}
+          totalRecords={totalRecords}
+          onPageChange={(newPage) => setPage(newPage)}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+        />
 
         <Modal
           isOpen={showModal}

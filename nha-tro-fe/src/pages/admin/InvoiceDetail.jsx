@@ -40,6 +40,11 @@ export default function InvoiceDetail() {
   const [autoAmount, setAutoAmount] = useState(null);
   const [latestMeter, setLatestMeter] = useState(null);
 
+  // ==== Pagination states ====
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalRecords, setTotalRecords] = useState(0);
+
   // Các trường cho bộ lọc nâng cao
   const fieldOptions = [
     { value: "invoice_id", label: "Hóa đơn", type: "number" },
@@ -54,31 +59,31 @@ export default function InvoiceDetail() {
     try {
       const res = await fetch(INVOICE_API);
       const data = await res.json();
-      setInvoices(data);
+      setInvoices(Array.isArray(data) ? data : []);
     } catch (err) {
       toast.error("Không thể tải danh sách hóa đơn!");
+      setInvoices([]); // Đảm bảo luôn là mảng khi lỗi
     }
   };
 
-  // Lấy danh sách chi tiết hóa đơn từ API, có hỗ trợ filter nâng cao
+  // Lấy danh sách chi tiết hóa đơn từ API, có hỗ trợ filter nâng cao và phân trang
   const fetchDetails = async () => {
     try {
-      let query = "";
+      let query = `?page=${page}&page_size=${pageSize}`;
       if (filters.length > 0) {
-        query =
-          "?" +
-          filters
-            .map(
-              (f) =>
-                `filter_${f.field}=${encodeURIComponent(
-                  f.operator + f.value
-                )}`
-            )
-            .join("&");
+        query += "&" + filters
+          .map(
+            (f) =>
+              `filter_${f.field}=${encodeURIComponent(
+                f.operator + f.value
+              )}`
+          )
+          .join("&");
       }
       const res = await fetch(INVOICE_DETAIL_API + query);
       const data = await res.json();
-      setDetails(data);
+      setDetails(Array.isArray(data.items) ? data.items : []);
+      setTotalRecords(data.total || 0);
     } catch (err) {
       toast.error("Không thể tải danh sách chi tiết hóa đơn!");
     }
@@ -105,7 +110,7 @@ export default function InvoiceDetail() {
     fetchDetails();
     fetchInvoices();
     // eslint-disable-next-line
-  }, [filters]);
+  }, [filters, page, pageSize]);
 
   // Khi chọn loại phí là Electricity thì load công tơ điện
   useEffect(() => {
@@ -117,49 +122,6 @@ export default function InvoiceDetail() {
       setAutoAmount(null);
     }
   }, [form.fee_type, form.invoice_id]);
-
-  // Advanced filter logic giống các trang khác
-  const getValueByPath = (obj, path) => {
-    return path.split('.').reduce((o, p) => (o ? o[p] : undefined), obj);
-  };
-
-  const evaluateFilter = (f, detail) => {
-    const raw = getValueByPath(detail, f.field);
-    if (raw === undefined || raw === null) return false;
-
-    const maybeNum = Number(raw);
-    const targetNum = Number(f.value);
-    const isNumeric = !isNaN(maybeNum) && !isNaN(targetNum);
-
-    if (isNumeric) {
-      switch (f.operator) {
-        case '>': return maybeNum > targetNum;
-        case '<': return maybeNum < targetNum;
-        case '>=': return maybeNum >= targetNum;
-        case '<=': return maybeNum <= targetNum;
-        case '=': return maybeNum === targetNum;
-        case '~':
-          const diff = Math.abs(maybeNum - targetNum);
-          const tol = Math.max(1, Math.abs(targetNum) * 0.1);
-          return diff <= tol;
-        default: return false;
-      }
-    }
-
-    // string operations
-    const rawStr = String(raw).toLowerCase();
-    const valStr = String(f.value).toLowerCase();
-    if (f.operator === '=') return rawStr === valStr;
-    if (f.operator === '~') return rawStr.includes(valStr);
-    return false;
-  };
-
-  const applyFilters = (list) => {
-    if (!filters || filters.length === 0) return list;
-    return list.filter((item) => filters.every((f) => evaluateFilter(f, item)));
-  };
-
-  const filteredDetails = applyFilters(details);
 
   const columns = [
     { label: "ID", accessor: "detail_id" },
@@ -316,7 +278,18 @@ export default function InvoiceDetail() {
           />
         </div>
 
-        <Table columns={columns} data={filteredDetails} />
+        <Table
+          columns={columns}
+          data={details}
+          page={page}
+          pageSize={pageSize}
+          totalRecords={totalRecords}
+          onPageChange={(newPage) => setPage(newPage)}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1); // reset về trang 1 khi đổi pageSize
+          }}
+        />
 
         <Modal
           isOpen={showModal}
@@ -401,7 +374,6 @@ export default function InvoiceDetail() {
                         : ""
                   }
                   onChange={(e) => {
-                    // Chỉ cho nhập số, loại bỏ ký tự không phải số
                     const raw = e.target.value.replace(/[^\d]/g, "");
                     handleFormChange("amount", raw);
                   }}

@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import date, datetime
 
 class InvoiceBase(BaseModel):
@@ -20,6 +20,13 @@ class InvoiceUpdate(BaseModel):
 class InvoiceOut(InvoiceBase):
     invoice_id: int
     created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+class PaginatedInvoiceOut(BaseModel):
+    items: List[InvoiceOut]
+    total: int
 
     class Config:
         orm_mode = True
