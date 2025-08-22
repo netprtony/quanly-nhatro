@@ -1,42 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Table from "/src/components/Table.jsx";
 import Modal from "/src/components/Modal.jsx";
 import ModalConfirm from "/src/components/ModalConfirm.jsx";
+import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-export default function Payments() {
-  // Mock dữ liệu thanh toán
-  const [payments, setPayments] = useState([
-    {
-      payment_id: 1,
-      invoice_id: 1,
-      tenant_name: "Nguyễn Văn D",
-      amount: 2500000,
-      date: "2024-06-02",
-      method: "Chuyển khoản",
-      note: "Thanh toán tiền phòng tháng 6",
-    },
-    {
-      payment_id: 2,
-      invoice_id: 2,
-      tenant_name: "Trần Thị E",
-      amount: 3500000,
-      date: "2024-06-03",
-      method: "Tiền mặt",
-      note: "Thanh toán tiền phòng tháng 6",
-    },
-    {
-      payment_id: 3,
-      invoice_id: 3,
-      tenant_name: "Lê Văn F",
-      amount: 1800000,
-      date: "2024-05-03",
-      method: "Chuyển khoản",
-      note: "Thanh toán tiền phòng tháng 5",
-    },
-  ]);
+const PAYMENT_API = "http://localhost:8000/payments";
+const INVOICE_API = "http://localhost:8000/invoices";
 
+export default function Payment() {
+  const [payments, setPayments] = useState([]);
+  const [invoices, setInvoices] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
   const [form, setForm] = useState({
@@ -52,6 +27,21 @@ export default function Payments() {
   const [showConfirmExit, setShowConfirmExit] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [paymentToDelete, setPaymentToDelete] = useState(null);
+  const [filters, setFilters] = useState([]);
+  const [search, setSearch] = useState("");
+
+  // Phân trang
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalRecords, setTotalRecords] = useState(0);
+
+  const fieldOptions = [
+    { value: "invoice_id", label: "Phiếu thu", type: "number" },
+    { value: "tenant_name", label: "Khách thuê", type: "string" },
+    { value: "paid_amount", label: "Số tiền", type: "number" },
+    { value: "payment_date", label: "Ngày thanh toán", type: "string" },
+    { value: "payment_method", label: "Phương thức", type: "string" },
+  ];
 
   const columns = [
     { label: "ID", accessor: "payment_id" },
@@ -59,7 +49,7 @@ export default function Payments() {
     { label: "Khách thuê", accessor: "tenant_name" },
     {
       label: "Số tiền",
-      accessor: "amount",
+      accessor: "paid_amount",
       render: (value) =>
         typeof value === "number"
           ? new Intl.NumberFormat("vi-VN", {
@@ -68,8 +58,8 @@ export default function Payments() {
             }).format(value)
           : "N/A",
     },
-    { label: "Ngày thanh toán", accessor: "date" },
-    { label: "Phương thức", accessor: "method" },
+    { label: "Ngày thanh toán", accessor: "payment_date" },
+    { label: "Phương thức", accessor: "payment_method" },
     { label: "Ghi chú", accessor: "note" },
     {
       label: "Thao tác",
@@ -82,6 +72,84 @@ export default function Payments() {
       ),
     },
   ];
+
+  // Export CSV
+  const exportCSV = () => {
+    if (payments.length === 0) return;
+    const headers = Object.keys(payments[0]);
+    const csv = [
+      headers.join(","),
+      ...payments.map((row) =>
+        headers.map((h) => JSON.stringify(row[h] ?? "")).join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "payments.csv";
+    a.click();
+  };
+
+  // Export JSON
+  const exportJSON = () => {
+    const blob = new Blob([JSON.stringify(payments, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "payments.json";
+    a.click();
+  };
+
+  // Lấy danh sách thanh toán từ API (có phân trang + filter nâng cao)
+  const fetchPayments = async () => {
+    try {
+      let url = `${PAYMENT_API}?page=${page}&page_size=${pageSize}`;
+      if (search) {
+        url += `&search=${encodeURIComponent(search)}`;
+      }
+      let res, data;
+
+      if (filters.length > 0) {
+        res = await fetch(url.replace(PAYMENT_API, PAYMENT_API + "/filter"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filters }),
+        });
+      } else {
+        res = await fetch(url);
+      }
+
+      data = await res.json();
+
+      setPayments(Array.isArray(data.items) ? data.items : []);
+      setTotalRecords(data.total || 0);
+    } catch (err) {
+      toast.error("Không thể tải danh sách thanh toán!");
+      setPayments([]);
+      setTotalRecords(0);
+    }
+  };
+
+  // Lấy danh sách hóa đơn để chọn invoice_id
+  const fetchInvoices = async () => {
+    try {
+      const res = await fetch(`${INVOICE_API}?page=1&page_size=200`);
+      const data = await res.json();
+      setInvoices(Array.isArray(data.items) ? data.items : []);
+    } catch (err) {
+      setInvoices([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchPayments();
+    fetchInvoices();
+    // eslint-disable-next-line
+  }, [filters, page, pageSize, search]);
 
   const handleAdd = () => {
     setForm({
@@ -116,36 +184,54 @@ export default function Payments() {
     setShowConfirmDelete(true);
   };
 
-  const confirmDelete = () => {
-    setPayments((prev) => prev.filter((p) => p.payment_id !== paymentToDelete));
-    toast.success("🗑️ Xóa thanh toán thành công!");
-    setShowConfirmDelete(false);
-    setPaymentToDelete(null);
+  const confirmDelete = async () => {
+    try {
+      const res = await fetch(`${PAYMENT_API}/${paymentToDelete}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchPayments();
+      toast.success("🗑️ Xóa thanh toán thành công!");
+      setShowConfirmDelete(false);
+      setPaymentToDelete(null);
+    } catch (err) {
+      toast.error("Xóa thanh toán thất bại! " + err.message);
+    }
   };
 
-  const handleSubmitPayment = () => {
-    if (editingPayment) {
-      // Sửa thanh toán
-      setPayments((prev) =>
-        prev.map((p) =>
-          p.payment_id === editingPayment.payment_id
-            ? { ...p, ...form }
-            : p
-        )
-      );
-      toast.success("✏️ Cập nhật thanh toán thành công!");
-    } else {
-      // Thêm thanh toán mới
-      setPayments((prev) => [
-        ...prev,
-        {
-          ...form,
-          payment_id: prev.length ? Math.max(...prev.map((p) => p.payment_id)) + 1 : 1,
-        },
-      ]);
-      toast.success("✅ Thêm thanh toán thành công!");
+  const handleSubmitPayment = async () => {
+    const payload = {
+      ...form,
+      invoice_id: form.invoice_id ? parseInt(form.invoice_id) : null,
+      amount: form.amount ? parseFloat(form.amount) : 0,
+      date: form.date,
+      method: form.method,
+      note: form.note,
+      tenant_name: form.tenant_name,
+    };
+    try {
+      if (editingPayment) {
+        const res = await fetch(`${PAYMENT_API}/${editingPayment.payment_id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        toast.success("✏️ Cập nhật thanh toán thành công!");
+      } else {
+        const res = await fetch(PAYMENT_API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        toast.success("✅ Thêm thanh toán thành công!");
+      }
+      await fetchPayments();
+      setShowModal(false);
+    } catch (err) {
+      toast.error("Lưu thanh toán thất bại! " + err.message);
     }
-    setShowModal(false);
   };
 
   const handleCloseModal = () => {
@@ -164,14 +250,41 @@ export default function Payments() {
   return (
     <div className="container mt-4 position-relative">
       <div className="p-4 rounded shadow bg-white">
-        <h3 className="mb-3">💳 Danh sách thanh toán</h3>
-        <button className="btn btn-success mb-3" onClick={handleAdd}>
-          ➕ Thêm thanh toán
-        </button>
+        <div className="d-flex align-items-center justify-content-between mb-3">
+          <h3 className="mb-0">💳 Danh sách thanh toán</h3>
+          <button className="btn btn-success" onClick={handleAdd}>
+            ➕ Thêm thanh toán
+          </button>
+        </div>
 
-        <Table columns={columns} data={payments} />
+        <div className="mb-3">
+          <AdvancedFilters
+            fieldOptions={fieldOptions}
+            filters={filters}
+            onAddFilter={(f) => setFilters((prev) => [...prev, f])}
+            onRemoveFilter={(i) => setFilters((prev) => prev.filter((_, idx) => idx !== i))}
+            compact
+            onLoad={fetchPayments}
+            onSearch={setSearch}
+            onExportCSV={exportCSV}
+            onExportJSON={exportJSON}
+          />
+        </div>
 
-        {/* Modal Thêm / Sửa */}
+        <Table
+          columns={columns}
+          data={payments}
+          page={page}
+          pageSize={pageSize}
+          totalRecords={totalRecords}
+          onPageChange={(newPage) => setPage(newPage)}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+            fetchInvoices();
+          }}
+        />
+
         <Modal
           isOpen={showModal}
           onClose={handleCloseModal}
@@ -183,13 +296,19 @@ export default function Payments() {
             <div className="row g-3">
               <div className="col-md-6">
                 <label className="form-label">Phiếu thu</label>
-                <input
-                  type="text"
-                  className="form-control"
+                <select
+                  className="form-select"
                   value={form.invoice_id}
                   onChange={(e) => handleFormChange("invoice_id", e.target.value)}
                   required
-                />
+                >
+                  <option value="">-- Chọn hóa đơn --</option>
+                  {invoices.map(inv => (
+                    <option key={inv.invoice_id} value={inv.invoice_id}>
+                      {`#${inv.invoice_id} - Phòng ${inv.room_id} - Tháng ${inv.month?.slice(0,7)}`}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="col-md-6">
                 <label className="form-label">Khách thuê</label>
@@ -246,7 +365,6 @@ export default function Payments() {
           </form>
         </Modal>
 
-        {/* Modal xác nhận xóa */}
         <ModalConfirm
           isOpen={showConfirmDelete}
           title="Xác nhận xóa"
@@ -257,7 +375,6 @@ export default function Payments() {
           onClose={() => setShowConfirmDelete(false)}
         />
 
-        {/* Modal xác nhận thoát khi có thay đổi */}
         <ModalConfirm
           isOpen={showConfirmExit}
           title="Thoát mà chưa lưu?"
@@ -272,7 +389,6 @@ export default function Payments() {
           onClose={() => setShowConfirmExit(false)}
         />
       </div>
-
       <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );

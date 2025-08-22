@@ -88,11 +88,12 @@ export default function Contracts() {
   // Load danh sách khách thuê cho combobox
   const fetchTenants = async () => {
     try {
-      const res = await fetch(TENANTS_API);
+      const res = await fetch(`${TENANTS_API}?page=1&page_size=200`);
       const data = await res.json();
-      setTenants(data);
+      setTenants(Array.isArray(data.items) ? data.items : []);
     } catch (err) {
       toast.error("Không thể tải danh sách khách thuê!");
+      setTenant([]);
     }
   };
 

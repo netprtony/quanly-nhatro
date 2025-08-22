@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import date, datetime
 
 class TenantBase(BaseModel):
@@ -25,3 +25,19 @@ class TenantOut(TenantBase):
 
     class Config:
         orm_mode = True
+# Schema phân trang
+class PaginatedTenantOut(BaseModel):
+    items: List[TenantOut]
+    total: int
+
+    class Config:
+        orm_mode = True
+# Schema cho filter nâng cao
+class Filter(BaseModel):
+    field: str
+    operator: str
+    value: str
+
+
+class FilterRequest(BaseModel):
+    filters: List[Filter] = [] 

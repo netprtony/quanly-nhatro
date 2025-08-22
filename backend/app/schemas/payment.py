@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 class PaymentBase(BaseModel):
@@ -25,3 +25,19 @@ class PaymentOut(PaymentBase):
 
     class Config:
         orm_mode = True
+
+class PaginatedPaymentOut(BaseModel):
+    items: List[PaymentOut]
+    total: int
+
+    class Config:
+        orm_mode = True
+# Schema cho filter nâng cao
+class Filter(BaseModel):
+    field: str
+    operator: str
+    value: str
+
+
+class FilterRequest(BaseModel):
+    filters: List[Filter] = [] 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 
 // Hỗ trợ lấy giá trị lồng như "room_type.type_name"
 const getNestedValue = (obj, path) =>
@@ -13,17 +13,19 @@ export default function Table({
   onPageChange,
   onPageSizeChange,
   showSearch = false,
-  onSort, // thêm prop onSort
+  onSort,
   sortField,
   sortOrder,
 }) {
-  // Đảm bảo data luôn là mảng
   const safeData = Array.isArray(data) ? data : [];
-
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
   const isInitialEmpty = !safeData || safeData.length === 0;
 
-  // Xử lý sự kiện sort
+  // State lưu width của cột
+  const [colWidths, setColWidths] = useState({});
+
+  const tableRef = useRef(null);
+
   const handleSort = (field) => {
     if (onSort) {
       let order = "asc";
@@ -32,9 +34,33 @@ export default function Table({
     }
   };
 
+  // Xử lý resize cột
+  const startResize = (e, accessor) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth =
+      tableRef.current.querySelector(`th[data-accessor="${accessor}"]`)
+        ?.offsetWidth || 100;
+
+    const doDrag = (moveEvent) => {
+      const newWidth = Math.max(50, startWidth + (moveEvent.clientX - startX));
+      setColWidths((prev) => ({
+        ...prev,
+        [accessor]: newWidth,
+      }));
+    };
+
+    const stopDrag = () => {
+      document.removeEventListener("mousemove", doDrag);
+      document.removeEventListener("mouseup", stopDrag);
+    };
+
+    document.addEventListener("mousemove", doDrag);
+    document.addEventListener("mouseup", stopDrag);
+  };
+
   return (
     <div>
-      {/* Tìm kiếm nếu cần */}
       {showSearch && (
         <div className="mb-3">
           <input
@@ -46,7 +72,6 @@ export default function Table({
         </div>
       )}
 
-      {/* Trường hợp không có dữ liệu */}
       {isInitialEmpty ? (
         <div className="text-center py-5">
           <img
@@ -58,17 +83,25 @@ export default function Table({
         </div>
       ) : (
         <>
-          {/* Bảng dữ liệu */}
-          <div className="table-responsive">
-            <table className="table table-bordered table-hover align-middle">
+          <div className="table-responsive" style={{ overflowX: "auto" }}>
+            <table
+              className="table table-bordered table-hover align-middle"
+              ref={tableRef}
+            >
               <thead className="table-primary">
                 <tr>
-                  <th className="text-center">STT</th>
+                  <th className="text-center" style={{ width: 50 }}>
+                    STT
+                  </th>
                   {columns.map((col, i) => (
                     <th
                       key={i}
-                      className="text-center"
-                      style={{ cursor: col.accessor ? "pointer" : "default" }}
+                      data-accessor={col.accessor}
+                      className="text-center position-relative"
+                      style={{
+                        cursor: col.accessor ? "pointer" : "default",
+                        width: colWidths[col.accessor] || "auto",
+                      }}
                       onClick={() => col.accessor && handleSort(col.accessor)}
                     >
                       {col.label}
@@ -81,6 +114,20 @@ export default function Table({
                             : ""}
                         </span>
                       )}
+
+                      {/* Thanh kéo resize */}
+                      <div
+                        onMouseDown={(e) => startResize(e, col.accessor)}
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          right: 0,
+                          width: "5px",
+                          height: "100%",
+                          cursor: "col-resize",
+                          userSelect: "none",
+                        }}
+                      />
                     </th>
                   ))}
                 </tr>
@@ -94,7 +141,11 @@ export default function Table({
                     {columns.map((col, i) => {
                       const value = getNestedValue(row, col.accessor);
                       return (
-                        <td key={i} className="text-center">
+                        <td
+                          key={i}
+                          className="text-center"
+                          style={{ width: colWidths[col.accessor] || "auto" }}
+                        >
                           {col.render ? col.render(value, row) : value}
                         </td>
                       );
@@ -105,7 +156,6 @@ export default function Table({
             </table>
           </div>
 
-          {/* Phân trang */}
           <div className="d-flex justify-content-between align-items-center mt-2">
             <small>
               Trang {page} / {totalPages}

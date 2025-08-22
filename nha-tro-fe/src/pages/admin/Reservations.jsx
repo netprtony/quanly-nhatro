@@ -41,11 +41,12 @@ export default function Reservations() {
   // Lấy danh sách người dùng cho combobox
   const fetchUsers = async () => {
     try {
-      const res = await fetch(USERS_API);
+      const res = await fetch(`${USERS_API}?page=1&page_size=200`);
       const data = await res.json();
-      setUsers(data);
+      setUsers(Array.isArray(data.items) ? data.items : []);
     } catch (err) {
       toast.error("Không thể tải danh sách người dùng!");
+      SetUsers([])
     }
   };
 

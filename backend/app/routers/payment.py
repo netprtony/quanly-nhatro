@@ -2,15 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List
 from app import models, database
-from app.schemas.payment import PaymentCreate, PaymentUpdate, PaymentOut
-
+from app.schemas.payment import PaymentCreate, PaymentUpdate, PaymentOut, PaginatedPaymentOut,FilterRequest
 router = APIRouter(prefix="/payments", tags=["Payments"])
 
-@router.get("/", response_model=List[PaymentOut])
+@router.get("/", response_model=PaginatedPaymentOut)
 def get_payments(
     db: Session = Depends(database.get_db),
-    skip: int = 0,
-    limit: int = 20,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=200),
     search: str = Query(None, description="Tìm theo mã hóa đơn hoặc phương thức")
 ):
     query = db.query(models.Payment)
@@ -19,7 +18,9 @@ def get_payments(
             (models.Payment.invoice_id.ilike(f"%{search}%")) |
             (models.Payment.payment_method.ilike(f"%{search}%"))
         )
-    return query.offset(skip).limit(limit).all()
+    total = query.count()
+    items = query.offset((page - 1) * page_size).limit(page_size).all()
+    return {"items": items, "total": total}
 
 @router.get("/{payment_id}", response_model=PaymentOut)
 def get_payment(payment_id: int, db: Session = Depends(database.get_db)):
@@ -55,3 +56,58 @@ def delete_payment(payment_id: int, db: Session = Depends(database.get_db)):
     db.delete(db_payment)
     db.commit()
     return {"message": "Payment deleted successfully"}
+
+def filter_payment(
+    request: FilterRequest,
+    db: Session = Depends(database.get_db),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=200),
+):
+    query = db.query(models.Invoice)
+
+    # Map field hợp lệ
+    valid_fields = {
+        "invoice_id": (models.Payment.invoice_id, str),
+        "month": (models.Payment.month, date),
+        "paid_amount": (models.Payment.paid_amount, float),
+        "payment_method": (models.Payment.payment_method, str),
+        "transaction_reference": (models.Payment.transaction_reference, str),
+    }
+
+    for f in request.filters:
+        col_type = valid_fields.get(f.field)
+        if not col_type:
+            continue
+
+        col, py_type = col_type
+
+        # ép kiểu value
+        try:
+            if py_type == bool:
+                val = f.value.lower() in ("true", "1", "yes")
+            else:
+                val = py_type(f.value)
+        except Exception:
+            # nếu không ép được thì bỏ qua filter này
+            continue
+
+        if f.operator == "=":
+            query = query.filter(col == val)
+        elif f.operator == "!=":
+            query = query.filter(col != val)
+        elif f.operator == ">":
+            query = query.filter(col > val)
+        elif f.operator == "<":
+            query = query.filter(col < val)
+        elif f.operator == ">=":
+            query = query.filter(col >= val)
+        elif f.operator == "<=":
+            query = query.filter(col <= val)
+        elif f.operator == "~":
+            # chỉ apply LIKE cho chuỗi
+            if py_type == str:
+                query = query.filter(col.ilike(f"%{val}%"))
+
+    total = query.count()
+    items = query.offset((page - 1) * page_size).limit(page_size).all()
+    return {"items": items, "total": total}

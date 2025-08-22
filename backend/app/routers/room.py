@@ -5,10 +5,6 @@ from app import models, utils, database
 from app.schemas import room as room_schema
 router = APIRouter(prefix="/rooms", tags=["Rooms"])
 
-# # ✅ Get all rooms
-# @router.get("/", response_model=List[room_schema.RoomSchema])
-# def get_all_rooms(db: Session = Depends(database.get_db)):
-#     return db.query(models.Room).join(models.RoomType).all()
 @router.get("/all", response_model=List[room_schema.RoomSchema])
 def get_all_rooms(
     filter_is_available: Optional[str] = None,
@@ -40,7 +36,9 @@ def get_rooms(
     if search:
         query = query.filter(
             (models.Room.room_number.ilike(f"%{search}%")) |
-            (models.Room.floor_number.ilike(f"%{search}%"))
+            (models.Room.floor_number.ilike(f"%{search}%")) |
+            (models.RoomType.name.ilike(f"%{search}%")) |
+            (models.RoomType.price_per_month.ilike(f"%{search}%"))
         )
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()

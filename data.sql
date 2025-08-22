@@ -49,7 +49,7 @@ CREATE TABLE Rooms (
     room_number VARCHAR(50) NOT NULL UNIQUE,
     room_type_id INT NOT NULL,
     max_occupants INT DEFAULT 1,
-    is_available BOOLEAN DEFAULT TRUE,
+    is_available BOOLEAN DEFAULT FALSE,
     floor_number INT,
     description TEXT,
     FOREIGN KEY (room_type_id) REFERENCES RoomTypes(room_type_id)

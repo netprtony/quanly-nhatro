@@ -19,7 +19,7 @@ from .room import (
 from .tenant import (
     TenantCreate,
     TenantUpdate,
-    TenantOut
+    TenantOut,PaginatedTenantOut, FilterRequest
 )
 from .reservation import (
     ReservationCreate,

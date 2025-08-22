@@ -8,7 +8,7 @@ class InvoiceBase(BaseModel):
     month: date
     total_amount: Optional[float] = None
     is_paid: Optional[bool] = False
-
+    
 
 class InvoiceCreate(InvoiceBase):
     pass

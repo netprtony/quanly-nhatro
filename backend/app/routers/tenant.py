@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List
 from app import models, database
-from app.schemas import TenantCreate, TenantUpdate, TenantOut
+from app.schemas import TenantCreate, TenantUpdate, TenantOut, PaginatedTenantOut, FilterRequest
 from app import models, utils, database
 from app.schemas import tenant as tenant_schemas
 router = APIRouter(prefix="/tenants", tags=["Tenants"])
@@ -15,11 +15,11 @@ def get_db():
         db.close()
 
 # Lấy danh sách tenant (có phân trang, tìm kiếm)
-@router.get("/", response_model=List[tenant_schemas.TenantOut])
+@router.get("/", response_model=PaginatedTenantOut)
 def get_tenants(
     db: Session = Depends(get_db),
-    skip: int = 0,
-    limit: int = 20,
+    page: int = Query(1, ge=1, description="Trang hiện tại"),
+    page_size: int = Query(20, ge=1, le=200, description="Số item mỗi trang"),
     search: str = Query(None, description="Tìm kiếm theo tên hoặc số điện thoại")
 ):
     query = db.query(models.Tenant)
@@ -28,7 +28,12 @@ def get_tenants(
             (models.Tenant.full_name.ilike(f"%{search}%")) |
             (models.Tenant.phone_number.ilike(f"%{search}%"))
         )
-    return query.offset(skip).limit(limit).all()
+
+    total = query.count()
+    offset = (page - 1) * page_size
+    items = query.offset(offset).limit(page_size).all()
+
+    return {"items": items, "total": total}
 
 # Lấy chi tiết tenant
 @router.get("/{tenant_id}", response_model=tenant_schemas.TenantOut)
@@ -70,3 +75,60 @@ def delete_tenant(tenant_id: str, db: Session = Depends(get_db)):
     db.delete(db_tenant)
     db.commit()
     return {"message": "Tenant deleted successfully"}
+
+@router.post("/filter", response_model=PaginatedTenantOut)
+def filter_tenants(
+    request: FilterRequest,
+    db: Session = Depends(database.get_db),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=200),
+):
+    query = db.query(models.Tenant)
+
+    # Map field hợp lệ
+    valid_fields = {
+        "gender": (models.Tenant.gender, str),
+        "date_of_birth": (models.Tenant.date_of_birth, date),
+        "is_rent": (models.Tenant.is_rent, bool),
+        "email": (models.Tenant.email, str),
+        "phone_number": (models.Tenant.phone_number, str),
+        "created_at": (models.Tenant.created_at, datetime),
+    }
+
+    for f in request.filters:
+        col_type = valid_fields.get(f.field)
+        if not col_type:
+            continue
+
+        col, py_type = col_type
+
+        # ép kiểu value
+        try:
+            if py_type == bool:
+                val = f.value.lower() in ("true", "1", "yes")
+            else:
+                val = py_type(f.value)
+        except Exception:
+            # nếu không ép được thì bỏ qua filter này
+            continue
+
+        if f.operator == "=":
+            query = query.filter(col == val)
+        elif f.operator == "!=":
+            query = query.filter(col != val)
+        elif f.operator == ">":
+            query = query.filter(col > val)
+        elif f.operator == "<":
+            query = query.filter(col < val)
+        elif f.operator == ">=":
+            query = query.filter(col >= val)
+        elif f.operator == "<=":
+            query = query.filter(col <= val)
+        elif f.operator == "~":
+            # chỉ apply LIKE cho chuỗi
+            if py_type == str:
+                query = query.filter(col.ilike(f"%{val}%"))
+
+    total = query.count()
+    items = query.offset((page - 1) * page_size).limit(page_size).all()
+    return {"items": items, "total": total}
