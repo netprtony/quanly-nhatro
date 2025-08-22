@@ -49,16 +49,18 @@ export default function Reservations() {
     }
   };
 
-  // Lấy danh sách phòng cho combobox
-  const fetchRooms = async () => {
-    try {
-      const res = await fetch(ROOMS_API);
-      const data = await res.json();
-      setRooms(data);
-    } catch (err) {
-      toast.error("Không thể tải danh sách phòng!");
-    }
-  };
+  // Lấy danh sách phòng
+    const fetchRooms = async () => {
+      try {
+        // có phân trang, mặc định lấy 1 trang lớn để đủ dữ liệu
+        const res = await fetch(`${ROOMS_API}?page=1&page_size=200`);
+        const data = await res.json();
+        setRooms(Array.isArray(data.items) ? data.items : []);
+      } catch (err) {
+        toast.error("Không thể tải danh sách phòng!");
+        setRooms([]);
+      }
+    };
 
   useEffect(() => {
     fetchReservations();

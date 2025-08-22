@@ -43,28 +43,35 @@ export default function AdvancedFilters({
 
       {/* Thanh tìm kiếm */}
       <div className="row g-3 mb-3">
-        <div className="col-md-8">
+        <div className="col-md-12">
           <input
             type="text"
             className="form-control"
             placeholder="Nhập từ khóa tìm kiếm..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              onSearch && onSearch(e.target.value);
+            }}
           />
-        </div>
-        <div className="col-md-4 d-flex gap-2">
-          <button className="btn btn-secondary" type="button" onClick={handleSearch}>
-            🔍 Tìm kiếm
-          </button>
-          <button className="btn btn-outline-primary" type="button" onClick={onLoad}>
-            ⟳ Load
-          </button>
+          {searchTerm && (
+            <button
+              className="btn btn-sm btn-outline-secondary mt-2"
+              type="button"
+              onClick={() => {
+                setSearchTerm("");
+                onSearch && onSearch("");
+              }}
+            >
+              Xóa tìm kiếm
+            </button>
+          )}
         </div>
       </div>
 
       {/* Bộ lọc nâng cao */}
-      <div className="row g-3">
-        <div className="col-md-4">
+      <div className="row g-3 align-items-end">
+        <div className="col-md-3">
           <label className="form-label">Trường</label>
           <select
             className="form-select"
@@ -82,7 +89,7 @@ export default function AdvancedFilters({
           </select>
         </div>
 
-        <div className="col-md-4">
+        <div className="col-md-3">
           <label className="form-label">Toán tử</label>
           <select
             className="form-select"
@@ -102,7 +109,7 @@ export default function AdvancedFilters({
           </select>
         </div>
 
-        <div className="col-md-4">
+        <div className="col-md-3">
           <label className="form-label">Giá trị</label>
           <input
             type="text"
@@ -114,8 +121,8 @@ export default function AdvancedFilters({
           />
         </div>
 
-        <div className="col-12">
-          <button className="btn btn-primary" type="button" onClick={add}>
+        <div className="col-md-3 d-flex align-items-end">
+          <button className="btn btn-primary w-100" type="button" onClick={add}>
             ➕ Thêm bộ lọc
           </button>
         </div>
@@ -124,21 +131,19 @@ export default function AdvancedFilters({
       {/* Danh sách bộ lọc */}
       {filters.length > 0 && (
         <div className="mt-4">
-          <h6>Các bộ lọc đang áp dụng:</h6>
-          <div className="d-flex flex-wrap gap-2">
+          <div className="d-flex align-items-center flex-wrap gap-2">
+            <h6 className="mb-0">Các bộ lọc đang áp dụng:</h6>
             {filters.map((f, i) => (
-              <div
-                key={i}
-                className="badge bg-info text-dark d-flex align-items-center gap-1"
-              >
+              <div key={i} className="badge bg-info text-dark d-flex align-items-center gap-1 px-2 py-2">
                 <span>
                   {fieldOptions.find((opt) => opt.value === f.field)?.label}{" "}
                   {f.operator} {String(f.value)}
                 </span>
                 <button
-                  className="btn-close btn-close-dark"
+                  className="btn-close btn-close-dark ms-2"
                   type="button"
                   onClick={() => onRemoveFilter && onRemoveFilter(i)}
+                  style={{ fontSize: "0.8rem" }}
                 ></button>
               </div>
             ))}

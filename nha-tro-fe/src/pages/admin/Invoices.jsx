@@ -399,7 +399,7 @@ const fetchInvoices = async () => {
     });
     setEditingDetail(null);
     setDetailUnsaved(false);
-
+    await fetchInvoices();
     // Nếu đã biết phòng, lấy danh sách hóa đơn điện của phòng đó
     const invoice = invoices.find(inv => inv.invoice_id === selectedInvoiceId);
     if (invoice && invoice.room_id) {
@@ -442,6 +442,8 @@ const fetchInvoices = async () => {
       toast.success("🗑️ Xóa chi tiết hóa đơn thành công!");
       setShowDetailConfirmDelete(false);
       setDetailToDelete(null);
+      // 👉 Load lại bảng hóa đơn chính
+      await fetchInvoices();
     } catch (err) {
       toast.error("Xóa chi tiết hóa đơn thất bại! " + err.message);
     }
@@ -477,6 +479,8 @@ const fetchInvoices = async () => {
       await fetchInvoiceDetails(selectedInvoiceId);
       setEditingDetail(null);
       setDetailUnsaved(false);
+      // 👉 Load lại bảng hóa đơn chính
+      await fetchInvoices();
     } catch (err) {
       toast.error("Lưu chi tiết hóa đơn thất bại! " + err.message);
     }
@@ -595,14 +599,23 @@ const fetchInvoices = async () => {
               />
               </div>
               <div className="col-md-6">
-              <label className="form-label">Số tiền (VND)</label>
-              <input
-                type="number"
-                className="form-control"
-                value={form.total_amount}
-                onChange={(e) => handleFormChange("total_amount", e.target.value)}
-                required
-              />
+                <label className="form-label">Số tiền (VND)</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={
+                    detailForm.amount
+                      ? new Intl.NumberFormat("vi-VN").format(detailForm.amount)
+                      : ""
+                  }
+                  onChange={(e) => {
+                    // Bỏ dấu chấm phân cách trước khi lưu
+                    const rawValue = e.target.value.replace(/\./g, "").replace(/,/g, "");
+                    const numericValue = rawValue ? parseInt(rawValue, 10) : "";
+                    handleDetailFormChange("amount", numericValue);
+                  }}
+                  required
+                />
               </div>
               <div className="col-md-6">
               <label className="form-label">Trạng thái</label>
@@ -667,50 +680,70 @@ const fetchInvoices = async () => {
                   <select
                     className="form-select"
                     value={detailForm.fee_type}
-                    onChange={(e) => handleDetailFormChange("fee_type", e.target.value)}
+                    onChange={async (e) => {
+                      const newFeeType = e.target.value;
+                      handleDetailFormChange("fee_type", newFeeType);
+
+                      if (newFeeType === "Electricity") {
+                        // Gọi API lấy danh sách công tơ điện
+                        try {
+                          const res = await fetch(`${API_URL}/electricity-meters?room_id=${selectedRoomId}`);
+                          const data = await res.json();
+                          setElectricityMeters(Array.isArray(data) ? data : []);
+                        } catch (err) {
+                          console.error("Lỗi tải công tơ điện:", err);
+                          setElectricityMeters([]);
+                        }
+                      } else {
+                        // Reset meter_id nếu không phải điện
+                        handleDetailFormChange("meter_id", null);
+                      }
+                    }}
                     required
                   >
                     <option value="">-- Chọn loại phí --</option>
-                    {FEE_TYPES.map(ft => (
-                      <option key={ft.value} value={ft.value}>{ft.label}</option>
+                    {FEE_TYPES.map((ft) => (
+                      <option key={ft.value} value={ft.value}>
+                        {ft.label}
+                      </option>
                     ))}
                   </select>
                 </div>
-                {detailForm.fee_type === "Electricity" ? (
-                  <div className="col-md-6">
-                    <label className="form-label">Chỉ số điện</label>
-                    <select
-                      className="form-select"
-                      value={detailForm.meter_id}
-                      onChange={(e) => handleDetailFormChange("meter_id", e.target.value)}
-                      required
-                    >
-                      <option value="">-- Chọn hóa đơn điện --</option>
-                      {electricityMeters.map(meter => (
-                        <option key={meter.meter_id} value={meter.meter_id}>
-                          {`Tháng ${meter.month?.slice(0,7)} | Cũ: ${meter.old_reading} | Mới: ${meter.new_reading}`}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
-                  <div className="col-md-6">
-                    <label className="form-label">Chỉ số điện</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={detailForm.meter_id}
-                      onChange={(e) => handleDetailFormChange("meter_id", e.target.value)}
-                    />
-                  </div>
-                )}
+                {/* Nếu chọn Electricity thì hiện combobox chọn công tơ */}
+                  {detailForm.fee_type === "Electricity" && (
+                    <div className="col-md-6">
+                      <label className="form-label">Hóa đơn điện</label>
+                      <select
+                        className="form-select"
+                        value={detailForm.meter_id || ""}
+                        onChange={(e) => handleDetailFormChange("meter_id", e.target.value)}
+                        required
+                      >
+                        <option value="">-- Chọn hóa đơn điện --</option>
+                        {electricityMeters.map((meter) => (
+                          <option key={meter.meter_id} value={meter.meter_id}>
+                            {`Tháng ${meter.month?.slice(0, 7)} | Cũ: ${meter.old_reading} | Mới: ${meter.new_reading}`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 <div className="col-md-6">
                   <label className="form-label">Số tiền (VND)</label>
                   <input
-                    type="number"
+                    type="text"
                     className="form-control"
-                    value={detailForm.amount}
-                    onChange={(e) => handleDetailFormChange("amount", e.target.value)}
+                    value={
+                      detailForm.amount
+                        ? new Intl.NumberFormat("vi-VN").format(detailForm.amount)
+                        : ""
+                    }
+                    onChange={(e) => {
+                      // Bỏ dấu chấm phân cách trước khi lưu
+                      const rawValue = e.target.value.replace(/\./g, "").replace(/,/g, "");
+                      const numericValue = rawValue ? parseInt(rawValue, 10) : "";
+                      handleDetailFormChange("amount", numericValue);
+                    }}
                     required
                   />
                 </div>

@@ -581,15 +581,25 @@ export default function Electricity() {
                 />
               </div>
               <div className="col-md-6">
-                <label className="form-label">Đơn giá (VND/kWh)</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={form.electricity_rate}
-                  onChange={(e) => handleFormChange("electricity_rate", e.target.value)}
-                  required
-                />
-              </div>
+              <label className="form-label">Đơn giá (VND/kWh)</label>
+              <input
+                type="text"
+                className="form-control"
+                value={
+                  form.electricity_rate
+                    ? new Intl.NumberFormat("vi-VN").format(form.electricity_rate)
+                    : ""
+                }
+                onChange={(e) => {
+                  // Loại bỏ dấu phân cách khi nhập
+                  const raw = e.target.value.replace(/\D/g, "");
+                  handleFormChange("electricity_rate", raw ? Number(raw) : "");
+                }}
+                required
+                inputMode="numeric"
+                pattern="[0-9]*"
+              />
+            </div>
               
             </div>
           </form>
