@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 class ReservationBase(BaseModel):
@@ -17,9 +17,25 @@ class ReservationUpdate(BaseModel):
     user_id: Optional[int] = None
     status: Optional[str] = None
 
-class ReservationOut(ReservationBase):
+class ReservationOut(BaseModel):
     reservation_id: int
-    created_at: datetime
+    contact_phone: str
+    room_id: int
+    status: str
 
     class Config:
         from_attributes = True
+
+class PaginatedReservationOut(BaseModel):
+    items: List[ReservationOut]
+    total: int
+    class Config:
+        orm_mode = True
+
+
+class Filter(BaseModel):
+    field: str
+    operator: str
+    value: str
+class FilterRequest(BaseModel):
+    filters: List[Filter] = []   # ⚠️ tránh dùng Optional[List] = [] vì default mutable

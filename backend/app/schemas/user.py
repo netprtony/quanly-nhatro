@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 from enum import Enum
 
 
@@ -53,3 +53,18 @@ class UserUpdate(BaseModel):
     password: Optional[str]
     class Config:
         from_attributes = True
+
+class PaginatedUserOut(BaseModel):
+    items: List[UserOut]
+    total: int
+    class Config:
+        orm_mode = True
+
+class Filter(BaseModel):
+    field: str
+    operator: str
+    value: str
+
+
+class FilterRequest(BaseModel):
+    filters: List[Filter] = []   # ⚠️ tránh dùng Optional[List] = [] vì default mutable
