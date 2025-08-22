@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import Table from "/src/components/Table.jsx";
 import Modal from "/src/components/Modal.jsx";
 import ModalConfirm from "/src/components/ModalConfirm.jsx";
+import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -27,14 +28,45 @@ export default function Reservations() {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [reservationToDelete, setReservationToDelete] = useState(null);
 
-  // Lấy danh sách đặt phòng từ API
+  // Phân trang, lọc, tìm kiếm
+  const [filters, setFilters] = useState([]);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalRecords, setTotalRecords] = useState(0);
+
+  // Các trường lọc nâng cao
+  const fieldOptions = [
+    { value: "reservation_id", label: "Mã đặt phòng", type: "number" },
+    { value: "contact_phone", label: "Số điện thoại", type: "string" },
+    { value: "room_id", label: "Phòng", type: "number" },
+    { value: "status", label: "Trạng thái", type: "string" },
+  ];
+
+  // Lấy danh sách đặt phòng từ API (có phân trang + filter nâng cao)
   const fetchReservations = async () => {
     try {
-      const res = await fetch(API_URL);
-      const data = await res.json();
-      setReservations(data);
+      let url = `${API_URL}?page=${page}&page_size=${pageSize}`;
+      if (search) {
+        url += `&search=${encodeURIComponent(search)}`;
+      }
+      let res, data;
+      if (filters.length > 0) {
+        res = await fetch(url.replace(API_URL, API_URL + "/filter"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filters }),
+        });
+      } else {
+        res = await fetch(url);
+      }
+      data = await res.json();
+      setReservations(Array.isArray(data.items) ? data.items : []);
+      setTotalRecords(data.total || 0);
     } catch (err) {
       toast.error("Không thể tải danh sách đặt phòng!");
+      setReservations([]);
+      setTotalRecords(0);
     }
   };
 
@@ -46,28 +78,28 @@ export default function Reservations() {
       setUsers(Array.isArray(data.items) ? data.items : []);
     } catch (err) {
       toast.error("Không thể tải danh sách người dùng!");
-      SetUsers([])
+      setUsers([]);
     }
   };
 
   // Lấy danh sách phòng
-    const fetchRooms = async () => {
-      try {
-        // có phân trang, mặc định lấy 1 trang lớn để đủ dữ liệu
-        const res = await fetch(`${ROOMS_API}?page=1&page_size=200`);
-        const data = await res.json();
-        setRooms(Array.isArray(data.items) ? data.items : []);
-      } catch (err) {
-        toast.error("Không thể tải danh sách phòng!");
-        setRooms([]);
-      }
-    };
+  const fetchRooms = async () => {
+    try {
+      const res = await fetch(`${ROOMS_API}?page=1&page_size=200`);
+      const data = await res.json();
+      setRooms(Array.isArray(data.items) ? data.items : []);
+    } catch (err) {
+      toast.error("Không thể tải danh sách phòng!");
+      setRooms([]);
+    }
+  };
 
   useEffect(() => {
     fetchReservations();
     fetchUsers();
     fetchRooms();
-  }, []);
+    // eslint-disable-next-line
+  }, [filters, page, pageSize, search]);
 
   // Thêm mới đặt phòng
   const createReservation = async () => {
@@ -129,17 +161,47 @@ export default function Reservations() {
     }
   };
 
+  // Export CSV
+  const exportCSV = () => {
+    if (reservations.length === 0) return;
+    const headers = Object.keys(reservations[0]);
+    const csv = [
+      headers.join(","),
+      ...reservations.map((row) =>
+        headers.map((h) => JSON.stringify(row[h] ?? "")).join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "reservations.csv";
+    a.click();
+  };
+
+  // Export JSON
+  const exportJSON = () => {
+    const blob = new Blob([JSON.stringify(reservations, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "reservations.json";
+    a.click();
+  };
+
   const columns = [
     { label: "ID", accessor: "reservation_id" },
     { label: "Số điện thoại", accessor: "contact_phone" },
-    { label: "Phòng", accessor: "room_id" },
     {
-      label: "Người dùng",
-      accessor: "user_id",
-      render: (user_id) => {
-        const user = users.find(u => u.id === user_id);
-        return user ? user.username : user_id;
-      }
+      label: "Phòng",
+      accessor: "room_id",
+      render: (room_id) => {
+        const room = rooms.find((r) => r.room_id === room_id);
+        return room ? room.room_number : room_id;
+      },
     },
     { label: "Trạng thái", accessor: "status" },
     { label: "Ngày tạo", accessor: "created_at" },
@@ -212,14 +274,40 @@ export default function Reservations() {
   return (
     <div className="container mt-4 position-relative">
       <div className="p-4 rounded shadow bg-white">
-        <h3 className="mb-3">📝 Danh sách đặt phòng</h3>
-        <button className="btn btn-success mb-3" onClick={handleAdd}>
-          ➕ Thêm đặt phòng
-        </button>
+        <div className="d-flex align-items-center justify-content-between mb-3">
+          <h3 className="mb-0">📝 Danh sách đặt phòng</h3>
+          <button className="btn btn-success" onClick={handleAdd}>
+            ➕ Thêm đặt phòng
+          </button>
+        </div>
 
-        <Table columns={columns} data={reservations} />
+        <div className="mb-3">
+          <AdvancedFilters
+            fieldOptions={fieldOptions}
+            filters={filters}
+            onAddFilter={(f) => setFilters((prev) => [...prev, f])}
+            onRemoveFilter={(i) => setFilters((prev) => prev.filter((_, idx) => idx !== i))}
+            compact
+            onLoad={fetchReservations}
+            onSearch={setSearch}
+            onExportCSV={exportCSV}
+            onExportJSON={exportJSON}
+          />
+        </div>
 
-        {/* Modal Thêm / Sửa */}
+        <Table
+          columns={columns}
+          data={reservations}
+          page={page}
+          pageSize={pageSize}
+          totalRecords={totalRecords}
+          onPageChange={(newPage) => setPage(newPage)}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+        />
+
         <Modal
           isOpen={showModal}
           onClose={handleCloseModal}
@@ -288,7 +376,6 @@ export default function Reservations() {
           </form>
         </Modal>
 
-        {/* Modal xác nhận xóa */}
         <ModalConfirm
           isOpen={showConfirmDelete}
           title="Xác nhận xóa"
@@ -299,7 +386,6 @@ export default function Reservations() {
           onClose={() => setShowConfirmDelete(false)}
         />
 
-        {/* Modal xác nhận thoát khi có thay đổi */}
         <ModalConfirm
           isOpen={showConfirmExit}
           title="Thoát mà chưa lưu?"
@@ -314,7 +400,6 @@ export default function Reservations() {
           onClose={() => setShowConfirmExit(false)}
         />
       </div>
-
       <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
