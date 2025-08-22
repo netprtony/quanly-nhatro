@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 // Hỗ trợ lấy giá trị lồng như "room_type.type_name"
 const getNestedValue = (obj, path) =>
@@ -13,12 +13,24 @@ export default function Table({
   onPageChange,
   onPageSizeChange,
   showSearch = false,
+  onSort, // thêm prop onSort
+  sortField,
+  sortOrder,
 }) {
   // Đảm bảo data luôn là mảng
   const safeData = Array.isArray(data) ? data : [];
 
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
   const isInitialEmpty = !safeData || safeData.length === 0;
+
+  // Xử lý sự kiện sort
+  const handleSort = (field) => {
+    if (onSort) {
+      let order = "asc";
+      if (sortField === field && sortOrder === "asc") order = "desc";
+      onSort(field, order);
+    }
+  };
 
   return (
     <div>
@@ -53,8 +65,22 @@ export default function Table({
                 <tr>
                   <th className="text-center">STT</th>
                   {columns.map((col, i) => (
-                    <th key={i} className="text-center">
+                    <th
+                      key={i}
+                      className="text-center"
+                      style={{ cursor: col.accessor ? "pointer" : "default" }}
+                      onClick={() => col.accessor && handleSort(col.accessor)}
+                    >
                       {col.label}
+                      {col.accessor && (
+                        <span style={{ marginLeft: 4 }}>
+                          {sortField === col.accessor
+                            ? sortOrder === "asc"
+                              ? " ▲"
+                              : " ▼"
+                            : ""}
+                        </span>
+                      )}
                     </th>
                   ))}
                 </tr>

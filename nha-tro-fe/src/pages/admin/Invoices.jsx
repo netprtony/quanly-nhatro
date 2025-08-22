@@ -39,6 +39,7 @@ export default function Invoices() {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState(null);
   const [filters, setFilters] = useState([]);
+  const [search, setSearch] = useState("");
 
   // Phân trang
   const [page, setPage] = useState(1);
@@ -61,6 +62,9 @@ export default function Invoices() {
   const [showDetailConfirmDelete, setShowDetailConfirmDelete] = useState(false);
   const [detailToDelete, setDetailToDelete] = useState(null);
 
+  // sắp sắp bảng
+  const [detailSortField, setDetailSortField] = useState();
+  const [detailSortOrder, setDetailSortOrder] = useState();
   const fieldOptions = [
     { value: "room_id", label: "Phòng", type: "number" },
     { value: "month", label: "Tháng", type: "string" },
@@ -137,31 +141,70 @@ export default function Invoices() {
       ),
     },
   ];
+  // Export CSV
+  const exportCSV = () => {
+    if (invoices.length === 0) return;
+    const headers = Object.keys(invoices[0]);
+    const csv = [
+      headers.join(","),
+      ...invoices.map((row) =>
+        headers.map((h) => JSON.stringify(row[h] ?? "")).join(",")
+      ),
+    ].join("\n");
 
-  // Lấy danh sách hóa đơn từ API (có phân trang)
-  const fetchInvoices = async () => {
-    try {
-      let query = `?page=${page}&page_size=${pageSize}`;
-      if (filters.length > 0) {
-        query += "&" + filters
-          .map(
-            (f) =>
-              `filter_${f.field}=${encodeURIComponent(
-                f.operator + f.value
-              )}`
-          )
-          .join("&");
-      }
-      const res = await fetch(INVOICE_API + query);
-      const data = await res.json();
-      setInvoices(Array.isArray(data.items) ? data.items : []);
-      setTotalRecords(data.total || 0);
-    } catch (err) {
-      toast.error("Không thể tải danh sách hóa đơn!");
-      setInvoices([]);
-      setTotalRecords(0);
-    }
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "invoices.csv";
+    a.click();
   };
+
+  // Export JSON
+  const exportJSON = () => {
+    const blob = new Blob([JSON.stringify(invoices, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "invoices.json";
+    a.click();
+  };
+  // Lấy danh sách hóa đơn từ API (có phân trang + filter nâng cao)
+const fetchInvoices = async () => {
+  try {
+    let url = `${INVOICE_API}?page=${page}&page_size=${pageSize}`;
+    if (search) {
+      url += `&search=${encodeURIComponent(search)}`;
+    }
+    let res, data;
+
+    if (filters.length > 0) {
+      // gọi POST filter
+      res = await fetch(url.replace(INVOICE_API, INVOICE_API + "/filter"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ filters }),
+      });
+    } else {
+      // gọi GET bình thường
+      res = await fetch(url);
+    }
+
+    data = await res.json();
+
+    setInvoices(Array.isArray(data.items) ? data.items : []);
+    setTotalRecords(data.total || 0);
+  } catch (err) {
+    toast.error("Không thể tải danh sách hóa đơn!");
+    setInvoices([]);
+    setTotalRecords(0);
+  }
+};
+
 
   // Lấy danh sách phòng
   const fetchRooms = async () => {
@@ -192,7 +235,7 @@ export default function Invoices() {
     fetchInvoices();
     fetchRooms();
     // eslint-disable-next-line
-  }, [filters, page, pageSize]);
+  }, [filters, page, pageSize, search]);
 
   // --- Advanced filter logic giống Rooms.jsx ---
   const getValueByPath = (obj, path) => {
@@ -487,6 +530,10 @@ export default function Invoices() {
             onAddFilter={(f) => setFilters((prev) => [...prev, f])}
             onRemoveFilter={(i) => setFilters((prev) => prev.filter((_, idx) => idx !== i))}
             compact
+            onLoad={fetchInvoices}
+            onSearch={setSearch}
+            onExportCSV={exportCSV}
+            onExportJSON={exportJSON}
           />
         </div>
 
@@ -502,6 +549,14 @@ export default function Invoices() {
             setPage(1);
             fetchRooms();
             }}
+            onSort={(field, order) => {
+              setDetailSortField(field);
+              setDetailSortOrder(order);
+              // Gọi lại fetchInvoices với sort
+              fetchInvoicesWithSort(field, order);
+            }}
+          sortField={detailSortField}
+          sortOrder={detailSortOrder}
           />
 
           <Modal

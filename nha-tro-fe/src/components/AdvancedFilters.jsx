@@ -1,8 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 
-export default function AdvancedFilters({ fieldOptions = [], filters = [], onAddFilter, onRemoveFilter }) {
-  const [newFilter, setNewFilter] = useState({ field: fieldOptions[0]?.value || "", operator: ">=", value: "" });
+export default function AdvancedFilters({
+  fieldOptions = [],
+  filters = [],
+  onAddFilter,
+  onRemoveFilter,
+  onSearch,
+  onLoad,
+  onExportCSV,
+  onExportJSON,
+}) {
+  const [newFilter, setNewFilter] = useState({
+    field: fieldOptions[0]?.value || "",
+    operator: ">=",
+    value: "",
+  });
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     if (fieldOptions && fieldOptions.length && !newFilter.field) {
@@ -19,16 +33,45 @@ export default function AdvancedFilters({ fieldOptions = [], filters = [], onAdd
     setNewFilter((prev) => ({ ...prev, value: "" }));
   };
 
+  const handleSearch = () => {
+    onSearch && onSearch(searchTerm);
+  };
+
   return (
     <div className="mb-4">
       <h5 className="mb-3">🔍 Bộ lọc nâng cao</h5>
+
+      {/* Thanh tìm kiếm */}
+      <div className="row g-3 mb-3">
+        <div className="col-md-8">
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Nhập từ khóa tìm kiếm..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="col-md-4 d-flex gap-2">
+          <button className="btn btn-secondary" type="button" onClick={handleSearch}>
+            🔍 Tìm kiếm
+          </button>
+          <button className="btn btn-outline-primary" type="button" onClick={onLoad}>
+            ⟳ Load
+          </button>
+        </div>
+      </div>
+
+      {/* Bộ lọc nâng cao */}
       <div className="row g-3">
         <div className="col-md-4">
           <label className="form-label">Trường</label>
           <select
             className="form-select"
             value={newFilter.field}
-            onChange={(e) => setNewFilter((prev) => ({ ...prev, field: e.target.value }))}
+            onChange={(e) =>
+              setNewFilter((prev) => ({ ...prev, field: e.target.value }))
+            }
           >
             <option value="">-- Chọn trường --</option>
             {fieldOptions.map((opt) => (
@@ -44,15 +87,17 @@ export default function AdvancedFilters({ fieldOptions = [], filters = [], onAdd
           <select
             className="form-select"
             value={newFilter.operator}
-            onChange={(e) => setNewFilter((prev) => ({ ...prev, operator: e.target.value }))}
+            onChange={(e) =>
+              setNewFilter((prev) => ({ ...prev, operator: e.target.value }))
+            }
           >
             <option value="">-- Chọn toán tử --</option>
             <option value="=">=</option>
             <option value="!=">!=</option>
-            <option value=">">{'>'}</option>
-            <option value="<">{'<'}</option>
-            <option value=">=">{'>='}</option>
-            <option value="<=">{'<='}</option>
+            <option value=">">{">"}</option>
+            <option value="<">{"<"}</option>
+            <option value=">=">{">="}</option>
+            <option value="<=">{"<="}</option>
             <option value="~">Gần bằng</option>
           </select>
         </div>
@@ -63,32 +108,53 @@ export default function AdvancedFilters({ fieldOptions = [], filters = [], onAdd
             type="text"
             className="form-control"
             value={newFilter.value}
-            onChange={(e) => setNewFilter((prev) => ({ ...prev, value: e.target.value }))}
+            onChange={(e) =>
+              setNewFilter((prev) => ({ ...prev, value: e.target.value }))
+            }
           />
         </div>
 
         <div className="col-12">
           <button className="btn btn-primary" type="button" onClick={add}>
-            Thêm bộ lọc
+            ➕ Thêm bộ lọc
           </button>
         </div>
       </div>
 
+      {/* Danh sách bộ lọc */}
       {filters.length > 0 && (
         <div className="mt-4">
           <h6>Các bộ lọc đang áp dụng:</h6>
           <div className="d-flex flex-wrap gap-2">
             {filters.map((f, i) => (
-              <div key={i} className="badge bg-info text-dark d-flex align-items-center gap-1">
+              <div
+                key={i}
+                className="badge bg-info text-dark d-flex align-items-center gap-1"
+              >
                 <span>
-                  {fieldOptions.find((opt) => opt.value === f.field)?.label} {f.operator} {String(f.value)}
+                  {fieldOptions.find((opt) => opt.value === f.field)?.label}{" "}
+                  {f.operator} {String(f.value)}
                 </span>
-                <button className="btn-close btn-close-dark" type="button" onClick={() => onRemoveFilter && onRemoveFilter(i)}></button>
+                <button
+                  className="btn-close btn-close-dark"
+                  type="button"
+                  onClick={() => onRemoveFilter && onRemoveFilter(i)}
+                ></button>
               </div>
             ))}
           </div>
         </div>
       )}
+
+      {/* Xuất dữ liệu */}
+      <div className="mt-4 d-flex gap-2">
+        <button className="btn btn-success" type="button" onClick={onExportCSV}>
+          📑 Export CSV
+        </button>
+        <button className="btn btn-warning" type="button" onClick={onExportJSON}>
+          📑 Export JSON
+        </button>
+      </div>
     </div>
   );
 }
