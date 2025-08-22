@@ -161,6 +161,56 @@ CREATE TABLE Devices (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_device_room FOREIGN KEY (room_id) REFERENCES Rooms(room_id) ON DELETE SET NULL
 );
+-- Khi thêm chi tiết hóa đơn
+DELIMITER //
+CREATE TRIGGER trg_after_insert_invoice_detail
+AFTER INSERT ON InvoiceDetails
+FOR EACH ROW
+BEGIN
+    UPDATE Invoices
+    SET total_amount = (
+        SELECT IFNULL(SUM(amount), 0)
+        FROM InvoiceDetails
+        WHERE invoice_id = NEW.invoice_id
+    )
+    WHERE invoice_id = NEW.invoice_id;
+END;
+//
+DELIMITER ;
+
+-- Khi cập nhật chi tiết hóa đơn
+DELIMITER //
+CREATE TRIGGER trg_after_update_invoice_detail
+AFTER UPDATE ON InvoiceDetails
+FOR EACH ROW
+BEGIN
+    UPDATE Invoices
+    SET total_amount = (
+        SELECT IFNULL(SUM(amount), 0)
+        FROM InvoiceDetails
+        WHERE invoice_id = NEW.invoice_id
+    )
+    WHERE invoice_id = NEW.invoice_id;
+END;
+//
+DELIMITER ;
+
+-- Khi xóa chi tiết hóa đơn
+DELIMITER //
+CREATE TRIGGER trg_after_delete_invoice_detail
+AFTER DELETE ON InvoiceDetails
+FOR EACH ROW
+BEGIN
+    UPDATE Invoices
+    SET total_amount = (
+        SELECT IFNULL(SUM(amount), 0)
+        FROM InvoiceDetails
+        WHERE invoice_id = OLD.invoice_id
+    )
+    WHERE invoice_id = OLD.invoice_id;
+END;
+//
+DELIMITER ;
 INSERT INTO RoomTypes (type_name, description, price_per_month) VALUES
 ('Standard', 'Phòng cơ bản, không điều hòa', 3000000.00),
 ('Deluxe', 'Phòng có điều hòa, ban công', 5000000.00),
