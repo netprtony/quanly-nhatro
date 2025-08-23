@@ -6,6 +6,7 @@ class ReservationBase(BaseModel):
     contact_phone: str
     room_id: int
     user_id: Optional[int] = None
+    created_at: Optional[datetime] = None
     status: Optional[str] = "Pending"
 
 class ReservationCreate(ReservationBase):

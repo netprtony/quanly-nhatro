@@ -1,3 +1,4 @@
+import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List
@@ -10,7 +11,9 @@ def get_reservations(
     db: Session = Depends(database.get_db),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=200),
-    search: str = Query(None, description="Tìm theo số điện thoại hoặc số phòng")
+    search: str = Query(None, description="Tìm theo số điện thoại hoặc số phòng"),
+    sort_field: str = Query(None, description="Trường sắp xếp"),
+    sort_order: str = Query("asc", description="Thứ tự sắp xếp"),
 ):
     query = db.query(models.Reservation)
     if search:
@@ -18,6 +21,21 @@ def get_reservations(
             (models.Reservation.contact_phone.ilike(f"%{search}%")) |
             (models.Room.room_number.ilike(f"%{search}%"))
         )
+    # Thêm xử lý sort
+    valid_sort_fields = {
+        "reservation_id": models.Reservation.reservation_id,
+        "room_id": models.Reservation.room_id,
+        "user_id": models.Reservation.user_id,
+        "status": models.Reservation.status,
+        "contact_phone": models.Reservation.contact_phone,
+        "created_at": models.Reservation.created_at,
+    }
+    if sort_field in valid_sort_fields:
+        col = valid_sort_fields[sort_field]
+        if sort_order == "desc":
+            query = query.order_by(col.desc())
+        else:
+            query = query.order_by(col.asc())
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
     return {"items": items, "total": total}
@@ -73,6 +91,7 @@ def filter_invoices(
         "user_id": (models.Reservation.user_id, int),
         "status": (models.Reservation.status, str),
         "contact_phone": (models.Reservation.contact_phone, str),
+        "created_at": (models.Reservation.created_at, datetime.datetime),
     }
 
     for f in request.filters:

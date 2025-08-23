@@ -99,7 +99,16 @@ export default function Invoices() {
       accessor: "is_paid",
       render: (is_paid) => (is_paid ? "Đã thanh toán" : "Chưa thanh toán"),
     },
-    { label: "Ngày tạo", accessor: "created_at" },
+    {
+      label: "Ngày tạo",
+      accessor: "created_at",
+      render: (value) => {
+        if (!value) return "";
+        const date = new Date(value);
+        const pad = (n) => n.toString().padStart(2, "0");
+        return `${pad(date.getHours())}:${pad(date.getMinutes())} ${pad(date.getDate())}-${pad(date.getMonth() + 1)}-${date.getFullYear()}`;
+      },
+    },
     {
       label: "Thao tác",
       accessor: "actions",

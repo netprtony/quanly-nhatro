@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import Table from "/src/components/Table.jsx";
 import Modal from "/src/components/Modal.jsx";
 import ModalConfirm from "/src/components/ModalConfirm.jsx";
+import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const API_URL = "http://localhost:8000/tenants";
+const TENANT_URL = "http://localhost:8000/tenants";
 
 export default function Tenants() {
   const [tenants, setTenants] = useState([]);
@@ -29,70 +30,26 @@ export default function Tenants() {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [tenantToDelete, setTenantToDelete] = useState(null);
 
-  // Lấy danh sách tenants từ API
-  const fetchTenants = async () => {
-    try {
-      const res = await fetch(API_URL);
-      const data = await res.json();
-      setTenants(data);
-    } catch (err) {
-      toast.error("Không thể tải danh sách khách thuê!");
-    }
-  };
+  // Bộ lọc nâng cao, tìm kiếm, phân trang, sort
+  const [filters, setFilters] = useState([]);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [sortField, setSortField] = useState();
+  const [sortOrder, setSortOrder] = useState();
 
-  useEffect(() => {
-    fetchTenants();
-  }, []);
-
-  // Thêm mới tenant
-  const createTenant = async () => {
-    try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      await fetchTenants();
-      toast.success("✅ Thêm khách thuê thành công!");
-      setShowModal(false);
-    } catch (err) {
-      toast.error("Thêm khách thuê thất bại! " + err.message);
-    }
-  };
-
-  // Sửa tenant
-  const updateTenant = async () => {
-    try {
-      const res = await fetch(`${API_URL}/${editingTenant.tenant_id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      await fetchTenants();
-      toast.success("✏️ Cập nhật khách thuê thành công!");
-      setShowModal(false);
-    } catch (err) {
-      toast.error("Cập nhật khách thuê thất bại! " + err.message);
-    }
-  };
-
-  // Xóa tenant
-  const deleteTenant = async () => {
-    try {
-      const res = await fetch(`${API_URL}/${tenantToDelete}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error(await res.text());
-      await fetchTenants();
-      toast.success("🗑️ Xóa khách thuê thành công!");
-      setShowConfirmDelete(false);
-      setTenantToDelete(null);
-    } catch (err) {
-      toast.error("Xóa khách thuê thất bại! " + err.message);
-    }
-  };
+  // Cấu hình bộ lọc nâng cao
+  const fieldOptions = [
+    { value: "tenant_id", label: "Mã khách thuê", type: "string" },
+    { value: "full_name", label: "Họ tên", type: "string" },
+    { value: "phone_number", label: "Số điện thoại", type: "string" },
+    { value: "email", label: "Email", type: "string" },
+    { value: "address", label: "Địa chỉ", type: "string" },
+    { value: "gender", label: "Giới tính", type: "string" },
+    { value: "date_of_birth", label: "Ngày sinh", type: "string" },
+    { value: "is_rent", label: "Trạng thái", type: "boolean" },
+  ];
 
   const columns = [
     { label: "ID", accessor: "tenant_id" },
@@ -100,6 +57,16 @@ export default function Tenants() {
     { label: "Số điện thoại", accessor: "phone_number" },
     { label: "Email", accessor: "email" },
     { label: "Địa chỉ", accessor: "address" },
+    {
+      label: "Ngày tạo",
+      accessor: "created_at",
+      render: (value) => {
+        if (!value) return "";
+        const date = new Date(value);
+        const pad = (n) => n.toString().padStart(2, "0");
+        return `${pad(date.getHours())}:${pad(date.getMinutes())} ${pad(date.getDate())}-${pad(date.getMonth() + 1)}-${date.getFullYear()}`;
+      },
+    },
     {
       label: "Trạng thái",
       accessor: "is_rent",
@@ -116,6 +83,121 @@ export default function Tenants() {
       ),
     },
   ];
+
+  // Lấy danh sách tenants từ API (phân trang, lọc, sort)
+  const fetchTenants = async (field = sortField, order = sortOrder) => {
+    try {
+      let url = `${TENANT_URL}?page=${page}&page_size=${pageSize}`;
+      if (search) url += `&search=${encodeURIComponent(search)}`;
+      if (field) url += `&sort_field=${field}`;
+      if (order) url += `&sort_order=${order}`;
+      let res, data;
+      if (search) {
+        url += `&search=${encodeURIComponent(search)}`;
+      }
+      if (filters.length > 0) {
+        res = await fetch(url.replace(TENANT_URL, TENANT_URL + "/filter"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filters, sort_field: field, sort_order: order }),
+        });
+      } else {
+        res = await fetch(url);
+      }
+
+      data = await res.json();
+      setTenants(Array.isArray(data.items) ? data.items : []);
+      setTotalRecords(data.total || 0);
+    } catch (err) {
+      toast.error("Không thể tải danh sách khách thuê!");
+      setTenants([]);
+      setTotalRecords(0);
+    }
+  };
+
+  useEffect(() => {
+    fetchTenants();
+    // eslint-disable-next-line
+  }, [filters, page, pageSize, search, sortField, sortOrder]);
+
+  // Export CSV
+  const exportCSV = () => {
+    if (tenants.length === 0) return;
+    const headers = Object.keys(tenants[0]);
+    const csv = [
+      headers.join(","),
+      ...tenants.map((row) =>
+        headers.map((h) => JSON.stringify(row[h] ?? "")).join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "tenants.csv";
+    a.click();
+  };
+
+  // Export JSON
+  const exportJSON = () => {
+    const blob = new Blob([JSON.stringify(tenants, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "tenants.json";
+    a.click();
+  };
+
+  // CRUD
+  const createTenant = async () => {
+    try {
+      const res = await fetch(TENANT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchTenants();
+      toast.success("✅ Thêm khách thuê thành công!");
+      setShowModal(false);
+    } catch (err) {
+      toast.error("Thêm khách thuê thất bại! " + err.message);
+    }
+  };
+
+  const updateTenant = async () => {
+    try {
+      const res = await fetch(`${TENANT_URL}/${editingTenant.tenant_id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchTenants();
+      toast.success("✏️ Cập nhật khách thuê thành công!");
+      setShowModal(false);
+    } catch (err) {
+      toast.error("Cập nhật khách thuê thất bại! " + err.message);
+    }
+  };
+
+  const deleteTenant = async () => {
+    try {
+      const res = await fetch(`${TENANT_URL}/${tenantToDelete}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchTenants();
+      toast.success("🗑️ Xóa khách thuê thành công!");
+      setShowConfirmDelete(false);
+      setTenantToDelete(null);
+    } catch (err) {
+      toast.error("Xóa khách thuê thất bại! " + err.message);
+    }
+  };
 
   const handleAdd = () => {
     setForm({
@@ -187,13 +269,45 @@ export default function Tenants() {
     <div className="container mt-4 position-relative">
       <div className="p-4 rounded shadow bg-white">
         <div className="d-flex align-items-center justify-content-between mb-3">
-          <h3 className="mb-3">🧑‍💼 Danh sách khách thuê</h3>
-          <button className="btn btn-success mb-3" onClick={handleAdd}>
+          <h3 className="mb-0">🧑‍💼 Danh sách khách thuê</h3>
+          <button className="btn btn-success" onClick={handleAdd}>
             ➕ Thêm khách thuê
           </button>
         </div>
 
-        <Table columns={columns} data={tenants} />
+        <div className="mb-3">
+          <AdvancedFilters
+            fieldOptions={fieldOptions}
+            filters={filters}
+            onAddFilter={(f) => setFilters((prev) => [...prev, f])}
+            onRemoveFilter={(i) => setFilters((prev) => prev.filter((_, idx) => idx !== i))}
+            compact
+            onLoad={fetchTenants}
+            onSearch={setSearch}
+            onExportCSV={exportCSV}
+            onExportJSON={exportJSON}
+          />
+        </div>
+
+        <Table
+          columns={columns}
+          data={tenants}
+          page={page}
+          pageSize={pageSize}
+          totalRecords={totalRecords}
+          onPageChange={(newPage) => setPage(newPage)}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+          onSort={(field, order) => {
+            setSortField(field);
+            setSortOrder(order);
+            fetchTenants(field, order);
+          }}
+          sortField={sortField}
+          sortOrder={sortOrder}
+        />
 
         {/* Modal Thêm / Sửa */}
         <Modal
@@ -337,7 +451,6 @@ export default function Tenants() {
           onClose={() => setShowConfirmExit(false)}
         />
       </div>
-
       <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );

@@ -1,10 +1,11 @@
+from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List
 from app import models, database
 from app.schemas import TenantCreate, TenantUpdate, TenantOut, PaginatedTenantOut, FilterRequest
 from app import models, utils, database
-from app.schemas import tenant as tenant_schemas
+
 router = APIRouter(prefix="/tenants", tags=["Tenants"])
 
 def get_db():
@@ -20,7 +21,9 @@ def get_tenants(
     db: Session = Depends(get_db),
     page: int = Query(1, ge=1, description="Trang hiện tại"),
     page_size: int = Query(20, ge=1, le=200, description="Số item mỗi trang"),
-    search: str = Query(None, description="Tìm kiếm theo tên hoặc số điện thoại")
+    search: str = Query(None, description="Tìm kiếm theo tên hoặc số điện thoại"),
+    sort_field: str = Query(None, description="Trường sắp xếp"),
+    sort_order: str = Query("asc", description="Thứ tự sắp xếp"),
 ):
     query = db.query(models.Tenant)
     if search:
@@ -28,7 +31,19 @@ def get_tenants(
             (models.Tenant.full_name.ilike(f"%{search}%")) |
             (models.Tenant.phone_number.ilike(f"%{search}%"))
         )
-
+    # thêm xử lý sort
+    valid_sort_fields = {
+        "full_name": models.Tenant.full_name,
+        "phone_number": models.Tenant.phone_number,
+        "email": models.Tenant.email,
+        "created_at": models.Tenant.created_at,
+    }
+    if sort_field in valid_sort_fields:
+        col = valid_sort_fields[sort_field]
+        if sort_order == "desc":
+            query = query.order_by(col.desc())
+        else:
+            query = query.order_by(col.asc())
     total = query.count()
     offset = (page - 1) * page_size
     items = query.offset(offset).limit(page_size).all()
@@ -36,7 +51,7 @@ def get_tenants(
     return {"items": items, "total": total}
 
 # Lấy chi tiết tenant
-@router.get("/{tenant_id}", response_model=tenant_schemas.TenantOut)
+@router.get("/{tenant_id}", response_model=TenantOut)
 def get_tenant(tenant_id: str, db: Session = Depends(get_db)):
     tenant = db.query(models.Tenant).filter(models.Tenant.tenant_id == tenant_id).first()
     if not tenant:
@@ -44,8 +59,8 @@ def get_tenant(tenant_id: str, db: Session = Depends(get_db)):
     return tenant
 
 # Tạo mới tenant
-@router.post("/", response_model=tenant_schemas.TenantOut, status_code=201)
-def create_tenant(tenant: tenant_schemas.TenantCreate, db: Session = Depends(get_db)):
+@router.post("/", response_model=TenantOut, status_code=201)
+def create_tenant(tenant: TenantCreate, db: Session = Depends(get_db)):
     if db.query(models.Tenant).filter(models.Tenant.tenant_id == tenant.tenant_id).first():
         raise HTTPException(status_code=400, detail="Tenant ID already exists")
     db_tenant = models.Tenant(**tenant.dict())
@@ -55,8 +70,8 @@ def create_tenant(tenant: tenant_schemas.TenantCreate, db: Session = Depends(get
     return db_tenant
 
 # Cập nhật tenant
-@router.put("/{tenant_id}", response_model=tenant_schemas.TenantOut)
-def update_tenant(tenant_id: str, tenant: tenant_schemas.TenantUpdate, db: Session = Depends(get_db)):
+@router.put("/{tenant_id}", response_model=TenantOut)
+def update_tenant(tenant_id: str, tenant: TenantUpdate, db: Session = Depends(get_db)):
     db_tenant = db.query(models.Tenant).filter(models.Tenant.tenant_id == tenant_id).first()
     if not db_tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")

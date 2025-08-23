@@ -6,7 +6,7 @@ import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const API_URL = "http://localhost:8000/reservations";
+const RESERVATION_URL = "http://localhost:8000/reservations";
 const USERS_API = "http://localhost:8000/accounts";
 const ROOMS_API = "http://localhost:8000/rooms";
 
@@ -34,6 +34,8 @@ export default function Reservations() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [totalRecords, setTotalRecords] = useState(0);
+  const [sortField, setSortField] = useState();
+  const [sortOrder, setSortOrder] = useState();
 
   // Các trường lọc nâng cao
   const fieldOptions = [
@@ -44,18 +46,21 @@ export default function Reservations() {
   ];
 
   // Lấy danh sách đặt phòng từ API (có phân trang + filter nâng cao)
-  const fetchReservations = async () => {
+  const fetchReservations = async (field = sortField, order = sortOrder) => {
     try {
-      let url = `${API_URL}?page=${page}&page_size=${pageSize}`;
+      let url = `${RESERVATION_URL}?page=${page}&page_size=${pageSize}`;
+      if (search) url += `&search=${encodeURIComponent(search)}`;
+      if (field) url += `&sort_field=${field}`;
+      if (order) url += `&sort_order=${order}`;
       if (search) {
         url += `&search=${encodeURIComponent(search)}`;
       }
       let res, data;
       if (filters.length > 0) {
-        res = await fetch(url.replace(API_URL, API_URL + "/filter"), {
+        res = await fetch(url.replace(RESERVATION_URL, RESERVATION_URL + "/filter"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filters }),
+          body: JSON.stringify({ filters, sort_field: field, sort_order: order }),
         });
       } else {
         res = await fetch(url);
@@ -109,7 +114,7 @@ export default function Reservations() {
         room_id: form.room_id ? parseInt(form.room_id) : null,
         user_id: form.user_id ? parseInt(form.user_id) : null,
       };
-      const res = await fetch(API_URL, {
+      const res = await fetch(RESERVATION_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -131,7 +136,7 @@ export default function Reservations() {
         room_id: form.room_id ? parseInt(form.room_id) : null,
         user_id: form.user_id ? parseInt(form.user_id) : null,
       };
-      const res = await fetch(`${API_URL}/${editingReservation.reservation_id}`, {
+      const res = await fetch(`${RESERVATION_URL}/${editingReservation.reservation_id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -148,7 +153,7 @@ export default function Reservations() {
   // Xóa đặt phòng
   const deleteReservation = async () => {
     try {
-      const res = await fetch(`${API_URL}/${reservationToDelete}`, {
+      const res = await fetch(`${RESERVATION_URL}/${reservationToDelete}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error(await res.text());
@@ -306,6 +311,13 @@ export default function Reservations() {
             setPageSize(size);
             setPage(1);
           }}
+          onSort={(field, order) => {
+            setSortField(field);
+            setSortOrder(order);
+            fetchReservations(field, order);
+          }}
+          sortField={sortField}
+          sortOrder={sortOrder}
         />
 
         <Modal
