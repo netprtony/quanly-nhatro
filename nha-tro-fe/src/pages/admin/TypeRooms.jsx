@@ -6,25 +6,10 @@ import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+const API_URL = "http://localhost:8000/roomtypes";
+
 export default function TypeRooms() {
   const [typeRooms, setTypeRooms] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  // API base URL
-  const API_URL = "http://localhost:8000/roomtypes";
-  // Fetch room types from backend
-  useEffect(() => {
-    setLoading(true);
-    fetch(API_URL)
-      .then((res) => {
-        if (!res.ok) throw new Error("Không thể lấy dữ liệu loại phòng");
-        return res.json();
-      })
-      .then((data) => setTypeRooms(data))
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, []);
-
   const [showModal, setShowModal] = useState(false);
   const [editingType, setEditingType] = useState(null);
   const [form, setForm] = useState({
@@ -38,8 +23,14 @@ export default function TypeRooms() {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [typeToDelete, setTypeToDelete] = useState(null);
 
-  // Advanced filters
+  // Bộ lọc nâng cao, tìm kiếm, phân trang, sort
   const [filters, setFilters] = useState([]);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [sortField, setSortField] = useState();
+  const [sortOrder, setSortOrder] = useState();
 
   const fieldOptions = [
     { value: "room_type_id", label: "Mã loại", type: "number" },
@@ -47,51 +38,6 @@ export default function TypeRooms() {
     { value: "price_per_month", label: "Giá phòng", type: "number" },
     { value: "description", label: "Mô tả", type: "string" },
   ];
-
-  const getValueByPath = (obj, path) =>
-    path.split(".").reduce((o, p) => (o ? o[p] : undefined), obj);
-
-  const evaluateFilter = (f, item) => {
-    const raw = getValueByPath(item, f.field);
-    if (raw === undefined || raw === null) return false;
-
-    const maybeNum = Number(raw);
-    const targetNum = Number(f.value);
-    const isNumeric = !isNaN(maybeNum) && !isNaN(targetNum);
-
-    if (isNumeric) {
-      switch (f.operator) {
-        case ">":
-          return maybeNum > targetNum;
-        case "<":
-          return maybeNum < targetNum;
-        case ">=":
-          return maybeNum >= targetNum;
-        case "<=":
-          return maybeNum <= targetNum;
-        case "=":
-          return maybeNum === targetNum;
-        case "~": {
-          const diff = Math.abs(maybeNum - targetNum);
-          const tol = Math.max(1, Math.abs(targetNum) * 0.1);
-          return diff <= tol;
-        }
-        default:
-          return false;
-      }
-    }
-
-    const rawStr = String(raw).toLowerCase();
-    const valStr = String(f.value).toLowerCase();
-    if (f.operator === "=") return rawStr === valStr;
-    if (f.operator === "~") return rawStr.includes(valStr);
-    return false;
-  };
-
-  const applyFilters = (list) => {
-    if (!filters || filters.length === 0) return list;
-    return list.filter((item) => filters.every((f) => evaluateFilter(f, item)));
-  };
 
   const columns = [
     { label: "Mã loại", accessor: "room_type_id" },
@@ -130,6 +76,115 @@ export default function TypeRooms() {
     },
   ];
 
+  // Lấy danh sách loại phòng từ API (phân trang, lọc, sort)
+  const fetchTypeRooms = async (field = sortField, order = sortOrder) => {
+    try {
+      let url = `${API_URL}?page=${page}&page_size=${pageSize}`;
+      if (search) url += `&search=${encodeURIComponent(search)}`;
+      if (field) url += `&sort_field=${field}`;
+      if (order) url += `&sort_order=${order}`;
+      let res, data;
+      if (filters.length > 0) {
+        res = await fetch(url.replace(API_URL, API_URL + "/filter"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filters, sort_field: field, sort_order: order }),
+        });
+      } else {
+        res = await fetch(url);
+      }
+      data = await res.json();
+      setTypeRooms(Array.isArray(data.items) ? data.items : []);
+      setTotalRecords(data.total || 0);
+    } catch (err) {
+      toast.error("Không thể tải danh sách loại phòng!");
+      setTypeRooms([]);
+      setTotalRecords(0);
+    }
+  };
+
+  useEffect(() => {
+    fetchTypeRooms();
+    // eslint-disable-next-line
+  }, [filters, page, pageSize, search, sortField, sortOrder]);
+
+  const exportCSV = () => {
+    if (typeRooms.length === 0) return;
+    const headers = Object.keys(typeRooms[0]);
+    const csv = [
+      headers.join(","),
+      ...typeRooms.map((row) =>
+        headers.map((h) => JSON.stringify(row[h] ?? "")).join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "roomtypes.csv";
+    a.click();
+  };
+
+  const exportJSON = () => {
+    const blob = new Blob([JSON.stringify(typeRooms, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "roomtypes.json";
+    a.click();
+  };
+
+  // CRUD
+  const createTypeRoom = async () => {
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchTypeRooms();
+      toast.success("✅ Thêm loại phòng thành công!");
+      setShowModal(false);
+    } catch (err) {
+      toast.error("Thêm loại phòng thất bại! " + err.message);
+    }
+  };
+
+  const updateTypeRoom = async () => {
+    try {
+      const res = await fetch(`${API_URL}/${editingType.room_type_id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchTypeRooms();
+      toast.success("✏️ Cập nhật loại phòng thành công!");
+      setShowModal(false);
+    } catch (err) {
+      toast.error("Cập nhật loại phòng thất bại! " + err.message);
+    }
+  };
+
+  const deleteTypeRoom = async () => {
+    try {
+      const res = await fetch(`${API_URL}/${typeToDelete}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchTypeRooms();
+      toast.success("🗑️ Xóa loại phòng thành công!");
+      setShowConfirmDelete(false);
+      setTypeToDelete(null);
+    } catch (err) {
+      toast.error("Xóa loại phòng thất bại! " + err.message);
+    }
+  };
+
   const handleAdd = () => {
     setForm({
       type_name: "",
@@ -157,58 +212,15 @@ export default function TypeRooms() {
     setShowConfirmDelete(true);
   };
 
-  // Delete room type
-  const confirmDelete = async () => {
-    try {
-      const res = await fetch(`${API_URL}/${typeToDelete}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Xóa loại phòng thất bại");
-      setTypeRooms((prev) =>
-        prev.filter((t) => t.room_type_id !== typeToDelete)
-      );
-      toast.success("🗑️ Xóa loại phòng thành công!");
-    } catch (err) {
-      toast.error(err.message);
-    }
-    setShowConfirmDelete(false);
-    setTypeToDelete(null);
+  const confirmDelete = () => {
+    deleteTypeRoom();
   };
 
-  // Add or update room type
-  const handleSubmitType = async () => {
-    try {
-      let res, data;
-      if (editingType) {
-        // Update
-        res = await fetch(`${API_URL}/${editingType.room_type_id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
-        });
-        if (!res.ok) throw new Error("Cập nhật loại phòng thất bại");
-        data = await res.json();
-        setTypeRooms((prev) =>
-          prev.map((t) =>
-            t.room_type_id === editingType.room_type_id ? data : t
-          )
-        );
-        toast.success("✏️ Cập nhật loại phòng thành công!");
-      } else {
-        // Add
-        res = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
-        });
-        if (!res.ok) throw new Error("Thêm loại phòng thất bại");
-        data = await res.json();
-        setTypeRooms((prev) => [...prev, data]);
-        toast.success("✅ Thêm loại phòng thành công!");
-      }
-      setShowModal(false);
-    } catch (err) {
-      toast.error(err.message);
+  const handleSubmitTypeRoom = () => {
+    if (editingType) {
+      updateTypeRoom();
+    } else {
+      createTypeRoom();
     }
   };
 
@@ -235,20 +247,37 @@ export default function TypeRooms() {
           </button>
         </div>
 
-        {/* Advanced Filters */}
         <AdvancedFilters
           fieldOptions={fieldOptions}
           filters={filters}
-          setFilters={setFilters}
+          onAddFilter={(f) => setFilters((prev) => [...prev, f])}
+          onRemoveFilter={(i) => setFilters((prev) => prev.filter((_, idx) => idx !== i))}
+          compact
+          onLoad={fetchTypeRooms}
+          onSearch={setSearch}
+          onExportCSV={exportCSV}
+          onExportJSON={exportJSON}
         />
 
-        {loading ? (
-          <div>Đang tải dữ liệu...</div>
-        ) : error ? (
-          <div className="text-danger">{error}</div>
-        ) : (
-          <Table columns={columns} data={applyFilters(typeRooms)} />
-        )}
+        <Table
+          columns={columns}
+          data={typeRooms}
+          page={page}
+          pageSize={pageSize}
+          totalRecords={totalRecords}
+          onPageChange={(newPage) => setPage(newPage)}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+          onSort={(field, order) => {
+            setSortField(field);
+            setSortOrder(order);
+            fetchTypeRooms(field, order);
+          }}
+          sortField={sortField}
+          sortOrder={sortOrder}
+        />
 
         {/* Modal Thêm / Sửa */}
         <Modal
@@ -256,7 +285,7 @@ export default function TypeRooms() {
           onClose={handleCloseModal}
           title={editingType ? "✏️ Chỉnh sửa loại phòng" : "➕ Thêm loại phòng"}
           showConfirm
-          onConfirm={handleSubmitType}
+          onConfirm={handleSubmitTypeRoom}
         >
           <form>
             <div className="row g-3">
@@ -272,7 +301,6 @@ export default function TypeRooms() {
                   required
                 />
               </div>
-
               <div className="col-md-6">
                 <label className="form-label">Giá phòng (VND)</label>
                 <input
@@ -285,7 +313,6 @@ export default function TypeRooms() {
                   required
                 />
               </div>
-
               <div className="col-12">
                 <label className="form-label">Mô tả</label>
                 <textarea
@@ -327,7 +354,6 @@ export default function TypeRooms() {
           onClose={() => setShowConfirmExit(false)}
         />
       </div>
-
       <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
