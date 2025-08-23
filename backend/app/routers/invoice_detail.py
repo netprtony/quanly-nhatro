@@ -11,12 +11,26 @@ def get_invoice_details(
     db: Session = Depends(database.get_db),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=200),
-    filter_invoice_id: int = Query(None)
+    filter_invoice_id: int = Query(None),
+    sort_field: str = Query(None, description="Trường sắp xếp"),
+    sort_order: str = Query("asc", description="Thứ tự sắp xếp"),
 ):
     query = db.query(models.InvoiceDetail)
     if filter_invoice_id is not None:
         query = query.filter(models.InvoiceDetail.invoice_id == filter_invoice_id)
-
+    valid_sort_fields = {
+        "detail_id": models.InvoiceDetail.detail_id,
+        "invoice_id": models.InvoiceDetail.invoice_id,
+        "meter_id": models.InvoiceDetail.meter_id,
+        "fee_type": models.InvoiceDetail.fee_type,
+        "amount": models.InvoiceDetail.amount,
+    }
+    if sort_field in valid_sort_fields:
+        col = valid_sort_fields[sort_field]
+        if sort_order == "desc":    
+            query = query.order_by(col.desc())
+        else:
+            query = query.order_by(col.asc())
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
     return {"items": items, "total": total}

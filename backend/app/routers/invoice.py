@@ -10,14 +10,30 @@ def get_invoices(
     db: Session = Depends(database.get_db),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=200),
-    search: str = Query(None, description="Tìm theo phòng hoặc tháng")
+    search: str = Query(None, description="Tìm theo phòng hoặc tháng"), 
+    sort_field: str = Query(None, description="Trường sắp xếp"),
+    sort_order: str = Query("asc", description="Thứ tự sắp xếp"),
 ):
     query = db.query(models.Invoice)
     if search:
         query = query.join(models.Room).filter(
             (models.Room.room_number.ilike(f"%{search}%")) |
-            (models.Invoice.month.ilike(f"%{search}%"))
+            (models.Invoice.month.ilike(f"%{search}%")) |
+            (models.Invoice.total_amount.ilike(f"%{search}%"))
         )
+    valid_sort_fields = {
+        "room_id": models.Invoice.room_id,
+        "invoice_id": models.Invoice.invoice_id,
+        "total_amount": models.Invoice.total_amount,
+        "is_paid": models.Invoice.is_paid,
+        "created_at": models.Invoice.created_at,
+    }
+    if sort_field in valid_sort_fields:
+        col = valid_sort_fields[sort_field]
+        if sort_order == "desc":
+            query = query.order_by(col.desc())
+        else:
+            query = query.order_by(col.asc())
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
     return {"items": items, "total": total}

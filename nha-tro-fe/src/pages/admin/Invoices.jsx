@@ -46,6 +46,10 @@ export default function Invoices() {
   const [pageSize, setPageSize] = useState(20);
   const [totalRecords, setTotalRecords] = useState(0);
 
+  const [pageDetail, setPageDetail] = useState(1);
+  const [pageSizeDetail, setPageSizeDetail] = useState(20);
+  const [totalRecordsDetail, setTotalRecordsDetail] = useState(0);
+
   // --- CRUD chi tiết hóa đơn ---
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
@@ -62,6 +66,8 @@ export default function Invoices() {
   const [showDetailConfirmDelete, setShowDetailConfirmDelete] = useState(false);
   const [detailToDelete, setDetailToDelete] = useState(null);
 
+  const [sortField, setSortField] = useState();
+  const [sortOrder, setSortOrder] = useState();
   // sắp sắp bảng
   const [detailSortField, setDetailSortField] = useState();
   const [detailSortOrder, setDetailSortOrder] = useState();
@@ -181,9 +187,12 @@ export default function Invoices() {
     a.click();
   };
   // Lấy danh sách hóa đơn từ API (có phân trang + filter nâng cao)
-const fetchInvoices = async () => {
+const fetchInvoices = async (field = sortField, order = sortOrder) => {
   try {
     let url = `${INVOICE_API}?page=${page}&page_size=${pageSize}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (field) url += `&sort_field=${field}`;
+    if (order) url += `&sort_order=${order}`;
     if (search) {
       url += `&search=${encodeURIComponent(search)}`;
     }
@@ -196,7 +205,7 @@ const fetchInvoices = async () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ filters }),
+        body: JSON.stringify({ filters, sort_field: field, sort_order: order }),
       });
     } else {
       // gọi GET bình thường
@@ -229,10 +238,10 @@ const fetchInvoices = async () => {
   };
 
   // Lấy chi tiết hóa đơn theo invoice_id
-  const fetchInvoiceDetails = async (invoice_id) => {
+  const fetchInvoiceDetails = async (invoice_id, filter = detailSortField, sort = detailSortOrder) => {
     try {
-      const res = await fetch(`${INVOICE_DETAIL_API}/by-invoice/${invoice_id}`);
-      const data = await res.json();
+      let url = await fetch(`${INVOICE_DETAIL_API}/by-invoice/${invoice_id}?sort_field=${sortField}&sort_order=${sortOrder}`);
+      const data = await url.json();
       setInvoiceDetails(Array.isArray(data) ? data : []);
     } catch (err) {
       toast.error("Không thể tải chi tiết hóa đơn!");
@@ -244,7 +253,7 @@ const fetchInvoices = async () => {
     fetchInvoices();
     fetchRooms();
     // eslint-disable-next-line
-  }, [filters, page, pageSize, search]);
+  }, [filters, page, pageSize, search,  sortField, sortOrder]);
 
   // --- Advanced filter logic giống Rooms.jsx ---
   const getValueByPath = (obj, path) => {
@@ -563,13 +572,14 @@ const fetchInvoices = async () => {
             fetchRooms();
             }}
             onSort={(field, order) => {
-              setDetailSortField(field);
-              setDetailSortOrder(order);
+              
+              setSortField(field);
+              setSortOrder(order);
               // Gọi lại fetchInvoices với sort
-              fetchInvoicesWithSort(field, order);
+              fetchInvoices(field, order);
             }}
-          sortField={detailSortField}
-          sortOrder={detailSortOrder}
+          sortField={sortField}
+          sortOrder={sortOrder}
           />
 
           <Modal
@@ -679,7 +689,24 @@ const fetchInvoices = async () => {
               ➕ Thêm chi tiết
             </button>
           </div>
-          <Table columns={detailColumns} data={invoiceDetails} />
+          <Table 
+          columns={detailColumns} 
+          data={invoiceDetails}
+          page={pageDetail}
+          pageSize={pageSizeDetail}
+          totalRecords={totalRecordsDetail}
+          onPageChange={(newPage) => setPageDetail(newPage)}
+          onPageSizeChange={(size) => {
+            setPageSizeDetail(size);
+            setPageDetail(1);
+          }}
+          onSort={(field, order) => {
+            setDetailSortField(field);
+            setDetailSortOrder(order);
+          }}
+          detailSortField={detailSortField}
+          detailSortOrder={detailSortOrder}
+          />
 
           {(editingDetail !== null || detailForm.invoice_id) && (
             <form className="mt-3">

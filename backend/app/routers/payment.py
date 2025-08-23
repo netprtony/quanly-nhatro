@@ -1,4 +1,6 @@
+from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import String
 from sqlalchemy.orm import Session
 from typing import List
 from app import models, database
@@ -10,17 +12,46 @@ def get_payments(
     db: Session = Depends(database.get_db),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=200),
-    search: str = Query(None, description="Tìm theo mã hóa đơn hoặc phương thức")
+    search: str = Query(None, description="Tìm theo mã hóa đơn, phương thức, hoặc tên khách thuê")
 ):
-    query = db.query(models.Payment)
+    # Join bảng
+    query = (
+        db.query(
+            models.Payment,
+            models.Tenant.full_name.label("tenant_name")
+        )
+        .join(models.Invoice, models.Payment.invoice_id == models.Invoice.invoice_id)
+        .join(models.Contract, models.Invoice.room_id == models.Contract.room_id)
+        .join(models.Tenant, models.Contract.tenant_id == models.Tenant.tenant_id)
+        .filter(models.Contract.contract_status == "Active")  # chỉ lấy hợp đồng đang hiệu lực
+    )
+
+    # Điều kiện tìm kiếm
     if search:
         query = query.filter(
-            (models.Payment.invoice_id.ilike(f"%{search}%")) |
-            (models.Payment.payment_method.ilike(f"%{search}%"))
+            (models.Payment.invoice_id.cast(String).ilike(f"%{search}%")) |
+            (models.Payment.payment_method.ilike(f"%{search}%")) |
+            (models.Tenant.full_name.ilike(f"%{search}%"))
         )
+
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
-    return {"items": items, "total": total}
+
+    # Trả về dữ liệu chuẩn
+    result = []
+    for payment, tenant_name in items:
+        result.append({
+            "payment_id": payment.payment_id,
+            "invoice_id": payment.invoice_id,
+            "paid_amount": payment.paid_amount,
+            "payment_date": payment.payment_date,
+            "payment_method": payment.payment_method,
+            "transaction_reference": payment.transaction_reference,
+            "note": payment.note,
+            "tenant_name": tenant_name
+        })
+
+    return {"items": result, "total": total}
 
 @router.get("/{payment_id}", response_model=PaymentOut)
 def get_payment(payment_id: int, db: Session = Depends(database.get_db)):
