@@ -13,8 +13,8 @@ from .room import (
     RoomCreate,
     RoomSchema,
     RoomCreateUpdateSchema,
-    RoomTypeCreate
-    
+    RoomTypeCreate,
+    PaginatedRoomTypeOut
 )
 from .tenant import (
     TenantCreate,

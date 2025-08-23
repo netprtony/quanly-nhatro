@@ -22,6 +22,7 @@ class RoomCreate(BaseModel):
 
 class RoomSchema(BaseModel):
     room_id: int
+    room_type_id: int
     room_number: str
     max_occupants: int
     is_available: bool
@@ -50,3 +51,18 @@ class PaginatedRoomOut(BaseModel):
 
     class Config:
         orm_mode = True
+class PaginatedRoomTypeOut(BaseModel):
+    items: List[RoomTypeSchema]
+    total: int
+
+    class Config:
+        orm_mode = True
+
+class Filter(BaseModel):
+    field: str
+    operator: str
+    value: str
+
+
+class FilterRequest(BaseModel):
+    filters: List[Filter] = [] 
