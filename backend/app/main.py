@@ -16,6 +16,7 @@ from app.routers import (
     room_router,
     roomtype_router,
     tenant_router,
+    backup_router,
 )
 app = FastAPI()
 
@@ -47,6 +48,7 @@ app.include_router(reservation_router)
 app.include_router(room_router)
 app.include_router(roomtype_router)
 app.include_router(tenant_router)
+app.include_router(backup_router)
 @app.get("/")
 def root():
     return {"message": "CORS đã bật thành công"}

@@ -102,6 +102,7 @@ def filter_tenants(
 
     # Map field hợp lệ
     valid_fields = {
+        "full_name": (models.Tenant.full_name, str),
         "gender": (models.Tenant.gender, str),
         "date_of_birth": (models.Tenant.date_of_birth, date),
         "is_rent": (models.Tenant.is_rent, bool),

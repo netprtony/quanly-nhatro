@@ -29,3 +29,5 @@ __pycache__/
 *.pyd
 
 backend/app/__pycache__/main*.pyc
+backend/backups/*.sql
+backend/backups/*.txt

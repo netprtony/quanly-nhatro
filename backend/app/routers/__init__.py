@@ -10,7 +10,7 @@ from .room import router as room_router
 from .roomtype import router as roomtype_router
 from .tenant import router as tenant_router
 from .invoice_detail import router as invoice_detail_router
-
+from .backup import router as backup_router
 __all__ = [
     "auth_router",
     "account_router",
@@ -23,5 +23,6 @@ __all__ = [
     "room_router",
     "roomtype_router",
     "tenant_router",
-    "invoice_detail_router"
+    "invoice_detail_router",
+    "backup_router"
 ]

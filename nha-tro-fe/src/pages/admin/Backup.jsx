@@ -3,17 +3,32 @@ import ModalConfirm from "/src/components/ModalConfirm.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+const BACKUP_API = "http://localhost:8000/backup/backup";
+
 export default function Backup() {
   const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleBackup = () => {
     setShowConfirm(true);
   };
 
-  const handleConfirmBackup = () => {
+  const handleConfirmBackup = async () => {
     setShowConfirm(false);
-    toast.success("✅ Sao lưu dữ liệu thành công!");
-    // Thực tế sẽ gọi API sao lưu ở đây
+    setLoading(true);
+    try {
+      const res = await fetch(BACKUP_API, { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("✅ Sao lưu dữ liệu thành công!");
+        toast.info(`File: ${data.dump_file}`);
+      } else {
+        toast.error("Sao lưu thất bại: " + (data.detail || "Lỗi không xác định"));
+      }
+    } catch (err) {
+      toast.error("Sao lưu thất bại!");
+    }
+    setLoading(false);
   };
 
   return (
@@ -21,8 +36,8 @@ export default function Backup() {
       <div className="p-4 rounded shadow bg-white text-center">
         <h3 className="mb-3">💾 Sao lưu dữ liệu hệ thống</h3>
         <p>Bạn có thể sao lưu toàn bộ dữ liệu hệ thống về file an toàn.</p>
-        <button className="btn btn-primary" onClick={handleBackup}>
-          💾 Sao lưu dữ liệu
+        <button className="btn btn-primary" onClick={handleBackup} disabled={loading}>
+          {loading ? "Đang sao lưu..." : "💾 Sao lưu dữ liệu"}
         </button>
       </div>
 
