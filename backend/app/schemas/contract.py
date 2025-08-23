@@ -35,3 +35,12 @@ class PaginatedContract(BaseModel):
 
     class Config:
         orm_mode = True
+
+class Filter(BaseModel):
+    field: str
+    operator: str
+    value: str
+
+
+class FilterRequest(BaseModel):
+    filters: List[Filter] = [] 

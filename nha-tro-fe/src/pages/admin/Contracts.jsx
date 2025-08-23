@@ -2,11 +2,11 @@ import React, { useState, useEffect } from "react";
 import Table from "/src/components/Table.jsx";
 import Modal from "/src/components/Modal.jsx";
 import ModalConfirm from "/src/components/ModalConfirm.jsx";
+import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
 
-const API_URL = "http://localhost:8000/contracts";
+const CONTRACT_URL = "http://localhost:8000/contracts";
 const ROOMS_API = "http://localhost:8000/rooms";
 const TENANTS_API = "http://localhost:8000/tenants";
 
@@ -17,6 +17,7 @@ export default function Contracts() {
   const [showModal, setShowModal] = useState(false);
   const [editingContract, setEditingContract] = useState(null);
   const [form, setForm] = useState({
+    contract_id: "",
     room_id: "",
     tenant_id: "",
     start_date: "",
@@ -30,143 +31,27 @@ export default function Contracts() {
   const [showConfirmExit, setShowConfirmExit] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [contractToDelete, setContractToDelete] = useState(null);
+
+  // Bộ lọc nâng cao, tìm kiếm, phân trang, sort
   const [filters, setFilters] = useState([]);
-  // Phân trang
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [totalRecords, setTotalRecords] = useState(0);
-  // Bộ lọc nâng cao: fieldOptions cho Contract
+  const [sortField, setSortField] = useState();
+  const [sortOrder, setSortOrder] = useState();
+
+  // Cấu hình bộ lọc nâng cao
   const fieldOptions = [
-    { label: "Phòng", value: "room_id" },
-    { label: "Khách thuê", value: "tenant_id" },
-    { label: "Ngày bắt đầu", value: "start_date" },
-    { label: "Ngày kết thúc", value: "end_date" },
-    { label: "Tiền cọc", value: "deposit_amount" },
-    { label: "Tiền thuê", value: "monthly_rent" },
-    { label: "Trạng thái", value: "contract_status" },
+    { value: "contract_id", label: "Mã hợp đồng", type: "number" },
+    { value: "room_id", label: "Phòng", type: "number" },
+    { value: "tenant_id", label: "Khách thuê", type: "number" },
+    { value: "start_date", label: "Ngày bắt đầu", type: "string" },
+    { value: "end_date", label: "Ngày kết thúc", type: "string" },
+    { value: "deposit_amount", label: "Tiền cọc", type: "number" },
+    { value: "monthly_rent", label: "Tiền thuê", type: "number" },
+    { value: "contract_status", label: "Trạng thái", type: "string" },
   ];
-
-  // Load danh sách hợp đồng từ API
-  const fetchContracts = async () => {
-    try {
-      let query = `?page=${page}&page_size=${pageSize}`;
-      if (filters.length > 0) {
-        query += "&" + filters
-          .map(
-            (f) =>
-              `filter_${f.field}=${encodeURIComponent(
-                f.operator + f.value
-              )}`
-          )
-          .join("&");
-      }
-      const res = await fetch(API_URL + query);
-      const data = await res.json();
-      setContracts(data.items);
-      setTotalRecords(data.total);
-    } catch (err) {
-      toast.error("Không thể tải danh sách hợp đồng!");
-      setContracts([]);
-      setTotalRecords(0);
-    }
-  };
-
-
-  // Load danh sách phòng cho combobox
-  const fetchRooms = async () => {
-      try {
-        // có phân trang, mặc định lấy 1 trang lớn để đủ dữ liệu
-        const res = await fetch(`${ROOMS_API}?page=1&page_size=200`);
-        const data = await res.json();
-        setRooms(Array.isArray(data.items) ? data.items : []);
-      } catch (err) {
-        toast.error("Không thể tải danh sách phòng!");
-        setRooms([]);
-      }
-    };
-
-  // Load danh sách khách thuê cho combobox
-  const fetchTenants = async () => {
-    try {
-      const res = await fetch(`${TENANTS_API}?page=1&page_size=200`);
-      const data = await res.json();
-      setTenants(Array.isArray(data.items) ? data.items : []);
-    } catch (err) {
-      toast.error("Không thể tải danh sách khách thuê!");
-      setTenant([]);
-    }
-  };
-
-  useEffect(() => {
-    fetchContracts();
-    fetchRooms();
-    fetchTenants();
-    // eslint-disable-next-line
-  }, [filters]);
-
-  // Thêm mới hợp đồng
-  const createContract = async () => {
-    try {
-      const payload = {
-        ...form,
-        room_id: form.room_id ? parseInt(form.room_id) : null,
-        tenant_id: form.tenant_id,
-        deposit_amount: form.deposit_amount ? parseFloat(form.deposit_amount) : 0,
-        monthly_rent: form.monthly_rent ? parseFloat(form.monthly_rent) : 0,
-      };
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      await fetchContracts();
-      toast.success("✅ Thêm hợp đồng thành công!");
-      setShowModal(false);
-    } catch (err) {
-      toast.error("Thêm hợp đồng thất bại! " + err.message);
-    }
-  };
-
-  // Sửa hợp đồng
-  const updateContract = async () => {
-    try {
-      const payload = {
-        ...form,
-        room_id: form.room_id ? parseInt(form.room_id) : null,
-        tenant_id: form.tenant_id,
-        deposit_amount: form.deposit_amount ? parseFloat(form.deposit_amount) : 0,
-        monthly_rent: form.monthly_rent ? parseFloat(form.monthly_rent) : 0,
-      };
-      const res = await fetch(`${API_URL}/${editingContract.contract_id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      await fetchContracts();
-      toast.success("✏️ Cập nhật hợp đồng thành công!");
-      setShowModal(false);
-    } catch (err) {
-      toast.error("Cập nhật hợp đồng thất bại! " + err.message);
-    }
-  };
-
-  // Xóa hợp đồng
-  const deleteContract = async () => {
-    try {
-      const res = await fetch(`${API_URL}/${contractToDelete}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error(await res.text());
-      await fetchContracts();
-      toast.success("🗑️ Xóa hợp đồng thành công!");
-      setShowConfirmDelete(false);
-      setContractToDelete(null);
-    } catch (err) {
-      toast.error("Xóa hợp đồng thất bại! " + err.message);
-    }
-  };
 
   const columns = [
     { label: "ID", accessor: "contract_id" },
@@ -193,10 +78,7 @@ export default function Contracts() {
       accessor: "deposit_amount",
       render: (value) =>
         typeof value === "number"
-          ? new Intl.NumberFormat("vi-VN", {
-              style: "currency",
-              currency: "VND",
-            }).format(value)
+          ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value)
           : "N/A",
     },
     {
@@ -204,10 +86,7 @@ export default function Contracts() {
       accessor: "monthly_rent",
       render: (value) =>
         typeof value === "number"
-          ? new Intl.NumberFormat("vi-VN", {
-              style: "currency",
-              currency: "VND",
-            }).format(value)
+          ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value)
           : "N/A",
     },
     {
@@ -232,8 +111,160 @@ export default function Contracts() {
     },
   ];
 
+  // Lấy danh sách contracts từ API (phân trang, lọc, sort)
+  const fetchContracts = async (field = sortField, order = sortOrder) => {
+    try {
+      let url = `${CONTRACT_URL}?page=${page}&page_size=${pageSize}`;
+      if (search) url += `&search=${encodeURIComponent(search)}`;
+      if (field) url += `&sort_field=${field}`;
+      if (order) url += `&sort_order=${order}`;
+      let res, data;
+      if (filters.length > 0) {
+        res = await fetch(url.replace(CONTRACT_URL, CONTRACT_URL + "/filter"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filters, sort_field: field, sort_order: order }),
+        });
+      } else {
+        res = await fetch(url);
+      }
+      data = await res.json();
+      setContracts(Array.isArray(data.items) ? data.items : []);
+      setTotalRecords(data.total || 0);
+    } catch (err) {
+      toast.error("Không thể tải danh sách hợp đồng!");
+      setContracts([]);
+      setTotalRecords(0);
+    }
+  };
+
+  // Lấy danh sách phòng cho combobox
+  const fetchRooms = async () => {
+    try {
+      const res = await fetch(`${ROOMS_API}?page=1&page_size=200`);
+      const data = await res.json();
+      setRooms(Array.isArray(data.items) ? data.items : []);
+    } catch (err) {
+      toast.error("Không thể tải danh sách phòng!");
+      setRooms([]);
+    }
+  };
+
+  // Lấy danh sách khách thuê cho combobox
+  const fetchTenants = async () => {
+    try {
+      const res = await fetch(`${TENANTS_API}?page=1&page_size=200`);
+      const data = await res.json();
+      setTenants(Array.isArray(data.items) ? data.items : []);
+    } catch (err) {
+      toast.error("Không thể tải danh sách khách thuê!");
+      setTenants([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchContracts();
+    fetchRooms();
+    fetchTenants();
+    // eslint-disable-next-line
+  }, [filters, page, pageSize, search, sortField, sortOrder]);
+
+  // Export CSV
+  const exportCSV = () => {
+    if (contracts.length === 0) return;
+    const headers = Object.keys(contracts[0]);
+    const csv = [
+      headers.join(","),
+      ...contracts.map((row) =>
+        headers.map((h) => JSON.stringify(row[h] ?? "")).join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "contracts.csv";
+    a.click();
+  };
+
+  // Export JSON
+  const exportJSON = () => {
+    const blob = new Blob([JSON.stringify(contracts, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "contracts.json";
+    a.click();
+  };
+
+  // CRUD
+  const createContract = async () => {
+    try {
+      const payload = {
+        ...form,
+        room_id: form.room_id ? parseInt(form.room_id) : null,
+        tenant_id: form.tenant_id,
+        deposit_amount: form.deposit_amount ? parseFloat(form.deposit_amount) : 0,
+        monthly_rent: form.monthly_rent ? parseFloat(form.monthly_rent) : 0,
+      };
+      const res = await fetch(CONTRACT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchContracts();
+      toast.success("✅ Thêm hợp đồng thành công!");
+      setShowModal(false);
+    } catch (err) {
+      toast.error("Thêm hợp đồng thất bại! " + err.message);
+    }
+  };
+
+  const updateContract = async () => {
+    try {
+      const payload = {
+        ...form,
+        room_id: form.room_id ? parseInt(form.room_id) : null,
+        tenant_id: form.tenant_id,
+        deposit_amount: form.deposit_amount ? parseFloat(form.deposit_amount) : 0,
+        monthly_rent: form.monthly_rent ? parseFloat(form.monthly_rent) : 0,
+      };
+      const res = await fetch(`${CONTRACT_URL}/${editingContract.contract_id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchContracts();
+      toast.success("✏️ Cập nhật hợp đồng thành công!");
+      setShowModal(false);
+    } catch (err) {
+      toast.error("Cập nhật hợp đồng thất bại! " + err.message);
+    }
+  };
+
+  const deleteContract = async () => {
+    try {
+      const res = await fetch(`${CONTRACT_URL}/${contractToDelete}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchContracts();
+      toast.success("🗑️ Xóa hợp đồng thành công!");
+      setShowConfirmDelete(false);
+      setContractToDelete(null);
+    } catch (err) {
+      toast.error("Xóa hợp đồng thất bại! " + err.message);
+    }
+  };
+
   const handleAdd = () => {
     setForm({
+      contract_id: "",
       room_id: "",
       tenant_id: "",
       start_date: "",
@@ -249,6 +280,7 @@ export default function Contracts() {
 
   const handleEdit = (contract) => {
     setForm({
+      contract_id: contract.contract_id,
       room_id: contract.room_id ? String(contract.room_id) : "",
       tenant_id: contract.tenant_id || "",
       start_date: contract.start_date || "",
@@ -292,45 +324,50 @@ export default function Contracts() {
     setUnsavedChanges(true);
   };
 
-  // Xử lý thêm/xóa filter
-  const handleAddFilter = (filter) => {
-    setFilters((prev) => [...prev, filter]);
-  };
-  const handleRemoveFilter = (index) => {
-    setFilters((prev) => prev.filter((_, i) => i !== index));
-  };
-
   return (
     <div className="container mt-4 position-relative">
       <div className="p-4 rounded shadow bg-white">
         <div className="d-flex align-items-center justify-content-between mb-3">
-          <h3 className="mb-3">📄 Danh sách hợp đồng</h3>
-          <button className="btn btn-success mb-3" onClick={handleAdd}>
+          <h3 className="mb-0">📄 Danh sách hợp đồng</h3>
+          <button className="btn btn-success" onClick={handleAdd}>
             ➕ Thêm hợp đồng
           </button>
         </div>
-        {/* Bộ lọc nâng cao */}
-        <AdvancedFilters
-          fieldOptions={fieldOptions}
-          filters={filters}
-          onAddFilter={handleAddFilter}
-          onRemoveFilter={handleRemoveFilter}
-        />
-       
+
+        <div className="mb-3">
+          <AdvancedFilters
+            fieldOptions={fieldOptions}
+            filters={filters}
+            onAddFilter={(f) => setFilters((prev) => [...prev, f])}
+            onRemoveFilter={(i) => setFilters((prev) => prev.filter((_, idx) => idx !== i))}
+            compact
+            onLoad={fetchContracts}
+            onSearch={setSearch}
+            onExportCSV={exportCSV}
+            onExportJSON={exportJSON}
+          />
+        </div>
 
         <Table
-            columns={columns}
-            data={contracts}
-            page={page}
-            pageSize={pageSize}
-            totalRecords={totalRecords}
-            onPageChange={(newPage) => setPage(newPage)}
-            onPageSizeChange={(size) => {
-              setPageSize(size);
-              setPage(1);
-              fetchRooms();
-              }}
-            />
+          columns={columns}
+          data={contracts}
+          page={page}
+          pageSize={pageSize}
+          totalRecords={totalRecords}
+          onPageChange={(newPage) => setPage(newPage)}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+            fetchRooms();
+          }}
+          onSort={(field, order) => {
+            setSortField(field);
+            setSortOrder(order);
+            fetchContracts(field, order);
+          }}
+          sortField={sortField}
+          sortOrder={sortOrder}
+        />
 
         {/* Modal Thêm / Sửa */}
         <Modal
@@ -397,21 +434,39 @@ export default function Contracts() {
               <div className="col-md-6">
                 <label className="form-label">Tiền cọc (VND)</label>
                 <input
-                  type="number"
+                  type="text"
                   className="form-control"
-                  value={form.deposit_amount}
-                  onChange={(e) => handleFormChange("deposit_amount", e.target.value)}
+                  value={
+                    form.deposit_amount
+                      ? new Intl.NumberFormat("vi-VN").format(form.deposit_amount)
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/\D/g, "");
+                    handleFormChange("deposit_amount", raw ? Number(raw) : "");
+                  }}
                   required
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                 />
               </div>
               <div className="col-md-6">
                 <label className="form-label">Tiền thuê (VND)</label>
                 <input
-                  type="number"
+                  type="text"
                   className="form-control"
-                  value={form.monthly_rent}
-                  onChange={(e) => handleFormChange("monthly_rent", e.target.value)}
+                  value={
+                    form.monthly_rent
+                      ? new Intl.NumberFormat("vi-VN").format(form.monthly_rent)
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/\D/g, "");
+                    handleFormChange("monthly_rent", raw ? Number(raw) : "");
+                  }}
                   required
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                 />
               </div>
               <div className="col-12">
@@ -457,7 +512,6 @@ export default function Contracts() {
           onClose={() => setShowConfirmExit(false)}
         />
       </div>
-
       <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
