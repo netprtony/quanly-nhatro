@@ -15,7 +15,6 @@ import Accounts from "./pages/admin/Accounts";
 import Contracts from "./pages/admin/Contracts";
 import Devices from "./pages/admin/Devices";
 import Invoices from "./pages/admin/Invoices";
-import InvoiceDetail from "./pages/admin/InvoiceDetail";
 import Payments from "./pages/admin/Payments";
 import Electricity from "./pages/admin/Electricity";
 import Water from "./pages/admin/Waters";
@@ -83,7 +82,6 @@ function App() {
         <Route path="contracts" element={<Contracts />} />
         <Route path="devices" element={<Devices />} />
         <Route path="invoices" element={<Invoices />} />
-        <Route path="invoice-details" element={<InvoiceDetail />} />
         <Route path="payments" element={<Payments />} />
         <Route path="water" element={<Water />} />
         <Route path="electricity" element={<Electricity />} />
