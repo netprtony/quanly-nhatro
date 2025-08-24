@@ -51,6 +51,22 @@ def create_invoice(invoice: InvoiceCreate, db: Session = Depends(database.get_db
     db.add(db_invoice)
     db.commit()
     db.refresh(db_invoice)
+
+    # Thêm chi tiết hóa đơn loại Rent
+    # Lấy giá thuê phòng từ RoomTypes
+    room = db.query(models.Room).filter(models.Room.room_id == db_invoice.room_id).first()
+    if room:
+        room_type = db.query(models.RoomType).filter(models.RoomType.room_type_id == room.room_type_id).first()
+        if room_type:
+            rent_price = room_type.price_per_month
+            rent_detail = models.InvoiceDetail(
+                invoice_id=db_invoice.invoice_id,
+                fee_type="Rent",
+                amount=rent_price,
+                note=f"Tiền thuê phòng tháng {db_invoice.month.strftime('%m/%Y')}"
+            )
+            db.add(rent_detail)
+            db.commit()
     return db_invoice
 
 @router.put("/{invoice_id}", response_model=InvoiceOut)

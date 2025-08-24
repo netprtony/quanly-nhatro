@@ -211,6 +211,11 @@ BEGIN
 END;
 //
 DELIMITER ;
+DELIMITER //
+
+
+
+DELIMITER ;
 INSERT INTO RoomTypes (type_name, description, price_per_month) VALUES
 ('Standard', 'Phòng cơ bản, không điều hòa', 3000000.00),
 ('Deluxe', 'Phòng có điều hòa, ban công', 5000000.00),
@@ -448,4 +453,5 @@ INSERT INTO Notifications (user_id, title, message, is_read) VALUES
 (8, 'Hóa đơn tháng 1', 'Hóa đơn tháng 1 đã được thanh toán', TRUE),
 (9, 'Hóa đơn tháng 1', 'Hóa đơn tháng 1 đã được tạo, vui lòng thanh toán trước ngày 10', FALSE),
 (10, 'Hóa đơn tháng 1', 'Hóa đơn tháng 1 đã được thanh toán', TRUE);
+DELIMITER //
 
