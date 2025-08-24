@@ -21,6 +21,12 @@ const FEE_TYPES = [
 
 const ELECTRICITY_API = "http://localhost:8000/electricity";
 
+const DEFAULT_FEES = [
+  { key: "Trash", label: "Rác", defaultAmount: 50000 },
+  { key: "Water", label: "Nước", defaultAmount: 300000 },
+  { key: "Wifi", label: "Wifi", defaultAmount: 30000 },
+];
+
 export default function Invoices() {
   const [electricityMeters, setElectricityMeters] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -33,7 +39,13 @@ export default function Invoices() {
     total_amount: "",
     is_paid: false,
   });
-
+  const [defaultFees, setDefaultFees] = useState(
+    DEFAULT_FEES.map(fee => ({
+      ...fee,
+      checked: true,
+      amount: fee.defaultAmount,
+    }))
+  );
   const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [showConfirmExit, setShowConfirmExit] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
@@ -354,15 +366,24 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
     }
   };
 
+  const handleDefaultFeeChange = (idx, field, value) => {
+    setDefaultFees(prev =>
+      prev.map((fee, i) =>
+        i === idx ? { ...fee, [field]: field === "checked" ? value : Number(value) } : fee
+      )
+    );
+  };
+
   const handleSubmitInvoice = async () => {
     const payload = {
       ...form,
       room_id: form.room_id ? parseInt(form.room_id) : null,
       total_amount: form.total_amount ? parseFloat(form.total_amount) : 0,
       is_paid: form.is_paid,
-      month: form.month ? form.month + "-01" : "", // chuyển từ yyyy-MM sang yyyy-MM-01
+      month: form.month ? form.month + "-01" : "",
     };
     try {
+      let invoiceId;
       if (editingInvoice) {
         const res = await fetch(`${INVOICE_API}/${editingInvoice.invoice_id}`, {
           method: "PUT",
@@ -370,15 +391,76 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
           body: JSON.stringify(payload),
         });
         if (!res.ok) throw new Error(await res.text());
+        invoiceId = editingInvoice.invoice_id;
         toast.success("✏️ Cập nhật hóa đơn thành công!");
+
+        // Lấy chi tiết hóa đơn hiện tại
+        const detailRes = await fetch(`${INVOICE_DETAIL_API}/by-invoice/${invoiceId}`);
+        const details = await detailRes.json();
+
+        // Xử lý từng loại phí mặc định
+        for (const fee of DEFAULT_FEES) {
+          const checkedFee = defaultFees.find(f => f.key === fee.key);
+          const existedDetail = details.find(d => d.fee_type === fee.key);
+
+          if (checkedFee && checkedFee.checked) {
+            // Nếu đã check và chưa có thì thêm mới
+            if (!existedDetail) {
+              await fetch(INVOICE_DETAIL_API, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  invoice_id: invoiceId,
+                  fee_type: fee.key,
+                  amount: checkedFee.amount,
+                  note: `Phí ${fee.label} tháng ${form.month}`,
+                }),
+              });
+            } else if (existedDetail.amount !== checkedFee.amount) {
+              // Nếu đã có nhưng số tiền thay đổi thì cập nhật
+              await fetch(`${INVOICE_DETAIL_API}/${existedDetail.detail_id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  amount: checkedFee.amount,
+                  note: `Phí ${fee.label} tháng ${form.month}`,
+                }),
+              });
+            }
+          } else if (existedDetail) {
+            // Nếu bỏ check và đã có thì xóa
+            await fetch(`${INVOICE_DETAIL_API}/${existedDetail.detail_id}`, {
+              method: "DELETE",
+            });
+          }
+        }
       } else {
+        // Thêm mới hóa đơn
         const res = await fetch(INVOICE_API, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
         if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        invoiceId = data.invoice_id || data.id;
         toast.success("✅ Thêm hóa đơn thành công!");
+
+        // Thêm các chi tiết hóa đơn mặc định
+        for (const fee of defaultFees) {
+          if (fee.checked) {
+            await fetch(INVOICE_DETAIL_API, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                invoice_id: invoiceId,
+                fee_type: fee.key,
+                amount: fee.amount,
+                note: `Phí ${fee.label} tháng ${form.month}`,
+              }),
+            });
+          }
+        }
       }
       await fetchInvoices();
       setShowModal(false);
@@ -648,6 +730,39 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
                 <option value="true">Đã thanh toán</option>
               </select>
               </div>
+            </div>
+            {/* Thêm các phí mặc định */}
+            <div className="row g-3">
+            <div className="col-12">
+            <label className="form-label">Các loại phí mặc định</label>
+            <div className="row">
+              {defaultFees.map((fee, idx) => (
+                <div className="col-md-4 mb-2" key={fee.key}>
+                  <div className="form-check d-flex align-items-center">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      checked={fee.checked}
+                      onChange={e => handleDefaultFeeChange(idx, "checked", e.target.checked)}
+                      id={`fee-${fee.key}`}
+                    />
+                    <label className="form-check-label ms-2 me-2" htmlFor={`fee-${fee.key}`}>
+                      {fee.label}
+                    </label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      style={{ width: "100px" }}
+                      value={fee.amount}
+                      min={0}
+                      onChange={e => handleDefaultFeeChange(idx, "amount", e.target.value)}
+                      disabled={!fee.checked}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            </div>
             </div>
             </form>
           </Modal>
