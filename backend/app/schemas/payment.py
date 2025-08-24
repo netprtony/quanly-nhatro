@@ -22,13 +22,13 @@ class PaymentUpdate(BaseModel):
 class PaymentOut(PaymentBase):
     payment_id: int
     invoice_id: int
-    room_number: int
     paid_amount: float
     payment_date: datetime
     payment_method: str
     transaction_reference: Optional[str]
     note: Optional[str]
     tenant_name: Optional[str] 
+    room_number: Optional[str]
 
     class Config:
         orm_mode = True
