@@ -14,16 +14,18 @@ def get_payments(
     page_size: int = Query(20, ge=1, le=200),
     search: str = Query(None, description="Tìm theo mã hóa đơn, phương thức, hoặc tên khách thuê")
 ):
-    # Join bảng
+    # Join bảng Payment -> Invoice -> Contract -> Tenant -> Room
     query = (
         db.query(
             models.Payment,
-            models.Tenant.full_name.label("tenant_name")
+            models.Tenant.full_name.label("tenant_name"),
+            models.Room.room_number.label("room_number")
         )
         .join(models.Invoice, models.Payment.invoice_id == models.Invoice.invoice_id)
         .join(models.Contract, models.Invoice.room_id == models.Contract.room_id)
         .join(models.Tenant, models.Contract.tenant_id == models.Tenant.tenant_id)
-        .filter(models.Contract.contract_status == "Active")  # chỉ lấy hợp đồng đang hiệu lực
+        .join(models.Room, models.Invoice.room_id == models.Room.room_id)
+        .filter(models.Contract.contract_status == "Active")
     )
 
     # Điều kiện tìm kiếm
@@ -31,7 +33,8 @@ def get_payments(
         query = query.filter(
             (models.Payment.invoice_id.cast(String).ilike(f"%{search}%")) |
             (models.Payment.payment_method.ilike(f"%{search}%")) |
-            (models.Tenant.full_name.ilike(f"%{search}%"))
+            (models.Tenant.full_name.ilike(f"%{search}%")) |
+            (models.Room.room_number.ilike(f"%{search}%"))
         )
 
     total = query.count()
@@ -39,7 +42,7 @@ def get_payments(
 
     # Trả về dữ liệu chuẩn
     result = []
-    for payment, tenant_name in items:
+    for payment, tenant_name, room_number in items:
         result.append({
             "payment_id": payment.payment_id,
             "invoice_id": payment.invoice_id,
@@ -48,7 +51,8 @@ def get_payments(
             "payment_method": payment.payment_method,
             "transaction_reference": payment.transaction_reference,
             "note": payment.note,
-            "tenant_name": tenant_name
+            "tenant_name": tenant_name,
+            "room_number": room_number
         })
 
     return {"items": result, "total": total}

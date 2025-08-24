@@ -9,6 +9,8 @@ class ContractBase(BaseModel):
     end_date: Optional[date] = None
     deposit_amount: Optional[float] = None
     monthly_rent: Optional[float] = None
+    num_people: Optional[int] = 1
+    num_vehicles: Optional[int] = 0
     contract_status: Optional[str] = "Active"
 
 class ContractCreate(ContractBase):
@@ -20,6 +22,8 @@ class ContractUpdate(BaseModel):
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     deposit_amount: Optional[float] = None
+    num_people: Optional[int] = None
+    num_vehicles: Optional[int] = None
     monthly_rent: Optional[float] = None
     contract_status: Optional[str] = None
 

@@ -46,6 +46,7 @@ export default function Payment() {
   const columns = [
     { label: "ID", accessor: "payment_id" },
     { label: "Phiếu thu", accessor: "invoice_id" },
+    { label: "Số phòng", accessor: "room_number" }, // Thêm cột số phòng
     { label: "Khách thuê", accessor: "tenant_name" },
     {
       label: "Số tiền",

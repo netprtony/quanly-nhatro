@@ -105,6 +105,7 @@ class Room(Base):
 
 class Contract(Base):
     __tablename__ = "Contracts"
+
     contract_id = Column(Integer, primary_key=True, index=True)
     tenant_id = Column(String(15), ForeignKey("Tenants.tenant_id", ondelete="CASCADE"), nullable=False)
     room_id = Column(Integer, ForeignKey("Rooms.room_id", ondelete="CASCADE"), nullable=False)
@@ -112,6 +113,11 @@ class Contract(Base):
     end_date = Column(Date)
     deposit_amount = Column(DECIMAL(10, 2))
     monthly_rent = Column(DECIMAL(10, 2))
+
+    # thêm 2 cột mới
+    num_people = Column(Integer, default=1, nullable=False)    # số lượng người ở
+    num_vehicles = Column(Integer, default=0, nullable=False)  # số lượng xe
+
     contract_status = Column(Enum(ContractStatusEnum), default=ContractStatusEnum.Active)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
@@ -159,6 +165,14 @@ class Payment(Base):
     payment_method = Column(Enum(PaymentMethodEnum), default=PaymentMethodEnum.Cash)
     transaction_reference = Column(String(100))
     note = Column(Text)
+
+    # Thêm relationship để truy cập hóa đơn
+    invoice = relationship("Invoice", backref="payments")
+
+    # Thêm property để truy cập số phòng qua hóa đơn
+    @property
+    def room_number(self):
+        return self.invoice.room.room_number if self.invoice and self.invoice.room else None
 
 class RepairRequest(Base):
     __tablename__ = "RepairRequests"

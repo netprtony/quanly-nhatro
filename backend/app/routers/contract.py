@@ -31,6 +31,8 @@ def get_contracts(
         "room_name": models.Room.room_number,
         "deposit_amount": models.Contract.deposit_amount,
         "monthly_rent": models.Contract.monthly_rent,
+        "num_people": models.Contract.num_people,
+        "num_vehicles": models.Contract.num_vehicles,
         "contract_status": models.Contract.contract_status,
         "created_at": models.Contract.created_at,
     }
@@ -106,6 +108,8 @@ def filter_tenants(
         "end_date": (models.Contract.end_date, date),
         "deposit_amount": (models.Contract.deposit_amount, float),
         "monthly_rent": (models.Contract.monthly_rent, float),
+        "num_people": (models.Contract.num_people, int),
+        "num_vehicles": (models.Contract.num_vehicles, int),
         "contract_status": (models.Contract.contract_status, str),
         "created_at": (models.Contract.created_at, datetime),
     }

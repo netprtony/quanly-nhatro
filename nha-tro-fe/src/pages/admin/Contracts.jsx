@@ -24,6 +24,8 @@ export default function Contracts() {
     end_date: "",
     deposit_amount: "",
     monthly_rent: "",
+    num_people: 1,         // Thêm trường số người
+    num_vehicles: 0,       // Thêm trường số xe
     contract_status: "Active",
   });
 
@@ -50,6 +52,8 @@ export default function Contracts() {
     { value: "end_date", label: "Ngày kết thúc", type: "string" },
     { value: "deposit_amount", label: "Tiền cọc", type: "number" },
     { value: "monthly_rent", label: "Tiền thuê", type: "number" },
+    { value: "num_people", label: "Số người", type: "number" },      // Thêm trường lọc số người
+    { value: "num_vehicles", label: "Số xe", type: "number" },      // Thêm trường lọc số xe
     { value: "contract_status", label: "Trạng thái", type: "string" },
   ];
 
@@ -89,6 +93,8 @@ export default function Contracts() {
           ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value)
           : "N/A",
     },
+    { label: "Số người", accessor: "num_people" },        // Thêm cột số người
+    { label: "Số xe", accessor: "num_vehicles" },         // Thêm cột số xe
     {
       label: "Trạng thái",
       accessor: "contract_status",
@@ -209,6 +215,8 @@ export default function Contracts() {
         tenant_id: form.tenant_id,
         deposit_amount: form.deposit_amount ? parseFloat(form.deposit_amount) : 0,
         monthly_rent: form.monthly_rent ? parseFloat(form.monthly_rent) : 0,
+        num_people: form.num_people ? parseInt(form.num_people) : 1,         // Truyền số người
+        num_vehicles: form.num_vehicles ? parseInt(form.num_vehicles) : 0,   // Truyền số xe
       };
       const res = await fetch(CONTRACT_URL, {
         method: "POST",
@@ -232,6 +240,8 @@ export default function Contracts() {
         tenant_id: form.tenant_id,
         deposit_amount: form.deposit_amount ? parseFloat(form.deposit_amount) : 0,
         monthly_rent: form.monthly_rent ? parseFloat(form.monthly_rent) : 0,
+        num_people: form.num_people ? parseInt(form.num_people) : 1,         // Truyền số người
+        num_vehicles: form.num_vehicles ? parseInt(form.num_vehicles) : 0,   // Truyền số xe
       };
       const res = await fetch(`${CONTRACT_URL}/${editingContract.contract_id}`, {
         method: "PUT",
@@ -271,6 +281,8 @@ export default function Contracts() {
       end_date: "",
       deposit_amount: "",
       monthly_rent: "",
+      num_people: 1,         // Mặc định 1 người
+      num_vehicles: 0,       // Mặc định 0 xe
       contract_status: "Active",
     });
     setEditingContract(null);
@@ -287,6 +299,8 @@ export default function Contracts() {
       end_date: contract.end_date || "",
       deposit_amount: contract.deposit_amount || "",
       monthly_rent: contract.monthly_rent || "",
+      num_people: contract.num_people ?? 1,           // Lấy số người
+      num_vehicles: contract.num_vehicles ?? 0,       // Lấy số xe
       contract_status: contract.contract_status || "Active",
     });
     setEditingContract(contract);
@@ -467,6 +481,28 @@ export default function Contracts() {
                   required
                   inputMode="numeric"
                   pattern="[0-9]*"
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Số người</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={form.num_people}
+                  min={1}
+                  onChange={(e) => handleFormChange("num_people", parseInt(e.target.value) || 1)}
+                  required
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Số xe</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={form.num_vehicles}
+                  min={0}
+                  onChange={(e) => handleFormChange("num_vehicles", parseInt(e.target.value) || 0)}
+                  required
                 />
               </div>
               <div className="col-12">

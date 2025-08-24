@@ -67,6 +67,8 @@ CREATE TABLE Contracts (
     end_date DATE,
     deposit_amount DECIMAL(10, 2),
     monthly_rent DECIMAL(10, 2),
+    num_people INT DEFAULT 1,         -- số lượng người ở
+    num_vehicles INT DEFAULT 0,       -- số lượng xe
     contract_status ENUM('Active', 'Terminated', 'Pending') DEFAULT 'Active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (tenant_id) REFERENCES Tenants(tenant_id) ON DELETE CASCADE,
@@ -453,5 +455,5 @@ INSERT INTO Notifications (user_id, title, message, is_read) VALUES
 (8, 'Hóa đơn tháng 1', 'Hóa đơn tháng 1 đã được thanh toán', TRUE),
 (9, 'Hóa đơn tháng 1', 'Hóa đơn tháng 1 đã được tạo, vui lòng thanh toán trước ngày 10', FALSE),
 (10, 'Hóa đơn tháng 1', 'Hóa đơn tháng 1 đã được thanh toán', TRUE);
-DELIMITER //
+
 
