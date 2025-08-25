@@ -85,6 +85,7 @@ export default function Rooms() {
       accessor: "actions",
       render: (_, room) => (
         <div className="d-flex gap-2 justify-content-center">
+          <button className="btn btn-sm btn-info" onClick={() => handleViewImages(room)}>Xem ảnh</button>
           <button className="btn btn-sm btn-warning" onClick={() => handleEdit(room)}>Sửa</button>
           <button className="btn btn-sm btn-danger" onClick={() => handleDelete(room.room_id)}>Xóa</button>
         </div>
@@ -130,6 +131,111 @@ export default function Rooms() {
       toast.error("❌ Lỗi khi lấy loại phòng!");
       setRoomTypes([]);
     }
+  };
+
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState(null);
+  const [roomImages, setRoomImages] = useState([]);
+  const [editingImage, setEditingImage] = useState(null);
+  const [imageForm, setImageForm] = useState({ image_path: "", room_id: "" });
+  const [imageToDelete, setImageToDelete] = useState(null);
+  const [showImageConfirmDelete, setShowImageConfirmDelete] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+
+  const ROOM_IMAGE_URL = "http://localhost:8000/room-images";
+
+  const fetchRoomImages = async (room_id) => {
+    try {
+      const res = await fetch(`${ROOM_IMAGE_URL}?room_id=${room_id}`);
+      const data = await res.json();
+      setRoomImages(data);
+    } catch {
+      setRoomImages([]);
+    }
+  };
+
+  const handleViewImages = (room) => {
+    setSelectedRoom(room);
+    fetchRoomImages(room.room_id);
+    setShowImageModal(true);
+    setEditingImage(null);
+    setImageForm({ image_path: "", room_id: room.room_id });
+  };
+
+  const handleAddImage = () => {
+    setEditingImage(null);
+    setImageForm({ image_path: "", room_id: selectedRoom.room_id });
+    setShowUploadModal(true);
+  };
+
+  const handleEditImage = (img) => {
+    setEditingImage(img);
+    setImageForm({ image_path: img.image_path, room_id: img.room_id });
+    setShowUploadModal(true);
+  };
+
+  const handleDeleteImage = (imgId) => {
+    setImageToDelete(imgId);
+    setShowImageConfirmDelete(true);
+  };
+
+  const confirmDeleteImage = async () => {
+    try {
+      await fetch(`${ROOM_IMAGE_URL}/${imageToDelete}`, { method: "DELETE" });
+      fetchRoomImages(selectedRoom.room_id);
+      toast.success("🗑️ Xóa ảnh thành công!");
+    } catch (err) {
+      toast.error("Xóa ảnh thất bại!");
+    }
+    setShowImageConfirmDelete(false);
+    setImageToDelete(null);
+  };
+
+  const handleSubmitImage = async () => {
+    try {
+      if (editingImage) {
+        await fetch(`${ROOM_IMAGE_URL}/${editingImage.image_id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(imageForm),
+        });
+        toast.success("✏️ Sửa ảnh thành công!");
+      } else {
+        await fetch(ROOM_IMAGE_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(imageForm),
+        });
+        toast.success("✅ Thêm ảnh thành công!");
+      }
+      fetchRoomImages(selectedRoom.room_id);
+      setEditingImage(null);
+      setImageForm({ image_path: "", room_id: selectedRoom.room_id });
+    } catch (err) {
+      toast.error("Lưu ảnh thất bại!");
+    }
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("http://localhost:8000/room-images/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      setImageForm((prev) => ({ ...prev, image_path: data.image_path }));
+      toast.success("Ảnh đã được tải lên!");
+    } catch (err) {
+      toast.error("Tải ảnh thất bại!");
+    }
+    setUploading(false);
   };
 
   useEffect(() => {
@@ -430,6 +536,161 @@ export default function Rooms() {
           }}
           onClose={() => setShowConfirmExit(false)}
         />
+
+        {/* Modal xem ảnh phòng */}
+        <Modal
+          isOpen={showImageModal}
+          onClose={() => setShowImageModal(false)}
+          title={`Ảnh phòng ${selectedRoom?.room_number || ""}`}
+          showConfirm={false}
+        >
+          <div>
+            <div className="mb-2 d-flex justify-content-between align-items-center">
+              <h5 className="mb-0">Danh sách ảnh phòng</h5>
+              <button className="btn btn-success btn-sm" onClick={() => setShowUploadModal(true)}>
+                ➕ Thêm ảnh
+              </button>
+            </div>
+            <div className="row">
+              {roomImages.map((img) => (
+                <div className="col-md-4 mb-3" key={img.image_id}>
+                  <div className="card">
+                    <img
+                      src={img.image_path}
+                      alt={`Phòng ${selectedRoom?.room_number}`}
+                      className="card-img-top"
+                      style={{ height: "180px", objectFit: "cover" }}
+                    />
+                    <div className="card-body p-2 d-flex justify-content-between">
+                      <button className="btn btn-warning btn-sm" onClick={() => handleEditImage(img)}>
+                        Sửa
+                      </button>
+                      <button className="btn btn-danger btn-sm" onClick={() => handleDeleteImage(img.image_id)}>
+                        Xóa
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {roomImages.length === 0 && <div className="col-12 text-center text-muted">Chưa có ảnh phòng</div>}
+            </div>
+            {(editingImage !== null || imageForm.image_path) && (
+              <form className="mt-3">
+                <div className="row g-3">
+                  <div className="col-md-8">
+                    <label className="form-label">Chọn ảnh</label>
+                    <button
+                      type="button"
+                      className="btn btn-outline-primary"
+                      onClick={() => setShowUploadModal(true)}
+                      disabled={uploading}
+                    >
+                      Chọn file ảnh
+                    </button>
+                    {imageForm.image_path && (
+                      <div className="mt-2">
+                        <img
+                          src={imageForm.image_path}
+                          alt="Preview"
+                          style={{ width: "100%", maxHeight: "180px", objectFit: "cover", marginBottom: 4 }}
+                        />
+                        <div className="small text-muted">Đường dẫn: {imageForm.image_path}</div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="col-md-4 d-flex align-items-end">
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={handleSubmitImage}
+                      disabled={!imageForm.image_path || uploading}
+                    >
+                      {editingImage ? "Lưu chỉnh sửa" : "Thêm mới"}
+                    </button>
+                    {editingImage && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary ms-2"
+                        onClick={() => {
+                          setEditingImage(null);
+                          setImageForm({ image_path: "", room_id: selectedRoom.room_id });
+                        }}
+                      >
+                        Hủy
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </form>
+            )}
+            <ModalConfirm
+              isOpen={showImageConfirmDelete}
+              title="Xác nhận xóa"
+              message="Bạn có chắc chắn muốn xóa ảnh này không?"
+              confirmText="Xóa"
+              cancelText="Hủy"
+              onConfirm={confirmDeleteImage}
+              onClose={() => setShowImageConfirmDelete(false)}
+            />
+          </div>
+        </Modal>
+
+        {/* Modal chọn và tải ảnh lên */}
+        <Modal
+          isOpen={showUploadModal}
+          onClose={() => setShowUploadModal(false)}
+          title={editingImage ? "Sửa ảnh phòng" : "Thêm ảnh phòng"}
+          showConfirm={false}
+        >
+          <form>
+            <div className="row g-3">
+              <div className="col-12">
+                <label className="form-label">Chọn ảnh</label>
+                <input
+                  type="file"
+                  className="form-control"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  disabled={uploading}
+                />
+                {imageForm.image_path && (
+                  <div className="mt-2">
+                    <img
+                      src={imageForm.image_path}
+                      alt="Preview"
+                      style={{ width: "100%", maxHeight: "180px", objectFit: "cover", marginBottom: 4 }}
+                    />
+                    <div className="small text-muted">Đường dẫn: {imageForm.image_path}</div>
+                  </div>
+                )}
+              </div>
+              <div className="col-12 d-flex justify-content-end">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={async () => {
+                    await handleSubmitImage();
+                    setShowUploadModal(false);
+                  }}
+                  disabled={!imageForm.image_path || uploading}
+                >
+                  {editingImage ? "Lưu chỉnh sửa" : "Thêm mới"}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary ms-2"
+                  onClick={() => {
+                    setEditingImage(null);
+                    setImageForm({ image_path: "", room_id: selectedRoom.room_id });
+                    setShowUploadModal(false);
+                  }}
+                >
+                  Hủy
+                </button>
+              </div>
+            </div>
+          </form>
+        </Modal>
       </div>
       <ToastContainer position="top-right" autoClose={3000} />
     </div>

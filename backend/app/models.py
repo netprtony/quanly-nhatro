@@ -99,10 +99,19 @@ class Room(Base):
 
     room_type = relationship("RoomType", back_populates="rooms")
     reservations = relationship("Reservation", back_populates="room", cascade="all, delete")
-
+      # ✅ Quan hệ với RoomImages (1 phòng có nhiều ảnh)
+    images = relationship("RoomImage", back_populates="room", cascade="all, delete-orphan")
     # ✅ thêm dòng này để khớp với ElectricityMeter.room
     meters = relationship("ElectricityMeter", back_populates="room", cascade="all, delete")
+class RoomImage(Base):
+    __tablename__ = "RoomImages"
 
+    image_id = Column(Integer, primary_key=True, index=True)
+    room_id = Column(Integer, ForeignKey("Rooms.room_id", ondelete="CASCADE"), nullable=False)
+    image_path = Column(String(255), nullable=False)
+
+    # Quan hệ ngược về Room
+    room = relationship("Room", back_populates="images")
 class Contract(Base):
     __tablename__ = "Contracts"
 
@@ -162,7 +171,7 @@ class Payment(Base):
     invoice_id = Column(Integer, ForeignKey("Invoices.invoice_id", ondelete="CASCADE"), nullable=False)
     paid_amount = Column(DECIMAL(12, 2), nullable=False)
     payment_date = Column(DateTime, default=datetime.datetime.utcnow)
-    payment_method = Column(Enum(PaymentMethodEnum), default=PaymentMethodEnum.Cash)
+    payment_method = Column(String(20), nullable=False)
     transaction_reference = Column(String(100))
     note = Column(Text)
 

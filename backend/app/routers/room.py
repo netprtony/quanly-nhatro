@@ -48,6 +48,12 @@ def get_rooms(
         "type_name": models.RoomType.type_name,
         "price_per_month": models.RoomType.price_per_month,
     }
+    if sort_field in valid_sort_fields:
+        col = valid_sort_fields[sort_field]
+        if sort_order == "desc":
+            query = query.order_by(col.desc())
+        else:
+            query = query.order_by(col.asc())
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
     return {"items": items, "total": total}

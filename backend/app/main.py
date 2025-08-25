@@ -17,7 +17,8 @@ from app.routers import (
     roomtype_router,
     tenant_router,
     backup_router,
-    report_router
+    report_router,
+    room_image_router
 )
 app = FastAPI()
 
@@ -29,7 +30,7 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,              # Cho phép các origin này
+    allow_origins=["*"],              # Cho phép các origin này
     allow_credentials=True,
     allow_methods=["*"],                # Cho phép tất cả method: GET, POST, PUT...
     allow_headers=["*"],                # Cho phép tất cả headers
@@ -51,6 +52,7 @@ app.include_router(roomtype_router)
 app.include_router(tenant_router)
 app.include_router(backup_router)
 app.include_router(report_router)
+app.include_router(room_image_router)
 @app.get("/")
 def root():
     return {"message": "CORS đã bật thành công"}

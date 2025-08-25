@@ -163,6 +163,13 @@ CREATE TABLE Devices (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_device_room FOREIGN KEY (room_id) REFERENCES Rooms(room_id) ON DELETE SET NULL
 );
+CREATE TABLE RoomImages (
+    image_id INT AUTO_INCREMENT PRIMARY KEY,
+    room_id INT NOT NULL,
+    image_path VARCHAR(255) NOT NULL,
+    FOREIGN KEY (room_id) REFERENCES Rooms(room_id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
 -- Khi thêm chi tiết hóa đơn
 DELIMITER //
 CREATE TRIGGER trg_after_insert_invoice_detail
@@ -250,6 +257,14 @@ VALUES
 ('Phòng 7B', 1, 4, 0),
 ('Phòng 8B', 1, 4, 0),
 ('Phòng 9B', 1, 4, 0);
+INSERT INTO RoomImages (room_id, image_path) VALUES
+(1, '/public/roomImage/images1.jfif'),
+(1, '/public/roomImage/images2.jfif'),
+(1, '/public/roomImage/images3.jfif'),
+(1, '/public/roomImage/images4.jfif'),
+(1, '/public/roomImage/images5.jfif'),
+(1, '/public/roomImage/images6.jfif');
+-- Thêm thiết bị cho các phòng
 INSERT INTO Devices (device_name, room_id, description, is_active)
 VALUES
 -- Phòng 1A
