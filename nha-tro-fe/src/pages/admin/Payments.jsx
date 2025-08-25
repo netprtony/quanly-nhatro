@@ -16,10 +16,9 @@ export default function Payment() {
   const [editingPayment, setEditingPayment] = useState(null);
   const [form, setForm] = useState({
     invoice_id: "",
-    tenant_name: "",
     amount: "",
     date: "",
-    method: "Chuyển khoản",
+    method: "Cash",
     note: "",
   });
 
@@ -46,7 +45,7 @@ export default function Payment() {
   const columns = [
     { label: "ID", accessor: "payment_id" },
     { label: "Phiếu thu", accessor: "invoice_id" },
-    { label: "Số phòng", accessor: "room_number" }, // Thêm cột số phòng
+    { label: "Số phòng", accessor: "room_number" },
     { label: "Khách thuê", accessor: "tenant_name" },
     {
       label: "Số tiền",
@@ -59,7 +58,12 @@ export default function Payment() {
             }).format(value)
           : "N/A",
     },
-    { label: "Ngày thanh toán", accessor: "payment_date" },
+    {
+      label: "Ngày thanh toán",
+      accessor: "payment_date",
+      render: (value) =>
+        value ? new Date(value).toLocaleDateString("vi-VN") : "",
+    },
     { label: "Phương thức", accessor: "payment_method" },
     { label: "Ghi chú", accessor: "note" },
     {
@@ -155,10 +159,9 @@ export default function Payment() {
   const handleAdd = () => {
     setForm({
       invoice_id: "",
-      tenant_name: "",
       amount: "",
       date: "",
-      method: "Chuyển khoản",
+      method: "Cash",
       note: "",
     });
     setEditingPayment(null);
@@ -169,10 +172,9 @@ export default function Payment() {
   const handleEdit = (payment) => {
     setForm({
       invoice_id: payment.invoice_id,
-      tenant_name: payment.tenant_name,
-      amount: payment.amount,
-      date: payment.date,
-      method: payment.method,
+      amount: payment.paid_amount, // lấy đúng trường từ API
+      date: payment.payment_date,
+      method: payment.payment_method,
       note: payment.note,
     });
     setEditingPayment(payment);
@@ -202,13 +204,11 @@ export default function Payment() {
 
   const handleSubmitPayment = async () => {
     const payload = {
-      ...form,
       invoice_id: form.invoice_id ? parseInt(form.invoice_id) : null,
-      amount: form.amount ? parseFloat(form.amount) : 0,
-      date: form.date,
-      method: form.method,
+      paid_amount: form.amount ? parseFloat(form.amount) : 0,
+      payment_date: form.date,
+      payment_method: form.method,
       note: form.note,
-      tenant_name: form.tenant_name,
     };
     try {
       if (editingPayment) {
@@ -311,16 +311,7 @@ export default function Payment() {
                   ))}
                 </select>
               </div>
-              <div className="col-md-6">
-                <label className="form-label">Khách thuê</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={form.tenant_name}
-                  onChange={(e) => handleFormChange("tenant_name", e.target.value)}
-                  required
-                />
-              </div>
+              {/* XÓA TRƯỜNG KHÁCH THUÊ */}
               <div className="col-md-6">
                 <label className="form-label">Số tiền (VND)</label>
                 <input
@@ -349,8 +340,10 @@ export default function Payment() {
                   onChange={(e) => handleFormChange("method", e.target.value)}
                   required
                 >
-                  <option value="Chuyển khoản">Chuyển khoản</option>
-                  <option value="Tiền mặt">Tiền mặt</option>
+                  <option value="Cash">Tiền mặt</option>
+                  <option value="BankTransfer">Chuyển khoản</option>
+                  <option value="Momo">Momo</option>
+                  <option value="ZaloPay">ZaloPay</option>
                 </select>
               </div>
               <div className="col-12">

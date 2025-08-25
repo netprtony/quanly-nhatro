@@ -27,14 +27,28 @@ class PaymentOut(PaymentBase):
     payment_method: str
     transaction_reference: Optional[str]
     note: Optional[str]
-    tenant_name: Optional[str] 
-    room_number: Optional[str]
+
+
+    class Config:
+        orm_mode = True
+class PaymentWithRelationsOut(BaseModel):
+    payment_id: int
+    invoice_id: int
+    paid_amount: float
+    payment_date: datetime
+    payment_method: str
+    transaction_reference: Optional[str] = None
+    note: Optional[str] = None
+
+    # ✅ Thêm 2 trường join từ bảng khác
+    tenant_name: str
+    room_number: str
 
     class Config:
         orm_mode = True
 
 class PaginatedPaymentOut(BaseModel):
-    items: List[PaymentOut]
+    items: List[PaymentWithRelationsOut]
     total: int
 
     class Config:

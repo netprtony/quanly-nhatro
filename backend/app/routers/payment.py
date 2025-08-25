@@ -4,7 +4,7 @@ from sqlalchemy import String
 from sqlalchemy.orm import Session
 from typing import List
 from app import models, database
-from app.schemas.payment import PaymentCreate, PaymentUpdate, PaymentOut, PaginatedPaymentOut,FilterRequest
+from app.schemas.payment import PaymentCreate, PaymentUpdate, PaymentOut, PaginatedPaymentOut, FilterRequest, PaginatedPaymentOut, PaymentWithRelationsOut
 router = APIRouter(prefix="/payments", tags=["Payments"])
 
 @router.get("/", response_model=PaginatedPaymentOut)
@@ -14,21 +14,23 @@ def get_payments(
     page_size: int = Query(20, ge=1, le=200),
     search: str = Query(None, description="Tìm theo mã hóa đơn, phương thức, hoặc tên khách thuê")
 ):
-    # Join bảng Payment -> Invoice -> Contract -> Tenant -> Room
     query = (
-        db.query(
-            models.Payment,
-            models.Tenant.full_name.label("tenant_name"),
-            models.Room.room_number.label("room_number")
-        )
-        .join(models.Invoice, models.Payment.invoice_id == models.Invoice.invoice_id)
-        .join(models.Contract, models.Invoice.room_id == models.Contract.room_id)
-        .join(models.Tenant, models.Contract.tenant_id == models.Tenant.tenant_id)
-        .join(models.Room, models.Invoice.room_id == models.Room.room_id)
-        .filter(models.Contract.contract_status == "Active")
+    db.query(
+        models.Payment,
+        models.Tenant.full_name.label("tenant_name"),
+        models.Room.room_number.label("room_number")
     )
+    .join(models.Invoice, models.Payment.invoice_id == models.Invoice.invoice_id)
+    .join(models.Contract, models.Invoice.room_id == models.Contract.room_id)
+    .join(models.Tenant, models.Contract.tenant_id == models.Tenant.tenant_id)
+    .join(models.Room, models.Invoice.room_id == models.Room.room_id)
+    .filter(
+        models.Contract.contract_status == "Active",
+        models.Invoice.created_at >= models.Contract.start_date,
+        (models.Contract.end_date.is_(None)) | (models.Invoice.created_at <= models.Contract.end_date)
+    )
+)
 
-    # Điều kiện tìm kiếm
     if search:
         query = query.filter(
             (models.Payment.invoice_id.cast(String).ilike(f"%{search}%")) |
@@ -40,20 +42,19 @@ def get_payments(
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
 
-    # Trả về dữ liệu chuẩn
     result = []
     for payment, tenant_name, room_number in items:
-        result.append({
-            "payment_id": payment.payment_id,
-            "invoice_id": payment.invoice_id,
-            "paid_amount": payment.paid_amount,
-            "payment_date": payment.payment_date,
-            "payment_method": payment.payment_method,
-            "transaction_reference": payment.transaction_reference,
-            "note": payment.note,
-            "tenant_name": tenant_name,
-            "room_number": room_number
-        })
+        result.append(PaymentWithRelationsOut(
+            payment_id=payment.payment_id,
+            invoice_id=payment.invoice_id,
+            paid_amount=payment.paid_amount,
+            payment_date=payment.payment_date,
+            payment_method=payment.payment_method,
+            transaction_reference=payment.transaction_reference,
+            note=payment.note,
+            tenant_name=tenant_name,
+            room_number=room_number
+        ))
 
     return {"items": result, "total": total}
 
