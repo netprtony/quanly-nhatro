@@ -321,85 +321,81 @@ export default function Payment() {
                   ))}
                 </select>
               </div>
-              /* XÓA TRƯỜNG KHÁCH THUÊ */}
-                      <div className="col-md-6">
-                      <label className="form-label">Số tiền (VND)</label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        value={form.amount}
-                        onChange={(e) => handleFormChange("amount", parseInt(e.target.value) || 0)}
-                        required
-                      />
-                      </div>
-                      <div className="w-100 my-2 border-bottom"></div>
-                      <div className="col-md-6">
-                      <label className="form-label">Ngày thanh toán</label>
-                      <input
-                        type="date"
-                        className="form-control"
-                        value={form.date}
-                        onChange={(e) => handleFormChange("date", e.target.value)}
-                        required
-                      />
-                      </div>
-                      <div className="w-100 my-2 border-bottom"></div>
-                      <div className="col-md-6">
-                      <label className="form-label">Phương thức</label>
-                      <select
-                        className="form-select"
-                        value={form.method}
-                        onChange={(e) => handleFormChange("method", e.target.value)}
-                        required
-                      >
-                        <option value="Cash">Tiền mặt</option>
-                        <option value="BankTransfer">Chuyển khoản</option>
-                        <option value="Momo">Momo</option>
-                        <option value="ZaloPay">ZaloPay</option>
-                      </select>
-                      </div>
-                      <div className="w-100 my-2 border-bottom"></div>
-                      <div className="col-12">
-                      <label className="form-label">Ghi chú</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={form.note}
-                        onChange={(e) => handleFormChange("note", e.target.value)}
-                      />
-                      </div>
-                      <div className="w-100 my-2 border-bottom"></div>
-                      <div className="col-12">
-                      <label className="form-label">Mã giao dịch</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={form.transaction_reference}
-                        onChange={(e) => handleFormChange("transaction_reference", e.target.value)}
-                        placeholder="Nhập mã giao dịch (nếu có)"
-                      />
-                      </div>
-                    </div>
-                    </form>
-                  </Modal>
+              {/* XÓA TRƯỜNG KHÁCH THUÊ */}
+              <div className="col-md-6">
+                <label className="form-label">Số tiền (VND)</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={form.amount}
+                  onChange={(e) => handleFormChange("amount", parseInt(e.target.value) || 0)}
+                  required
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Ngày thanh toán</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={form.date}
+                  onChange={(e) => handleFormChange("date", e.target.value)}
+                  required
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Phương thức</label>
+                <select
+                  className="form-select"
+                  value={form.method}
+                  onChange={(e) => handleFormChange("method", e.target.value)}
+                  required
+                >
+                  <option value="Cash">Tiền mặt</option>
+                  <option value="BankTransfer">Chuyển khoản</option>
+                  <option value="Momo">Momo</option>
+                  <option value="ZaloPay">ZaloPay</option>
+                </select>
+              </div>
+              <div className="col-12">
+                <label className="form-label">Ghi chú</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={form.note}
+                  onChange={(e) => handleFormChange("note", e.target.value)}
+                />
+              </div>
+              <div className="col-12">
+                <label className="form-label">Mã giao dịch</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={form.transaction_reference}
+                  onChange={(e) => handleFormChange("transaction_reference", e.target.value)}
+                  placeholder="Nhập mã giao dịch (nếu có)"
+                />
+              </div>
+            </div>
+          </form>
+        </Modal>
 
-                  <ModalConfirm
-                    isOpen={showConfirmDelete}
-                    title="Xác nhận xóa"
-                    message="Bạn có chắc chắn muốn xóa thanh toán này không?"
-                    confirmText="Xóa"
-                    cancelText="Hủy"
-                    onConfirm={confirmDelete}
-                    onClose={() => setShowConfirmDelete(false)}
-                  />
+        <ModalConfirm
+          isOpen={showConfirmDelete}
+          title="Xác nhận xóa"
+          message="Bạn có chắc chắn muốn xóa thanh toán này không?"
+          confirmText="Xóa"
+          cancelText="Hủy"
+          onConfirm={confirmDelete}
+          onClose={() => setShowConfirmDelete(false)}
+        />
 
-                  <ModalConfirm
-                    isOpen={showConfirmExit}
-                    title="Thoát mà chưa lưu?"
-                    message="Bạn có thay đổi chưa được lưu. Thoát không?"
-                    confirmText="Thoát"
-                    cancelText="Ở lại"
-                    onConfirm={() => {
+        <ModalConfirm
+          isOpen={showConfirmExit}
+          title="Thoát mà chưa lưu?"
+          message="Bạn có thay đổi chưa được lưu. Thoát không?"
+          confirmText="Thoát"
+          cancelText="Ở lại"
+          onConfirm={() => {
             setShowModal(false);
             setShowConfirmExit(false);
             setUnsavedChanges(false);
