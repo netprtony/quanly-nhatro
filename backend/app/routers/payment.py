@@ -12,7 +12,9 @@ def get_payments(
     db: Session = Depends(database.get_db),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=200),
-    search: str = Query(None, description="Tìm theo mã hóa đơn, phương thức, hoặc tên khách thuê")
+    search: str = Query(None, description="Tìm theo mã hóa đơn, phương thức, hoặc tên khách thuê"),
+    sort_field: str = Query(None, description="Trường sắp xếp"),
+    sort_order: str = Query("asc", description="Thứ tự sắp xếp"),
 ):
     query = (
     db.query(
@@ -41,7 +43,17 @@ def get_payments(
 
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
-
+    valid_sort_fields = {
+        "payment_id": models.Payment.payment_id,
+        "invoice_id": models.Payment.invoice_id,
+        "paid_amount": models.Payment.paid_amount,
+        "payment_date": models.Payment.payment_date,
+        "payment_method": models.Payment.payment_method,
+        "transaction_reference": models.Payment.transaction_reference,
+        "note": models.Payment.note,
+        "tenant_name": models.Tenant.full_name,
+        "room_number": models.Room.room_number
+    }
     result = []
     for payment, tenant_name, room_number in items:
         result.append(PaymentWithRelationsOut(

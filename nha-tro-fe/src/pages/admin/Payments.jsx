@@ -20,6 +20,7 @@ export default function Payment() {
     date: "",
     method: "Cash",
     note: "",
+    transaction_reference: "", // Thêm trường này
   });
 
   const [unsavedChanges, setUnsavedChanges] = useState(false);
@@ -33,7 +34,8 @@ export default function Payment() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [totalRecords, setTotalRecords] = useState(0);
-
+  const [sortField, setSortField] = useState();
+  const [sortOrder, setSortOrder] = useState();
   const fieldOptions = [
     { value: "invoice_id", label: "Phiếu thu", type: "number" },
     { value: "tenant_name", label: "Khách thuê", type: "string" },
@@ -65,6 +67,7 @@ export default function Payment() {
         value ? new Date(value).toLocaleDateString("vi-VN") : "",
     },
     { label: "Phương thức", accessor: "payment_method" },
+    { label: "Mã giao dịch", accessor: "transaction_reference" }, // Thêm trường này
     { label: "Ghi chú", accessor: "note" },
     {
       label: "Thao tác",
@@ -110,26 +113,23 @@ export default function Payment() {
   };
 
   // Lấy danh sách thanh toán từ API (có phân trang + filter nâng cao)
-  const fetchPayments = async () => {
+  const fetchPayments = async (field = sortField, order = sortOrder) => {
     try {
       let url = `${PAYMENT_API}?page=${page}&page_size=${pageSize}`;
-      if (search) {
-        url += `&search=${encodeURIComponent(search)}`;
-      }
+      if (search) url += `&search=${encodeURIComponent(search)}`;
+      if (field) url += `&sort_field=${field}`;
+      if (order) url += `&sort_order=${order}`;
       let res, data;
-
       if (filters.length > 0) {
         res = await fetch(url.replace(PAYMENT_API, PAYMENT_API + "/filter"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filters }),
+          body: JSON.stringify({ filters, sort_field: field, sort_order: order }),
         });
       } else {
         res = await fetch(url);
       }
-
       data = await res.json();
-
       setPayments(Array.isArray(data.items) ? data.items : []);
       setTotalRecords(data.total || 0);
     } catch (err) {
@@ -151,10 +151,10 @@ export default function Payment() {
   };
 
   useEffect(() => {
-    fetchPayments();
+    fetchPayments(sortField, sortOrder);
     fetchInvoices();
     // eslint-disable-next-line
-  }, [filters, page, pageSize, search]);
+  }, [filters, page, pageSize, search, sortField, sortOrder]);
 
   const handleAdd = () => {
     setForm({
@@ -163,6 +163,7 @@ export default function Payment() {
       date: "",
       method: "Cash",
       note: "",
+      transaction_reference: "", // Thêm trường này
     });
     setEditingPayment(null);
     setUnsavedChanges(false);
@@ -172,10 +173,11 @@ export default function Payment() {
   const handleEdit = (payment) => {
     setForm({
       invoice_id: payment.invoice_id,
-      amount: payment.paid_amount, // lấy đúng trường từ API
+      amount: payment.paid_amount,
       date: payment.payment_date,
       method: payment.payment_method,
       note: payment.note,
+      transaction_reference: payment.transaction_reference || "", // Thêm trường này
     });
     setEditingPayment(payment);
     setUnsavedChanges(false);
@@ -209,6 +211,7 @@ export default function Payment() {
       payment_date: form.date,
       payment_method: form.method,
       note: form.note,
+      transaction_reference: form.transaction_reference, // Thêm trường này
     };
     try {
       if (editingPayment) {
@@ -284,6 +287,13 @@ export default function Payment() {
             setPage(1);
             fetchInvoices();
           }}
+          onSort={(field, order) => {
+            setSortField(field);
+            setSortOrder(order);
+            fetchPayments(field, order);
+          }}
+          sortField={sortField}
+          sortOrder={sortOrder}
         />
 
         <Modal
@@ -311,71 +321,85 @@ export default function Payment() {
                   ))}
                 </select>
               </div>
-              {/* XÓA TRƯỜNG KHÁCH THUÊ */}
-              <div className="col-md-6">
-                <label className="form-label">Số tiền (VND)</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={form.amount}
-                  onChange={(e) => handleFormChange("amount", parseInt(e.target.value) || 0)}
-                  required
-                />
-              </div>
-              <div className="col-md-6">
-                <label className="form-label">Ngày thanh toán</label>
-                <input
-                  type="date"
-                  className="form-control"
-                  value={form.date}
-                  onChange={(e) => handleFormChange("date", e.target.value)}
-                  required
-                />
-              </div>
-              <div className="col-md-6">
-                <label className="form-label">Phương thức</label>
-                <select
-                  className="form-select"
-                  value={form.method}
-                  onChange={(e) => handleFormChange("method", e.target.value)}
-                  required
-                >
-                  <option value="Cash">Tiền mặt</option>
-                  <option value="BankTransfer">Chuyển khoản</option>
-                  <option value="Momo">Momo</option>
-                  <option value="ZaloPay">ZaloPay</option>
-                </select>
-              </div>
-              <div className="col-12">
-                <label className="form-label">Ghi chú</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={form.note}
-                  onChange={(e) => handleFormChange("note", e.target.value)}
-                />
-              </div>
-            </div>
-          </form>
-        </Modal>
+              /* XÓA TRƯỜNG KHÁCH THUÊ */}
+                      <div className="col-md-6">
+                      <label className="form-label">Số tiền (VND)</label>
+                      <input
+                        type="number"
+                        className="form-control"
+                        value={form.amount}
+                        onChange={(e) => handleFormChange("amount", parseInt(e.target.value) || 0)}
+                        required
+                      />
+                      </div>
+                      <div className="w-100 my-2 border-bottom"></div>
+                      <div className="col-md-6">
+                      <label className="form-label">Ngày thanh toán</label>
+                      <input
+                        type="date"
+                        className="form-control"
+                        value={form.date}
+                        onChange={(e) => handleFormChange("date", e.target.value)}
+                        required
+                      />
+                      </div>
+                      <div className="w-100 my-2 border-bottom"></div>
+                      <div className="col-md-6">
+                      <label className="form-label">Phương thức</label>
+                      <select
+                        className="form-select"
+                        value={form.method}
+                        onChange={(e) => handleFormChange("method", e.target.value)}
+                        required
+                      >
+                        <option value="Cash">Tiền mặt</option>
+                        <option value="BankTransfer">Chuyển khoản</option>
+                        <option value="Momo">Momo</option>
+                        <option value="ZaloPay">ZaloPay</option>
+                      </select>
+                      </div>
+                      <div className="w-100 my-2 border-bottom"></div>
+                      <div className="col-12">
+                      <label className="form-label">Ghi chú</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={form.note}
+                        onChange={(e) => handleFormChange("note", e.target.value)}
+                      />
+                      </div>
+                      <div className="w-100 my-2 border-bottom"></div>
+                      <div className="col-12">
+                      <label className="form-label">Mã giao dịch</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={form.transaction_reference}
+                        onChange={(e) => handleFormChange("transaction_reference", e.target.value)}
+                        placeholder="Nhập mã giao dịch (nếu có)"
+                      />
+                      </div>
+                    </div>
+                    </form>
+                  </Modal>
 
-        <ModalConfirm
-          isOpen={showConfirmDelete}
-          title="Xác nhận xóa"
-          message="Bạn có chắc chắn muốn xóa thanh toán này không?"
-          confirmText="Xóa"
-          cancelText="Hủy"
-          onConfirm={confirmDelete}
-          onClose={() => setShowConfirmDelete(false)}
-        />
+                  <ModalConfirm
+                    isOpen={showConfirmDelete}
+                    title="Xác nhận xóa"
+                    message="Bạn có chắc chắn muốn xóa thanh toán này không?"
+                    confirmText="Xóa"
+                    cancelText="Hủy"
+                    onConfirm={confirmDelete}
+                    onClose={() => setShowConfirmDelete(false)}
+                  />
 
-        <ModalConfirm
-          isOpen={showConfirmExit}
-          title="Thoát mà chưa lưu?"
-          message="Bạn có thay đổi chưa được lưu. Thoát không?"
-          confirmText="Thoát"
-          cancelText="Ở lại"
-          onConfirm={() => {
+                  <ModalConfirm
+                    isOpen={showConfirmExit}
+                    title="Thoát mà chưa lưu?"
+                    message="Bạn có thay đổi chưa được lưu. Thoát không?"
+                    confirmText="Thoát"
+                    cancelText="Ở lại"
+                    onConfirm={() => {
             setShowModal(false);
             setShowConfirmExit(false);
             setUnsavedChanges(false);
