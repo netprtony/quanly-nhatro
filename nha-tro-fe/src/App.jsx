@@ -8,6 +8,7 @@ import Home from "./pages/user/Home";
 import RoomUser from "./pages/user/Rooms";
 import DetailRoom from "./pages/user/DetailRoom";
 import PaymentHistory from "./pages/user/PaymentHistory";
+import Contract from "./pages/user/Contract";
 
 import Dashboard from "./pages/admin/Dashboard";
 import Rooms from "./pages/admin/Rooms";
@@ -63,6 +64,7 @@ function App() {
         <Route path="/rooms" element={<RoomUser />} />
         <Route path="/rooms/:roomId" element={<DetailRoom />} />
         <Route path="/history-payment" element={<PaymentHistory />} />
+        <Route path="/contracts" element={<Contract />} />
         {/* Thêm các route người dùng khác ở đây nếu cần */}
       </Route>
 

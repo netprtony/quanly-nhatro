@@ -139,18 +139,19 @@ export default function DetailRoom() {
                   <div className="col-md-6">
                     <div className="d-flex align-items-center mb-3">
                       <FaBed className="me-2" style={{ color: "#f9bc60" }} />
-                      <span className="fw-bold me-2" style={{ color: "#f9bc60" }}>
+                      <span className="fw-bold me-2" style={{ color: "#ffffffff" }}>
                         Loại phòng:
                       </span>
-                      <span>{room.type_name}</span>
+                      <span  style={{ color: "#ffffffff" }}>{room.room_type.type_name}</span>
                     </div>
                     <div className="d-flex align-items-center">
-                      <FaRulerCombined className="me-2" style={{ color: "#abd1c6" }} />
-                      <span className="fw-bold me-2" style={{ color: "#abd1c6" }}>
-                        Diện tích:
+                      <FaRulerCombined className="me-2" style={{ color: "#f9bc60" }} />
+                      <span className="fw-bold me-2" style={{ color: "#ffffffff" }}>
+                        Sức chứa:
                       </span>
-                      <span>{room.area} m²</span>
+                      <span style={{ color: "#ffffffff" }}>{room.max_occupants} người</span>
                     </div>
+                    
                   </div>
                   <div className="col-md-6">
                     <div className="d-flex align-items-center mb-3">
@@ -161,7 +162,7 @@ export default function DetailRoom() {
                       <span
                         style={{ color: "#f9bc60", fontWeight: 700, fontSize: "1.2rem" }}
                       >
-                        {room.price_per_month?.toLocaleString("vi-VN")} đ/tháng
+                        {room.room_type.price_per_month?.toLocaleString("vi-VN")} đ/tháng
                       </span>
                     </div>
                     <div className="d-flex align-items-center">
@@ -191,8 +192,8 @@ export default function DetailRoom() {
                   }}
                 >
                   <FaInfoCircle className="me-2" style={{ color: "#f9bc60" }} />
-                  <span style={{ fontWeight: 600, color: "#f9bc60" }}>Mô tả: </span>
-                  {room.description || <span className="text-muted">Chưa có mô tả</span>}
+                  <span style={{ fontWeight: 600, color: "#ffffffff" }}>Mô tả: </span>
+                  {room.description + ", " + room.room_type.description || <span className="text-muted">Chưa có mô tả</span>}
                 </div>
 
                 {/* Nút điều hướng */}

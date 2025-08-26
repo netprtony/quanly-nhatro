@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List
 from app import models, database
-from app.schemas.contract import ContractCreate, ContractUpdate, ContractOut,PaginatedContract, FilterRequest
+from app.schemas.contract import ContractCreate, ContractUpdate, ContractOut,PaginatedContract, FilterRequest, ContractDetailOut
 
 
 router = APIRouter(prefix="/contracts", tags=["Contracts"])
@@ -151,3 +151,28 @@ def filter_tenants(
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
     return {"items": items, "total": total}
+
+@router.get("/by-tenant/{tenant_id}", response_model=ContractDetailOut)
+def get_contract_by_tenant(tenant_id: str, db: Session = Depends(database.get_db)):
+    contract = (
+        db.query(models.Contract, models.Tenant.full_name, models.Room.room_number)
+        .join(models.Tenant, models.Contract.tenant_id == models.Tenant.tenant_id)
+        .join(models.Room, models.Contract.room_id == models.Room.room_id)
+        .filter(models.Contract.tenant_id == tenant_id)
+        .first()
+    )
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found for tenant")
+    contract_obj, full_name, room_number = contract
+    return {
+        "contract_id": contract_obj.contract_id,
+        "full_name": full_name,
+        "room_number": room_number,
+        "start_date": contract_obj.start_date,
+        "end_date": contract_obj.end_date,
+        "deposit_amount": contract_obj.deposit_amount,
+        "monthly_rent": contract_obj.monthly_rent,
+        "num_people": contract_obj.num_people,
+        "num_vehicles": contract_obj.num_vehicles,
+        "contract_status": contract_obj.contract_status,
+    }

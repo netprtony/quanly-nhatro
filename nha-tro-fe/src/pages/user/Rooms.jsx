@@ -196,7 +196,7 @@ export default function Rooms() {
                 </div>
                 <div className="mb-3" style={{ color: "#ffffffff" }}>
                   <span style={{ fontWeight: 600, color: "#f9bc60" }}>Mô tả phòng: </span>
-                  {room.description || <span className="text-muted">Chưa có mô tả</span>}
+                  {room.description || <span className="text-muted" style={{ color: "#ffffffff" }}>Chưa có mô tả</span>}
                 </div>
                 <div className="d-flex justify-content-end mt-auto">
                   {room.is_available ? (
