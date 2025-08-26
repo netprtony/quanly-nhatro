@@ -53,30 +53,31 @@ def delete_room_image(image_id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"message": "Room image deleted successfully"}
 
-UPLOAD_DIR = "public/roomImage"
+# ✅ Lấy thư mục gốc project (d:\NhaTroBaoBao)
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+
+# ✅ Thư mục FE chính
+UPLOAD_DIR = os.path.join(PROJECT_ROOT, "nha-tro-fe", "public", "roomImage")
+
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif"}
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/gif"}
+
+
 @router.post("/upload")
 async def upload_image(file: UploadFile = File(...)):
-    # ✅ kiểm tra MIME type
     if file.content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(status_code=400, detail="Chỉ được upload file ảnh (jpg, png, gif)")
 
-    # ✅ kiểm tra đuôi file
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=400, detail="Định dạng file không hợp lệ")
 
-    # ✅ giữ nguyên tên file gốc
     filename = file.filename
     save_path = os.path.join(UPLOAD_DIR, filename)
 
-    # Nếu chưa có thư mục thì tạo
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-    # ✅ copy file vào thư mục public/roomImage
     with open(save_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        buffer.write(await file.read())
 
-    # Trả về đường dẫn ảnh cho FE
-    return {"image_path": f"/{UPLOAD_DIR}/{filename}"}
+    return {"image_path": f"/roomImage/{filename}"}

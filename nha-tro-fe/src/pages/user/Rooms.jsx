@@ -19,7 +19,7 @@ function RoomImage({ roomId }) {
   }, [roomId]);
   const imageSrc =
     images.length === 0
-      ? "backend/public/roomImage/Data Not Available.png"
+      ? "nha-tro-fe/public/roomImage/Data Not Available.png"
       : images[0].image_url || images[0].image_path;
   return (
     <div
