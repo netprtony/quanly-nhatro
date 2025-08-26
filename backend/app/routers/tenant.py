@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List
 from app import models, database
-from app.schemas import TenantCreate, TenantUpdate, TenantOut, PaginatedTenantOut, FilterRequest
+from app.schemas import TenantCreate, TenantUpdate, TenantOut, PaginatedTenantOut, FilterRequest, TenantResponse
 from app import models, utils, database
 
 router = APIRouter(prefix="/tenants", tags=["Tenants"])
@@ -148,3 +148,12 @@ def filter_tenants(
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
     return {"items": items, "total": total}
+
+@router.get("/from-user/{user_id}", response_model=TenantResponse)
+def get_tenant_from_user(user_id: int, db: Session = Depends(database.get_db)):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not user.tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found for this user")
+    return user.tenant

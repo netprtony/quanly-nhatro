@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app import models, database
-from app.schemas.invoice import InvoiceCreate, InvoiceUpdate, InvoiceOut, PaginatedInvoiceOut, FilterRequest
+from app.schemas.invoice import InvoiceCreate, InvoiceUpdate, InvoiceOut, PaginatedInvoiceOut, FilterRequest, UnpaidInvoiceOut
 from datetime import date, datetime
+from typing import List
+
 router = APIRouter(prefix="/invoices", tags=["Invoices"])
 
 @router.get("/", response_model=PaginatedInvoiceOut)
@@ -38,6 +40,20 @@ def get_invoices(
     items = query.offset((page - 1) * page_size).limit(page_size).all()
     return {"items": items, "total": total}
 
+@router.get("/unpaid-invoices", response_model=List[UnpaidInvoiceOut])
+def get_unpaid_invoices(db: Session = Depends(database.get_db)):
+    invoices = (
+        db.query(
+            models.Invoice.invoice_id,
+            models.Room.room_number,
+            models.Invoice.month,
+            models.Invoice.total_amount
+        )
+        .join(models.Room, models.Invoice.room_id == models.Room.room_id)
+        .filter(models.Invoice.is_paid == False)
+        .all()
+    )
+    return invoices
 @router.get("/{invoice_id}", response_model=InvoiceOut)
 def get_invoice(invoice_id: int, db: Session = Depends(database.get_db)):
     invoice = db.query(models.Invoice).filter(models.Invoice.invoice_id == invoice_id).first()
@@ -144,3 +160,4 @@ def filter_invoices(
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
     return {"items": items, "total": total}
+

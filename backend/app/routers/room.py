@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List, Optional
 from app import models, utils, database
 from app.schemas import room as room_schema
@@ -34,7 +35,16 @@ def get_rooms(
     sort_field: str = Query(None, description="Trường sắp xếp"),
     sort_order: str = Query("asc", description="Thứ tự sắp xếp"),
 ):
-    query = db.query(models.Room).join(models.RoomType)
+    # Truy vấn chính có group_by để lấy số hình
+    query = db.query(
+        models.Room,
+        func.count(models.RoomImage.image_id).label("image_count")
+    ).outerjoin(models.RoomImage, models.Room.room_id == models.RoomImage.room_id)\
+     .join(models.RoomType)\
+     .group_by(models.Room.room_id, models.RoomType.room_type_id)
+
+    # Truy vấn đếm tổng số phòng (không group_by)
+    count_query = db.query(models.Room).join(models.RoomType)
     if search:
         query = query.filter(
             (models.Room.room_number.ilike(f"%{search}%")) |
@@ -42,11 +52,19 @@ def get_rooms(
             (models.RoomType.type_name.ilike(f"%{search}%")) |
             (models.RoomType.price_per_month.ilike(f"%{search}%"))
         )
+        count_query = count_query.filter(
+            (models.Room.room_number.ilike(f"%{search}%")) |
+            (models.Room.floor_number.ilike(f"%{search}%")) |
+            (models.RoomType.type_name.ilike(f"%{search}%")) |
+            (models.RoomType.price_per_month.ilike(f"%{search}%"))
+        )
+
     valid_sort_fields = {
         "room_number": models.Room.room_number,
         "floor_number": models.Room.floor_number,
         "type_name": models.RoomType.type_name,
         "price_per_month": models.RoomType.price_per_month,
+        "image_count": func.count(models.RoomImage.image_id),
     }
     if sort_field in valid_sort_fields:
         col = valid_sort_fields[sort_field]
@@ -54,9 +72,17 @@ def get_rooms(
             query = query.order_by(col.desc())
         else:
             query = query.order_by(col.asc())
-    total = query.count()
+
+    # Đếm tổng số phòng đúng (không bị ảnh hưởng bởi group_by)
+    total = count_query.count()
+
     items = query.offset((page - 1) * page_size).limit(page_size).all()
-    return {"items": items, "total": total}
+    result = []
+    for room, image_count in items:
+        room_dict = room_schema.RoomSchema.from_orm(room).dict()
+        room_dict["image_count"] = image_count
+        result.append(room_dict)
+    return {"items": result, "total": total}
 # ✅ Create a new room
 @router.post("/", response_model=room_schema.RoomSchema)
 def create_room(room: room_schema.RoomCreate, db: Session = Depends(database.get_db)):

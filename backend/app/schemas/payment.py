@@ -62,3 +62,8 @@ class Filter(BaseModel):
 
 class FilterRequest(BaseModel):
     filters: List[Filter] = [] 
+
+
+class PaymentRequest(BaseModel):
+    amount: int
+    invoice_id: int  

@@ -8,6 +8,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 const ROOM_URL = "http://localhost:8000/rooms";
 const ROOMTYPE_URL = "http://localhost:8000/roomtypes";
+const ROOM_IMAGE_URL = "http://localhost:8000/room-images";
 
 export default function Rooms() {
   const [rooms, setRooms] = useState([]);
@@ -23,6 +24,16 @@ export default function Rooms() {
     is_available: true,
     description: "",
   });
+
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState(null);
+  const [roomImages, setRoomImages] = useState([]);
+  const [editingImage, setEditingImage] = useState(null);
+  const [imageForm, setImageForm] = useState({ image_path: "", room_id: "" });
+  const [imageToDelete, setImageToDelete] = useState(null);
+  const [showImageConfirmDelete, setShowImageConfirmDelete] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [showConfirmExit, setShowConfirmExit] = useState(false);
@@ -81,6 +92,11 @@ export default function Rooms() {
             ),
     },
     {
+      label: "Số hình",
+      accessor: "image_count",
+      render: (value) => value ?? 0,
+    },
+    {
       label: "Thao tác",
       accessor: "actions",
       render: (_, room) => (
@@ -133,17 +149,7 @@ export default function Rooms() {
     }
   };
 
-  const [showImageModal, setShowImageModal] = useState(false);
-  const [selectedRoom, setSelectedRoom] = useState(null);
-  const [roomImages, setRoomImages] = useState([]);
-  const [editingImage, setEditingImage] = useState(null);
-  const [imageForm, setImageForm] = useState({ image_path: "", room_id: "" });
-  const [imageToDelete, setImageToDelete] = useState(null);
-  const [showImageConfirmDelete, setShowImageConfirmDelete] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [showUploadModal, setShowUploadModal] = useState(false);
-
-  const ROOM_IMAGE_URL = "http://localhost:8000/room-images";
+  
 
   const fetchRoomImages = async (room_id) => {
     try {
@@ -163,19 +169,19 @@ export default function Rooms() {
     setImageForm({ image_path: "", room_id: room.room_id });
   };
 
-  const handleAddImage = () => {
+  const handleAddImage = async () => {
     setEditingImage(null);
     setImageForm({ image_path: "", room_id: selectedRoom.room_id });
     setShowUploadModal(true);
   };
 
-  const handleEditImage = (img) => {
+  const handleEditImage = async (img) => {
     setEditingImage(img);
     setImageForm({ image_path: img.image_path, room_id: img.room_id });
     setShowUploadModal(true);
   };
 
-  const handleDeleteImage = (imgId) => {
+  const handleDeleteImage = async (imgId) => {
     setImageToDelete(imgId);
     setShowImageConfirmDelete(true);
   };
@@ -184,6 +190,7 @@ export default function Rooms() {
     try {
       await fetch(`${ROOM_IMAGE_URL}/${imageToDelete}`, { method: "DELETE" });
       fetchRoomImages(selectedRoom.room_id);
+      await fetchRooms(); // cập nhật số hình
       toast.success("🗑️ Xóa ảnh thành công!");
     } catch (err) {
       toast.error("Xóa ảnh thất bại!");
@@ -210,6 +217,7 @@ export default function Rooms() {
         toast.success("✅ Thêm ảnh thành công!");
       }
       fetchRoomImages(selectedRoom.room_id);
+      await fetchRooms(); // cập nhật số hình
       setEditingImage(null);
       setImageForm({ image_path: "", room_id: selectedRoom.room_id });
     } catch (err) {
@@ -553,13 +561,13 @@ export default function Rooms() {
             </div>
             <div className="row">
               {roomImages.map((img) => (
-                <div className="col-md-4 mb-3" key={img.image_id}>
+                <div className="col-md-6 mb-3" key={img.image_id}>
                   <div className="card">
                     <img
                       src={img.image_path}
                       alt={`Phòng ${selectedRoom?.room_number}`}
                       className="card-img-top"
-                      style={{ height: "180px", objectFit: "cover" }}
+                      style={{ height: "350px", objectFit: "cover", width: "100%" }} // tăng chiều cao
                     />
                     <div className="card-body p-2 d-flex justify-content-between">
                       <button className="btn btn-warning btn-sm" onClick={() => handleEditImage(img)}>
@@ -658,7 +666,7 @@ export default function Rooms() {
                     <img
                       src={imageForm.image_path}
                       alt="Preview"
-                      style={{ width: "100%", maxHeight: "180px", objectFit: "cover", marginBottom: 4 }}
+                      style={{ width: "100%", maxHeight: "350px", objectFit: "cover", marginBottom: 4 }} // tăng chiều cao
                     />
                     <div className="small text-muted">Đường dẫn: {imageForm.image_path}</div>
                   </div>

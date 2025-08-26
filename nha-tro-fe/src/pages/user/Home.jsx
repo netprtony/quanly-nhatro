@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useInView } from "react-intersection-observer";
 import "/src/assets/style/Home.css"; // CSS đã chỉnh màu
+
+const TENANT_API = "http://localhost:8000/tenants/from-user/";
 
 const features = [
   {
@@ -33,7 +35,7 @@ const features = [
     title: "Lịch sử thanh toán",
     description: "Xem lịch sử thanh toán tiền trọ, điện, nước.",
     icon: "📊",
-    link: "/payment-history",
+    link: "/history-payment",
   },
 ];
 
@@ -41,6 +43,19 @@ export default function Home() {
   const navigate = useNavigate();
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
   const isLoggedIn = localStorage.getItem("token");
+  const [tenantInfo, setTenantInfo] = useState(null);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      if (user.id) {
+        fetch(`${TENANT_API}${user.id}`)
+          .then((res) => res.json())
+          .then((data) => setTenantInfo(data))
+          .catch(() => setTenantInfo(null));
+      }
+    }
+  }, [isLoggedIn]);
 
   const handleAccess = (link) => {
     navigate(isLoggedIn ? link : "/login");
@@ -48,16 +63,33 @@ export default function Home() {
 
   if (isLoggedIn) {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
-    // Thêm feature thông tin cá nhân lên đầu
+    // Thêm feature thông tin cá nhân lên đầu, lấy từ tenantInfo
     const userFeatures = [
       {
         title: "Thông tin cá nhân",
-        description: (
+        description: tenantInfo ? (
           <>
-            <div><b>Họ tên:</b> {user.full_name || user.name || "Chưa cập nhật"}</div>
-            <div><b>Email:</b> {user.email || "Chưa có email"}</div>
-            <div><b>Quyền:</b> {user.role || "USER"}</div>
+            <div>
+              <b>Họ tên:</b> {tenantInfo.full_name}
+            </div>
+            <div>
+              <b>Email:</b> {tenantInfo.email}
+            </div>
+            <div>
+              <b>SĐT:</b> {tenantInfo.phone_number}
+            </div>
+            <div>
+              <b>Ngày sinh:</b> {tenantInfo.date_of_birth}
+            </div>
+            <div>
+              <b>Giới tính:</b> {tenantInfo.gender}
+            </div>
+            <div>
+              <b>Đang thuê:</b> {tenantInfo.is_rent ? "Có" : "Không"}
+            </div>
           </>
+        ) : (
+          <span className="text-muted">Chưa cập nhật thông tin</span>
         ),
         icon: "👤",
         link: "#",
@@ -85,8 +117,14 @@ export default function Home() {
                 transition={{ delay: 0.2 + i * 0.2 }}
               >
                 <div
-                  className={`glass-card text-center h-100 p-3 shadow${feature.isProfile ? " border border-warning" : ""}`}
-                  style={feature.isProfile ? { background: "#f9bc60", color: "#001e1d" } : {}}
+                  className={`glass-card text-center h-100 p-3 shadow${
+                    feature.isProfile ? " border border-warning" : ""
+                  }`}
+                  style={
+                    feature.isProfile
+                      ? { background: "#f9bc60", color: "#001e1d" }
+                      : {}
+                  }
                 >
                   <motion.div
                     className="display-4 mb-2"
@@ -95,10 +133,24 @@ export default function Home() {
                   >
                     {feature.icon}
                   </motion.div>
-                  <h5 className="fw-semibold" style={feature.isProfile ? { color: "#001e1d" } : { color: "#ffffff" }}>
+                  <h5
+                    className="fw-semibold"
+                    style={
+                      feature.isProfile
+                        ? { color: "#001e1d" }
+                        : { color: "#ffffff" }
+                    }
+                  >
                     {feature.title}
                   </h5>
-                  <div className="small mb-2" style={feature.isProfile ? { color: "#001e1d" } : { color: "#abd1c6" }}>
+                  <div
+                    className="small mb-2"
+                    style={
+                      feature.isProfile
+                        ? { color: "#001e1d" }
+                        : { color: "#abd1c6" }
+                    }
+                  >
                     {feature.description}
                   </div>
                   {!feature.isProfile && (
@@ -149,7 +201,8 @@ export default function Home() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
         >
-          Theo dõi phòng, hóa đơn, hợp đồng và hỗ trợ sửa chữa – tất cả trong một hệ thống.
+          Theo dõi phòng, hóa đơn, hợp đồng và hỗ trợ sửa chữa – tất cả trong một
+          hệ thống.
         </motion.p>
 
         <div className="row justify-content-center" ref={ref}>

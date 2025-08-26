@@ -48,3 +48,13 @@ class Filter(BaseModel):
 
 class FilterRequest(BaseModel):
     filters: List[Filter] = []   # ⚠️ tránh dùng Optional[List] = [] vì default mutable
+
+
+class UnpaidInvoiceOut(BaseModel):
+    invoice_id: int
+    room_number: str
+    month: date   # hoặc str nếu muốn format "YYYY-MM"
+    total_amount: float
+
+    class Config:
+        orm_mode = True

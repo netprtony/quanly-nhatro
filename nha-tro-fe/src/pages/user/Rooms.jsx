@@ -1,114 +1,85 @@
 import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { FaBed, FaRulerCombined, FaMoneyBillWave, FaCheckCircle, FaTimesCircle } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 
-// Thêm trường image cho mỗi phòng (có thể dùng ảnh minh họa online hoặc local assets)
-const mockRooms = [
-  {
-    id: 1,
-    name: "Phòng 101",
-    type: "Đơn",
-    area: 18,
-    price: 1800000,
-    status: "Còn trống",
-    description: "Phòng sạch sẽ, có cửa sổ lớn, gần cầu thang.",
-    image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80",
-  },
-  {
-    id: 2,
-    name: "Phòng 102",
-    type: "Đôi",
-    area: 22,
-    price: 2200000,
-    status: "Đã thuê",
-    description: "Phòng rộng, có ban công, view đẹp.",
-    image: "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=400&q=80",
-  },
-  {
-    id: 3,
-    name: "Phòng 201",
-    type: "Đơn",
-    area: 16,
-    price: 1700000,
-    status: "Còn trống",
-    description: "Phòng yên tĩnh, phù hợp sinh viên.",
-    image: "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80",
-  },
-  {
-    id: 4,
-    name: "Phòng 202",
-    type: "Gia đình",
-    area: 28,
-    price: 3000000,
-    status: "Đã thuê",
-    description: "Phòng lớn, có bếp riêng, phù hợp gia đình nhỏ.",
-    image: "https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&w=400&q=80",
-  },
-  {
-    id: 4,
-    name: "Phòng 202",
-    type: "Gia đình",
-    area: 28,
-    price: 3000000,
-    status: "Đã thuê",
-    description: "Phòng lớn, có bếp riêng, phù hợp gia đình nhỏ.",
-    image: "https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&w=400&q=80",
-  },
-  {
-    id: 4,
-    name: "Phòng 202",
-    type: "Gia đình",
-    area: 28,
-    price: 3000000,
-    status: "Đã thuê",
-    description: "Phòng lớn, có bếp riêng, phù hợp gia đình nhỏ.",
-    image: "https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&w=400&q=80",
-  },
-  {
-    id: 4,
-    name: "Phòng 202",
-    type: "Gia đình",
-    area: 28,
-    price: 3000000,
-    status: "Đã thuê",
-    description: "Phòng lớn, có bếp riêng, phù hợp gia đình nhỏ.",
-    image: "https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&w=400&q=80",
-  },
-  {
-    id: 4,
-    name: "Phòng 202",
-    type: "Gia đình",
-    area: 28,
-    price: 3000000,
-    status: "Đã thuê",
-    description: "Phòng lớn, có bếp riêng, phù hợp gia đình nhỏ.",
-    image: "https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&w=400&q=80",
-  },
-];
+const ROOM_API = "http://localhost:8000/rooms";
+const ROOMTYPE_API = "http://localhost:8000/roomtypes";
+const ROOM_IMAGE_API = "http://localhost:8000/room-images";
 
 const ROOMS_PER_PAGE = 6;
 
+// Gộp component hiển thị ảnh phòng vào file này
+function RoomImage({ roomId }) {
+  const [images, setImages] = useState([]);
+  useEffect(() => {
+    fetch(`${ROOM_IMAGE_API}/?room_id=${roomId}`)
+      .then(res => res.json())
+      .then(data => setImages(data));
+  }, [roomId]);
+  const imageSrc =
+    images.length === 0
+      ? "backend/public/roomImage/Data Not Available.png"
+      : images[0].image_url || images[0].image_path;
+  return (
+    <div
+      style={{
+        borderRadius: "18px",
+        overflow: "hidden",
+        marginBottom: 16,
+        border: "3px solid #f9bc60",
+        boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+        background: "#fff",
+      }}
+    >
+      <img
+        src={imageSrc}
+        alt="Phòng"
+        style={{
+          width: "100%",
+          height: "300px",
+          objectFit: "cover",
+          borderRadius: "18px",
+          transition: "0.3s",
+        }}
+      />
+    </div>
+  );
+}
+
 export default function Rooms() {
   const [rooms, setRooms] = useState([]);
+  const [roomTypes, setRoomTypes] = useState([]);
+  const [selectedType, setSelectedType] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalRooms, setTotalRooms] = useState(0);
   const topRef = useRef(null);
+  const navigate = useNavigate();
 
+  // Lấy danh sách loại phòng cho combobox
   useEffect(() => {
-    // Thay bằng API thực tế nếu có
-    setRooms(mockRooms);
+    fetch(`${ROOMTYPE_API}?page=1&page_size=100`)
+      .then(res => res.json())
+      .then(data => setRoomTypes(data.items || []));
   }, []);
 
-  // Tính toán phân trang
-  const totalPages = Math.ceil(rooms.length / ROOMS_PER_PAGE);
-  const pagedRooms = rooms.slice(
-    (currentPage - 1) * ROOMS_PER_PAGE,
-    currentPage * ROOMS_PER_PAGE
-  );
+  // Lấy danh sách phòng có phân trang và lọc theo loại phòng
+  useEffect(() => {
+    let url = `${ROOM_API}/?page=${currentPage}&page_size=${ROOMS_PER_PAGE}`;
+    if (selectedType) url += `&sort_field=type_name&search=${selectedType}`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        setRooms(data.items || []);
+        setTotalRooms(data.total || 0);
+      });
+  }, [currentPage, selectedType]);
+
+  const totalPages = Math.ceil(totalRooms / ROOMS_PER_PAGE);
 
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
-      // Scroll lên đầu danh sách phòng khi đổi trang
       if (topRef.current) {
         topRef.current.scrollIntoView({ behavior: "smooth" });
       }
@@ -137,10 +108,31 @@ export default function Rooms() {
         >
           Danh sách phòng trọ
         </h2>
+        {/* Combobox lọc loại phòng */}
+        <div className="mb-4 d-flex justify-content-center">
+          <select
+            className="form-select w-auto"
+            value={selectedType}
+            onChange={e => {
+              setSelectedType(e.target.value);
+              setCurrentPage(1);
+              if (topRef.current) {
+                topRef.current.scrollIntoView({ behavior: "smooth" });
+              }
+            }}
+          >
+            <option value="">-- Tất cả loại phòng --</option>
+            {roomTypes.map(rt => (
+              <option key={rt.room_type_id} value={rt.type_name}>
+                {rt.type_name}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="row g-4">
-          {pagedRooms.map((room) => (
+          {rooms.map((room) => (
             <motion.div
-              key={room.id}
+              key={room.room_id}
               className="col-12 col-md-6 col-lg-4"
               initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -162,27 +154,15 @@ export default function Rooms() {
                   minHeight: 420,
                 }}
               >
-                <div style={{ borderRadius: "14px", overflow: "hidden", marginBottom: 12 }}>
-                  <img
-                    src={room.image}
-                    alt={room.name}
-                    style={{
-                      width: "100%",
-                      height: "180px",
-                      objectFit: "cover",
-                      borderRadius: "14px",
-                      border: "2px solid #abd1c6",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                    }}
-                  />
-                </div>
+                {/* Load ảnh phòng từ API room-images */}
+                <RoomImage roomId={room.room_id} />
                 <div className="d-flex align-items-center mb-2">
                   <FaBed size={22} style={{ color: "#f9bc60", marginRight: 8 }} />
                   <span className="fs-6 fw-bold" style={{ color: "#f9bc60" }}>
-                    {room.name}
+                    {room.room_number}
                   </span>
                   <span
-                    className={`badge ms-auto ${room.status === "Còn trống" ? "bg-success" : "bg-secondary"}`}
+                    className={`badge ms-auto ${room.is_available ? "bg-success" : "bg-secondary"}`}
                     style={{
                       fontSize: "0.95rem",
                       fontWeight: 600,
@@ -191,7 +171,7 @@ export default function Rooms() {
                       borderRadius: "12px",
                     }}
                   >
-                    {room.status === "Còn trống" ? (
+                    {room.is_available ? (
                       <>
                         <FaCheckCircle className="me-1" /> Còn trống
                       </>
@@ -204,20 +184,22 @@ export default function Rooms() {
                 </div>
                 <div className="mb-2" style={{ color: "#ffffffff", fontWeight: 600 }}>
                   <FaRulerCombined className="me-2" style={{ color: "#ffffffff" }} />
-                  Diện tích: <span style={{ color: "#ffffffff" }}>{room.area} m²</span>
+                  Số người tối đa: <span style={{ color: "#ffffffff" }}>{room.max_occupancy} người</span>
                 </div>
+                
                 <div className="mb-2" style={{ color: "#ffffffff", fontWeight: 600 }}>
                   <FaMoneyBillWave className="me-2" style={{ color: "#f9bc60" }} />
                   Giá thuê:{" "}
                   <span style={{ color: "#f9bc60" }}>
-                    {room.price.toLocaleString("vi-VN")} đ/tháng
+                    {room.room_type.price_per_month?.toLocaleString("vi-VN") || "N/A"} đ/tháng
                   </span>
                 </div>
-                <div className="mb-3" style={{ color: "#abd1c6" }}>
-                  {room.description}
+                <div className="mb-3" style={{ color: "#ffffffff" }}>
+                  <span style={{ fontWeight: 600, color: "#f9bc60" }}>Mô tả phòng: </span>
+                  {room.description || <span className="text-muted">Chưa có mô tả</span>}
                 </div>
                 <div className="d-flex justify-content-end mt-auto">
-                  {room.status === "Còn trống" ? (
+                  {room.is_available ? (
                     <button
                       className="btn"
                       style={{
@@ -229,9 +211,9 @@ export default function Rooms() {
                         boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
                         border: "none",
                       }}
-                      onClick={() => alert("Liên hệ quản lý để đặt phòng!")}
+                      onClick={() => navigate(`/rooms/${room.room_id}`)}
                     >
-                      Đặt phòng
+                      Xem chi tiết
                     </button>
                   ) : (
                     <button
@@ -255,62 +237,62 @@ export default function Rooms() {
             </motion.div>
           ))}
         </div>
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <nav className="d-flex justify-content-center mt-4">
-            <ul className="pagination" style={{ background: "transparent" }}>
-              <li className={`page-item${currentPage === 1 ? " disabled" : ""}`}>
+      </motion.div>
+      {/* Pagination đặt ngoài motion.div để không bị hiệu ứng che */}
+      {totalPages > 1 && (
+        <nav className="d-flex justify-content-center mt-4">
+          <ul className="pagination" style={{ background: "transparent" }}>
+            <li className={`page-item${currentPage === 1 ? " disabled" : ""}`}>
+              <button
+                className="page-link"
+                style={{
+                  background: "#abd1c6",
+                  color: "#004643",
+                  border: "none",
+                  marginRight: 4,
+                }}
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                &laquo;
+              </button>
+            </li>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <li
+                key={i}
+                className={`page-item${currentPage === i + 1 ? " active" : ""}`}
+              >
                 <button
                   className="page-link"
                   style={{
-                    background: "#abd1c6",
-                    color: "#004643",
+                    background: currentPage === i + 1 ? "#f9bc60" : "#abd1c6",
+                    color: currentPage === i + 1 ? "#001e1d" : "#004643",
                     border: "none",
                     marginRight: 4,
                   }}
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
+                  onClick={() => handlePageChange(i + 1)}
                 >
-                  &laquo;
+                  {i + 1}
                 </button>
               </li>
-              {Array.from({ length: totalPages }, (_, i) => (
-                <li
-                  key={i}
-                  className={`page-item${currentPage === i + 1 ? " active" : ""}`}
-                >
-                  <button
-                    className="page-link"
-                    style={{
-                      background: currentPage === i + 1 ? "#f9bc60" : "#abd1c6",
-                      color: currentPage === i + 1 ? "#001e1d" : "#004643",
-                      border: "none",
-                      marginRight: 4,
-                    }}
-                    onClick={() => handlePageChange(i + 1)}
-                  >
-                    {i + 1}
-                  </button>
-                </li>
-              ))}
-              <li className={`page-item${currentPage === totalPages ? " disabled" : ""}`}>
-                <button
-                  className="page-link"
-                  style={{
-                    background: "#abd1c6",
-                    color: "#004643",
-                    border: "none",
-                  }}
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                >
-                  &raquo;
-                </button>
-              </li>
-            </ul>
-          </nav>
-        )}
-      </motion.div>
+            ))}
+            <li className={`page-item${currentPage === totalPages ? " disabled" : ""}`}>
+              <button
+                className="page-link"
+                style={{
+                  background: "#abd1c6",
+                  color: "#004643",
+                  border: "none",
+                }}
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                &raquo;
+              </button>
+            </li>
+          </ul>
+        </nav>
+      )}
     </div>
   );
 }

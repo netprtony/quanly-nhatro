@@ -61,6 +61,8 @@ class Tenant(Base):
     address = Column(Text)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
+    user = relationship("User", back_populates="tenant")
+
 class User(Base):
     __tablename__ = "Users"
     id = Column(Integer, primary_key=True, index=True)
@@ -76,6 +78,7 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
+    tenant = relationship("Tenant", back_populates="user")
     reservations = relationship("Reservation", back_populates="user", cascade="all, delete")
 
 class RoomType(Base):

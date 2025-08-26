@@ -25,6 +25,7 @@ class RoomSchema(BaseModel):
     room_type_id: int
     room_number: str
     max_occupants: int
+    image_count: int = 0
     is_available: bool
     floor_number: Optional[int]
     description: Optional[str]

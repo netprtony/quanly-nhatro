@@ -8,7 +8,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 const PAYMENT_API = "http://localhost:8000/payments";
 const INVOICE_API = "http://localhost:8000/invoices";
-
+const UNPAID_INVOICE_API = "http://localhost:8000/invoices/unpaid-invoices";
 export default function Payment() {
   const [payments, setPayments] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -22,6 +22,10 @@ export default function Payment() {
     note: "",
     transaction_reference: "", // Thêm trường này
   });
+  const [showPayModal, setShowPayModal] = useState(false);
+  const [payMethod, setPayMethod] = useState("Momo");
+  const [payInvoiceId, setPayInvoiceId] = useState("");
+  const [unpaidInvoices, setUnpaidInvoices] = useState([]);
 
   const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [showConfirmExit, setShowConfirmExit] = useState(false);
@@ -150,13 +154,27 @@ export default function Payment() {
     }
   };
 
+  const fetchUnpaidInvoices = async () => {
+    try {
+      const res = await fetch(`${UNPAID_INVOICE_API}`);
+      const data = await res.json();
+      setUnpaidInvoices(Array.isArray(data) ? data : []);
+    } catch {
+      setUnpaidInvoices([]);
+    }
+  };
+
   useEffect(() => {
     fetchPayments(sortField, sortOrder);
     fetchInvoices();
     // eslint-disable-next-line
   }, [filters, page, pageSize, search, sortField, sortOrder]);
 
-  const handleAdd = () => {
+  useEffect(() => {
+    if (showPayModal) fetchUnpaidInvoices();
+  }, [showPayModal]);
+
+  const handleAdd = async () => {
     setForm({
       invoice_id: "",
       amount: "",
@@ -167,10 +185,11 @@ export default function Payment() {
     });
     setEditingPayment(null);
     setUnsavedChanges(false);
+    await fetchUnpaidInvoices();
     setShowModal(true);
   };
 
-  const handleEdit = (payment) => {
+  const handleEdit = async (payment) => {
     setForm({
       invoice_id: payment.invoice_id,
       amount: payment.paid_amount,
@@ -181,6 +200,7 @@ export default function Payment() {
     });
     setEditingPayment(payment);
     setUnsavedChanges(false);
+    await fetchUnpaidInvoices();
     setShowModal(true);
   };
 
@@ -251,14 +271,54 @@ export default function Payment() {
     setUnsavedChanges(true);
   };
 
+  
+
+  const handlePayInvoice = async () => {
+    if (!payInvoiceId) {
+      toast.error("Vui lòng chọn hóa đơn!");
+      return;
+    }
+    const invoice = unpaidInvoices.find(i => i.invoice_id === parseInt(payInvoiceId));
+    if (!invoice) {
+      toast.error("Không tìm thấy hóa đơn!");
+      return;
+    }
+    try {
+      const res = await fetch(`${PAYMENT_API}/payos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: invoice.total_amount,
+          invoice_id: invoice.invoice_id // Thêm trường này
+        }),
+      });
+      const data = await res.json();
+      console.log(data);
+      if (data && data.checkoutUrl) {
+        window.open(data.checkoutUrl, "_blank");
+        toast.success("Đã tạo yêu cầu thanh toán!");
+      } else {
+        toast.info("Không lấy được link thanh toán, vui lòng thử lại!");
+      }
+      setShowPayModal(false);
+    } catch (err) {
+      toast.error("Thanh toán thất bại!");
+    }
+  };
+
   return (
     <div className="container mt-4 position-relative">
       <div className="p-4 rounded shadow bg-white">
         <div className="d-flex align-items-center justify-content-between mb-3">
           <h3 className="mb-0">💳 Danh sách thanh toán</h3>
-          <button className="btn btn-success" onClick={handleAdd}>
-            ➕ Thêm thanh toán
-          </button>
+          <div>
+            <button className="btn btn-success me-2" onClick={handleAdd}>
+              ➕ Thêm thanh toán
+            </button>
+            <button className="btn btn-primary" onClick={() => setShowPayModal(true)}>
+              💸 Thanh toán
+            </button>
+          </div>
         </div>
 
         <div className="mb-3">
@@ -306,7 +366,7 @@ export default function Payment() {
           <form>
             <div className="row g-3">
               <div className="col-md-6">
-                <label className="form-label">Phiếu thu</label>
+                <label className="form-label">Chọn hóa đơn chưa thanh toán</label>
                 <select
                   className="form-select"
                   value={form.invoice_id}
@@ -314,9 +374,9 @@ export default function Payment() {
                   required
                 >
                   <option value="">-- Chọn hóa đơn --</option>
-                  {invoices.map(inv => (
-                    <option key={inv.invoice_id} value={inv.invoice_id}>
-                      {`#${inv.invoice_id} - Phòng ${inv.room_id} - Tháng ${inv.month?.slice(0,7)}`}
+                {unpaidInvoices.map(inv => (
+                  <option key={inv.invoice_id} value={inv.invoice_id}>
+                      {`#${inv.invoice_id} - Phòng ${inv.room_number} - Tháng ${inv.month?.slice(0,7)} - Số tiền: ${inv.total_amount.toLocaleString("vi-VN")} ₫`}
                     </option>
                   ))}
                 </select>
@@ -325,10 +385,14 @@ export default function Payment() {
               <div className="col-md-6">
                 <label className="form-label">Số tiền (VND)</label>
                 <input
-                  type="number"
+                  type="text"
                   className="form-control"
-                  value={form.amount}
-                  onChange={(e) => handleFormChange("amount", parseInt(e.target.value) || 0)}
+                  value={form.amount.toLocaleString("vi-VN")} // ✅ hiển thị có dấu phân cách
+                  onChange={(e) => {
+                    // bỏ dấu phân cách rồi parse lại thành số
+                    const rawValue = e.target.value.replace(/\D/g, ""); 
+                    handleFormChange("amount", parseInt(rawValue || "0", 10));
+                  }}
                   required
                 />
               </div>
@@ -402,6 +466,45 @@ export default function Payment() {
           }}
           onClose={() => setShowConfirmExit(false)}
         />
+
+        <Modal
+          isOpen={showPayModal}
+          onClose={() => setShowPayModal(false)}
+          title="💸 Thanh toán hóa đơn"
+          showConfirm
+          onConfirm={handlePayInvoice}
+        >
+          <form>
+            <div className="mb-3">
+              <label className="form-label">Phương thức thanh toán</label>
+              <select
+                className="form-select"
+                value={payMethod}
+                onChange={e => setPayMethod(e.target.value)}
+              >
+                <option value="Momo">Momo</option>
+                <option value="PayOS">PayOS</option>
+                <option value="ZaloPay">ZaloPay</option>
+              </select>
+            </div>
+            <div className="mb-3">
+              <label className="form-label">Chọn hóa đơn chưa thanh toán</label>
+              <select
+                className="form-select"
+                value={payInvoiceId}
+                onChange={e => setPayInvoiceId(e.target.value)}
+                required
+              >
+                <option value="">-- Chọn hóa đơn --</option>
+                {unpaidInvoices.map(inv => (
+                  <option key={inv.invoice_id} value={inv.invoice_id}>
+                  {`#${inv.invoice_id} - Phòng ${inv.room_number} - Tháng ${inv.month?.slice(0,7)} - Số tiền: ${inv.total_amount.toLocaleString("vi-VN")} ₫`}
+                </option>
+                ))}
+              </select>
+            </div>
+          </form>
+        </Modal>
       </div>
       <ToastContainer position="top-right" autoClose={3000} />
     </div>

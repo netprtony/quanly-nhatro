@@ -15,6 +15,8 @@ import Modal from "./Modal.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+const TENANT_API = "http://localhost:8000/tenants/from-user/";
+
 export default function Header() {
   const navigate = useNavigate();
   const { currentUser, logout } = useUser();
@@ -28,6 +30,7 @@ export default function Header() {
     confirmPassword: ""
   });
   const [loading, setLoading] = useState(false);
+  const [tenantInfo, setTenantInfo] = useState(null);
 
   // Lấy token từ localStorage mỗi lần đổi mật khẩu
   const getToken = () => localStorage.getItem("token");
@@ -39,6 +42,16 @@ export default function Header() {
     if (dropdownOpen) document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [dropdownOpen]);
+
+  // Khi mở modal profile, lấy thông tin tenant
+  useEffect(() => {
+    if (showProfile && currentUser?.id) {
+      fetch(`${TENANT_API}${currentUser.id}`)
+        .then(res => res.json())
+        .then(data => setTenantInfo(data))
+        .catch(() => setTenantInfo(null));
+    }
+  }, [showProfile, currentUser]);
 
   const handleNavigate = (path) => {
     navigate(path);
@@ -223,12 +236,14 @@ export default function Header() {
         title="👤 Thông tin cá nhân"
         showConfirm={false}
       >
-        {currentUser ? (
+        {tenantInfo ? (
           <div>
-            <div className="mb-2"><b>Tên đăng nhập:</b> {currentUser.username}</div>
-            <div className="mb-2"><b>Họ tên:</b> {currentUser.full_name}</div>
-            <div className="mb-2"><b>Email:</b> {currentUser.email}</div>
-            <div className="mb-2"><b>Quyền:</b> {currentUser.role}</div>
+            <div className="mb-2"><b>Họ tên:</b> {tenantInfo.full_name}</div>
+            <div className="mb-2"><b>Email:</b> {tenantInfo.email}</div>
+            <div className="mb-2"><b>SĐT:</b> {tenantInfo.phone_number}</div>
+            <div className="mb-2"><b>Ngày sinh:</b> {tenantInfo.date_of_birth}</div>
+            <div className="mb-2"><b>Giới tính:</b> {tenantInfo.gender}</div>
+            <div className="mb-2"><b>Đang thuê:</b> {tenantInfo.is_rent ? "Có" : "Không"}</div>
             <button className="btn btn-link p-0" onClick={() => { setShowProfile(false); setShowChangePassword(true); }}>
               Đổi mật khẩu
             </button>
