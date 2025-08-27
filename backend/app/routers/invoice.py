@@ -12,11 +12,16 @@ def get_invoices(
     db: Session = Depends(database.get_db),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=200),
-    search: str = Query(None, description="Tìm theo phòng hoặc tháng"), 
+    search: str = Query(None, description="Tìm theo phòng hoặc tháng"),
     sort_field: str = Query(None, description="Trường sắp xếp"),
     sort_order: str = Query("asc", description="Thứ tự sắp xếp"),
+    tenant_id: str = Query(None, description="Lấy hóa đơn theo tenant_id"),  # Thêm param này
 ):
     query = db.query(models.Invoice)
+    if tenant_id:
+        # Join với Contract để lấy hóa đơn của khách thuê
+        query = query.join(models.Contract, models.Invoice.room_id == models.Contract.room_id)\
+                     .filter(models.Contract.tenant_id == tenant_id)
     if search:
         query = query.join(models.Room).filter(
             (models.Room.room_number.ilike(f"%{search}%")) |

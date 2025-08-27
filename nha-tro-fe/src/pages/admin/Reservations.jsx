@@ -208,7 +208,25 @@ export default function Reservations() {
         return room ? room.room_number : room_id;
       },
     },
-    { label: "Trạng thái", accessor: "status" },
+    {
+      label: "Trạng thái",
+      accessor: "status",
+      render: (status) => {
+        let className = "badge bg-secondary";
+        let display = status;
+        if (status === "Pending") {
+          className = "badge bg-warning text-dark";
+          display = "Chờ xác nhận";
+        } else if (status === "Confirmed") {
+          className = "badge bg-success";
+          display = "Đã xác nhận";
+        } else if (status === "Cancelled") {
+          className = "badge bg-danger";
+          display = "Đã hủy";
+        }
+        return <span className={className}>{display}</span>;
+      }
+    },
     { label: "Ngày tạo", accessor: "created_at" },
     {
       label: "Thao tác",

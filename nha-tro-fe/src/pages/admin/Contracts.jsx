@@ -99,10 +99,19 @@ export default function Contracts() {
       label: "Trạng thái",
       accessor: "contract_status",
       render: (value) => {
-        if (value === "Active") return "✅ Hiệu lực";
-        if (value === "Terminated") return "❌ Hết hạn";
-        if (value === "Pending") return "⏳ Chờ hiệu lực";
-        return value;
+        let className = "badge bg-secondary";
+        let display = value;
+        if (value === "Pending") {
+          className = "badge bg-warning text-dark";
+          display = "Chờ hiệu lực";
+        } else if (value === "Active") {
+          className = "badge bg-success";
+          display = "Hiệu lực";
+        } else if (value === "Terminated") {
+          className = "badge bg-danger";
+          display = "Đã kết thúc";
+        }
+        return <span className={className}>{display}</span>;
       },
     },
     {

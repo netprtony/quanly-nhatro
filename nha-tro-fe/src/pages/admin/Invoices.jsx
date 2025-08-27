@@ -115,7 +115,12 @@ export default function Invoices() {
     {
       label: "Trạng thái",
       accessor: "is_paid",
-      render: (is_paid) => (is_paid ? "Đã thanh toán" : "Chưa thanh toán"),
+       render: (is_paid) =>
+        is_paid ? (
+          <span className="badge bg-success">Đã thanh toán</span>
+        ) : (
+          <span className="badge bg-warning text-dark">Chưa thanh toán</span>
+        ),
     },
     {
       label: "Ngày tạo",

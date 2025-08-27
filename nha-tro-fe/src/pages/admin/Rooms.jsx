@@ -67,7 +67,9 @@ export default function Rooms() {
     {
       label: "Còn trống",
       accessor: "is_available",
-      render: (value) => (value ? "✅ Có" : "❌ Không"),
+      render: (value) => (value ? 
+        <span className="badge bg-success">Trống</span>
+        : <span className="badge bg-danger">Có người</span>),
     },
     {
       label: "Loại phòng",

@@ -23,7 +23,7 @@ const features = [
     title: "Thanh toán",
     description: "Xem và thanh toán hóa đơn tiền trọ, điện, nước.",
     icon: "💵",
-    link: "/payments",
+    link: "/invoices",
   },
   {
     title: "Đặt phòng online",

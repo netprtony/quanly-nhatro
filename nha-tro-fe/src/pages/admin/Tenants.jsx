@@ -70,7 +70,9 @@ export default function Tenants() {
     {
       label: "Trạng thái",
       accessor: "is_rent",
-      render: (value) => (value ? "✅ Đang thuê" : "❌ Đã rời"),
+      render: (value) => (value ? 
+        <span className="badge bg-success">Đang thuê</span> :
+        <span className="badge bg-danger">Đã rời</span>),
     },
     {
       label: "Thao tác",

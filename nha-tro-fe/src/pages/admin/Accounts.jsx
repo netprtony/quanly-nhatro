@@ -52,7 +52,9 @@ export default function Accounts() {
     {
       label: "Trạng thái",
       accessor: "is_active",
-      render: (value) => (value ? "✅ Kích hoạt" : "❌ Khóa"),
+      render: (value) => (value ? 
+        <span className="badge bg-success">Kích hoạt</span> :
+        <span className="badge bg-danger">Khóa</span>),
     },
     {
       label: "Thao tác",
