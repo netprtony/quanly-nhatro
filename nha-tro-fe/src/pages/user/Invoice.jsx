@@ -4,15 +4,7 @@ import Table from "../../components/Table";
 const TENANT_API = "http://localhost:8000/tenants/from-user/";
 const INVOICE_API = "http://localhost:8000/invoices/";
 const ROOMS_API = "http://localhost:8000/rooms";
-
-const fieldOptions = [
-  { label: "Mã hóa đơn", value: "invoice_id" },
-  { label: "Phòng", value: "room_id" },
-  { label: "Tháng", value: "month" },
-  { label: "Số tiền", value: "total_amount" },
-  { label: "Trạng thái", value: "is_paid" },
-  { label: "Ngày tạo", value: "created_at" },
-];
+const INVOICE_DETAIL_API = "http://localhost:8000/invoice-details/by-invoice/";
 
 export default function Invoice() {
   const [tenantId, setTenantId] = useState(null);
@@ -24,6 +16,7 @@ export default function Invoice() {
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
+  const [detailsCache, setDetailsCache] = useState({});
 
   // Lấy tenant_id từ user đang đăng nhập
   useEffect(() => {
@@ -56,6 +49,61 @@ export default function Invoice() {
         setTotal(data.total || 0);
       });
   }, [tenantId, page, pageSize, sortField, sortOrder, search]);
+
+  // Hàm render collapse cho từng dòng
+  const renderCollapse = (row) => {
+    const invoiceId = row.invoice_id;
+    const details = detailsCache[invoiceId];
+
+    // Nếu chưa có dữ liệu chi tiết, gọi API
+    if (details === undefined) {
+      // Chỉ gọi API khi collapse mở
+      fetch(`${INVOICE_DETAIL_API}${invoiceId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setDetailsCache((prev) => ({ ...prev, [invoiceId]: data }));
+        })
+        .catch(() => {
+          setDetailsCache((prev) => ({ ...prev, [invoiceId]: null }));
+        });
+      return <div>Đang tải chi tiết hóa đơn...</div>;
+    }
+
+    // Nếu không có dữ liệu chi tiết
+    if (!details || (Array.isArray(details) && details.length === 0)) {
+      return <div className="text-muted">Không có chi tiết hóa đơn.</div>;
+    }
+
+    // Hiển thị chi tiết hóa đơn (theo mẫu dữ liệu mới)
+    return (
+      <div>
+        <h6 className="fw-bold mb-2">Chi tiết hóa đơn</h6>
+        <table className="table table-sm table-bordered">
+          <thead>
+            <tr>
+              <th>Loại phí</th>
+              <th>Số tiền</th>
+              <th>Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody>
+            {details.map((item, idx) => (
+              <tr key={item.detail_id || idx}>
+                <td>{item.fee_type}</td>
+                <td>
+                  {item.amount?.toLocaleString("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  })}
+                </td>
+                <td>{item.note}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
 
   const columns = [
     { label: "Mã hóa đơn", accessor: "invoice_id" },
@@ -117,6 +165,7 @@ export default function Invoice() {
         onSort={handleSort}
         sortField={sortField}
         sortOrder={sortOrder}
+        renderCollapse={renderCollapse}
       />
     </div>
   );

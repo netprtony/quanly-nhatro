@@ -1,8 +1,53 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
-// Hỗ trợ lấy giá trị lồng như "room_type.type_name"
 const getNestedValue = (obj, path) =>
   path.split(".").reduce((acc, part) => acc && acc[part], obj);
+
+// Component con cho mỗi row
+function TableRow({ row, rowIndex, columns, page, pageSize, isOpen, onToggle, renderCollapse }) {
+  const collapseRef = useRef(null);
+  const [maxHeight, setMaxHeight] = useState("0px");
+
+  useEffect(() => {
+    if (isOpen && collapseRef.current) {
+      setMaxHeight(collapseRef.current.scrollHeight + "px");
+    } else {
+      setMaxHeight("0px");
+    }
+  }, [isOpen]);
+
+  return (
+    <>
+      <tr
+        style={{ cursor: renderCollapse ? "pointer" : "default" }}
+        onClick={() => renderCollapse && onToggle()}
+      >
+        <td className="text-center">{(page - 1) * pageSize + rowIndex + 1}</td>
+        {columns.map((col, i) => {
+          const value = getNestedValue(row, col.accessor);
+          return (
+            <td key={i} className="text-center">
+              {col.render ? col.render(value, row) : value}
+            </td>
+          );
+        })}
+      </tr>
+      {renderCollapse && (
+        <tr className="collapse-row">
+          <td colSpan={columns.length + 1}>
+            <div
+              ref={collapseRef}
+              className={`collapse-wrapper ${isOpen ? "open" : ""}`}
+              style={{ maxHeight }}
+            >
+              {renderCollapse(row)}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
 
 export default function Table({
   columns,
@@ -12,18 +57,15 @@ export default function Table({
   totalRecords = 0,
   onPageChange,
   onPageSizeChange,
-  showSearch = false,
   onSort,
   sortField,
   sortOrder,
+  renderCollapse,
 }) {
   const safeData = Array.isArray(data) ? data : [];
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
-  const isInitialEmpty = !safeData || safeData.length === 0;
-
-  // State lưu width của cột
   const [colWidths, setColWidths] = useState({});
-
+  const [openRow, setOpenRow] = useState(null);
   const tableRef = useRef(null);
 
   const handleSort = (field) => {
@@ -34,7 +76,6 @@ export default function Table({
     }
   };
 
-  // Xử lý resize cột
   const startResize = (e, accessor) => {
     e.preventDefault();
     const startX = e.clientX;
@@ -61,140 +102,94 @@ export default function Table({
 
   return (
     <div>
-      {showSearch && (
-        <div className="mb-3">
-          <input
-            type="text"
-            placeholder="Tìm kiếm..."
-            className="form-control"
-            disabled
-          />
-        </div>
-      )}
+      <style>
+        {`
+          .collapse-wrapper {
+            overflow: hidden;
+            transition: max-height 0.35s ease, opacity 0.35s ease;
+            opacity: 0;
+            max-height: 0;
+          }
+          .collapse-wrapper.open {
+            opacity: 1;
+          }
+          tr.collapse-row td {
+            background: #f9f9f9;
+            border-top: none;
+          }
+          tr.collapse-row td .collapse-wrapper {
+            border-left: 3px solid #0d6efd;
+            margin-left: 10px;
+            border-radius: 4px;
+            background: #fcfcfc;
+            padding: 8px 12px;
+          }
+        `}
+      </style>
 
-      {isInitialEmpty ? (
-        <div className="text-center py-5">
-          <img
-            src="/images/no-data.png"
-            alt="No data"
-            style={{ maxWidth: "300px", opacity: 0.7 }}
-          />
-          <p className="text-muted mt-3">Chưa có dữ liệu nào.</p>
-        </div>
-      ) : (
-        <>
-          <div className="table-responsive" style={{ overflowX: "auto" }}>
-            <table
-              className="table table-bordered table-hover align-middle"
-              ref={tableRef}
-            >
-              <thead className="table-primary">
-                <tr>
-                  <th className="text-center" style={{ width: 50 }}>
-                    STT
-                  </th>
-                  {columns.map((col, i) => (
-                    <th
-                      key={i}
-                      data-accessor={col.accessor}
-                      className="text-center position-relative"
-                      style={{
-                        cursor: col.accessor ? "pointer" : "default",
-                        width: colWidths[col.accessor] || "auto",
-                      }}
-                      onClick={() => col.accessor && handleSort(col.accessor)}
-                    >
-                      {col.label}
-                      {col.accessor && (
-                        <span style={{ marginLeft: 4 }}>
-                          {sortField === col.accessor
-                            ? sortOrder === "asc"
-                              ? " ▲"
-                              : " ▼"
-                            : ""}
-                        </span>
-                      )}
-
-                      {/* Thanh kéo resize */}
-                      <div
-                        onMouseDown={(e) => startResize(e, col.accessor)}
-                        style={{
-                          position: "absolute",
-                          top: 0,
-                          right: 0,
-                          width: "5px",
-                          height: "100%",
-                          cursor: "col-resize",
-                          userSelect: "none",
-                        }}
-                      />
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {safeData.map((row, rowIndex) => (
-                  <tr key={rowIndex}>
-                    <td className="text-center">
-                      {(page - 1) * pageSize + rowIndex + 1}
-                    </td>
-                    {columns.map((col, i) => {
-                      const value = getNestedValue(row, col.accessor);
-                      return (
-                        <td
-                          key={i}
-                          className="text-center"
-                          style={{ width: colWidths[col.accessor] || "auto" }}
-                        >
-                          {col.render ? col.render(value, row) : value}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="d-flex justify-content-between align-items-center mt-2">
-            <small>
-              Trang {page} / {totalPages}
-            </small>
-            <div className="btn-group">
-              <button
-                className="btn btn-sm btn-outline-primary"
-                onClick={() => onPageChange && onPageChange(page - 1)}
-                disabled={page === 1}
-              >
-                ◀
-              </button>
-              <button
-                className="btn btn-sm btn-outline-primary"
-                onClick={() => onPageChange && onPageChange(page + 1)}
-                disabled={page >= totalPages}
-              >
-                ▶
-              </button>
-            </div>
-            <div>
-              <label className="me-2">Số bản ghi/trang:</label>
-              <select
-                value={pageSize}
-                onChange={(e) =>
-                  onPageSizeChange && onPageSizeChange(Number(e.target.value))
+      <div className="table-responsive">
+        <table
+          className="table table-bordered table-hover align-middle"
+          ref={tableRef}
+        >
+          <thead className="table-primary">
+            <tr>
+              <th style={{ width: 50 }}>STT</th>
+              {columns.map((col, i) => (
+                <th
+                  key={i}
+                  data-accessor={col.accessor}
+                  style={{
+                    cursor: col.accessor ? "pointer" : "default",
+                    width: colWidths[col.accessor] || "auto",
+                  }}
+                  onClick={() => col.accessor && handleSort(col.accessor)}
+                  className="position-relative"
+                >
+                  {col.label}
+                  {col.accessor && (
+                    <span style={{ marginLeft: 4 }}>
+                      {sortField === col.accessor
+                        ? sortOrder === "asc"
+                          ? "▲"
+                          : "▼"
+                        : ""}
+                    </span>
+                  )}
+                  <div
+                    onMouseDown={(e) => startResize(e, col.accessor)}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      right: 0,
+                      width: "5px",
+                      height: "100%",
+                      cursor: "col-resize",
+                    }}
+                  />
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {safeData.map((row, rowIndex) => (
+              <TableRow
+                key={rowIndex}
+                row={row}
+                rowIndex={rowIndex}
+                columns={columns}
+                page={page}
+                pageSize={pageSize}
+                isOpen={openRow === rowIndex}
+                onToggle={() =>
+                  setOpenRow(openRow === rowIndex ? null : rowIndex)
                 }
-                className="form-select d-inline-block w-auto"
-              >
-                {[10, 20, 50, 100].map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </>
-      )}
+                renderCollapse={renderCollapse}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
