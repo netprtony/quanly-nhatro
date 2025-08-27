@@ -36,7 +36,7 @@ export default function Payment() {
 
   // Phân trang
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(200);
   const [totalRecords, setTotalRecords] = useState(0);
   const [sortField, setSortField] = useState();
   const [sortOrder, setSortOrder] = useState();

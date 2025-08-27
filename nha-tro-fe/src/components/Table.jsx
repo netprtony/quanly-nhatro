@@ -3,7 +3,6 @@ import React, { useState, useRef, useEffect } from "react";
 const getNestedValue = (obj, path) =>
   path.split(".").reduce((acc, part) => acc && acc[part], obj);
 
-// Component con cho mỗi row
 function TableRow({ row, rowIndex, columns, page, pageSize, isOpen, onToggle, renderCollapse }) {
   const collapseRef = useRef(null);
   const [maxHeight, setMaxHeight] = useState("0px");
@@ -189,6 +188,71 @@ export default function Table({
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="d-flex justify-content-between align-items-center mt-2">
+        {/* Page size select */}
+        <div>
+          <select
+            value={pageSize}
+            onChange={(e) => onPageSizeChange && onPageSizeChange(Number(e.target.value))}
+            className="form-select"
+            style={{ width: "auto", display: "inline-block" }}
+          >
+            {[5, 10, 20, 50, 100].map((size) => (
+              <option key={size} value={size}>
+                {size} / trang
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Pagination controls */}
+        <div>
+          <nav>
+            <ul className="pagination mb-0">
+              <li className={`page-item ${page === 1 ? "disabled" : ""}`}>
+                <button
+                  className="page-link"
+                  onClick={() => page > 1 && onPageChange && onPageChange(page - 1)}
+                >
+                  «
+                </button>
+              </li>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <li
+                  key={p}
+                  className={`page-item ${p === page ? "active" : ""}`}
+                >
+                  <button
+                    className="page-link"
+                    onClick={() => onPageChange && onPageChange(p)}
+                  >
+                    {p}
+                  </button>
+                </li>
+              ))}
+              <li className={`page-item ${page === totalPages ? "disabled" : ""}`}>
+                <button
+                  className="page-link"
+                  onClick={() =>
+                    page < totalPages && onPageChange && onPageChange(page + 1)
+                  }
+                >
+                  »
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+
+        {/* Total records */}
+        <div>
+          <small>
+            Tổng: {totalRecords} bản ghi
+          </small>
+        </div>
       </div>
     </div>
   );
