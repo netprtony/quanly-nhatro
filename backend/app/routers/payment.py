@@ -81,9 +81,9 @@ def get_payments(
         .join(models.Tenant, models.Contract.tenant_id == models.Tenant.tenant_id)
         .join(models.Room, models.Invoice.room_id == models.Room.room_id)
         .filter(
-            models.Contract.contract_status == "Active",
-            models.Invoice.created_at >= models.Contract.start_date,
-            (models.Contract.end_date.is_(None)) | (models.Invoice.created_at <= models.Contract.end_date)
+            # models.Contract.contract_status == "Active",
+            # models.Invoice.created_at >= models.Contract.start_date,
+            # (models.Contract.end_date.is_(None)) | (models.Invoice.created_at <= models.Contract.end_date)
         )
     )
 

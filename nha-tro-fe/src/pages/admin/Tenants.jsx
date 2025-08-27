@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Table from "/src/components/Table.jsx";
 import Modal from "/src/components/Modal.jsx";
 import ModalConfirm from "/src/components/ModalConfirm.jsx";
@@ -7,6 +7,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const TENANT_URL = "http://localhost:8000/tenants";
+const CCCD_UPLOAD_API = "http://localhost:8000/tenants/upload-cccd";
 
 export default function Tenants() {
   const [tenants, setTenants] = useState([]);
@@ -29,6 +30,9 @@ export default function Tenants() {
   const [showConfirmExit, setShowConfirmExit] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [tenantToDelete, setTenantToDelete] = useState(null);
+  const [frontFile, setFrontFile] = useState(null);
+  const [backFile, setBackFile] = useState(null);
+  const [viewCCCD, setViewCCCD] = useState(null); // {src, alt}
 
   // Bộ lọc nâng cao, tìm kiếm, phân trang, sort
   const [filters, setFilters] = useState([]);
@@ -57,6 +61,40 @@ export default function Tenants() {
     { label: "Số điện thoại", accessor: "phone_number" },
     { label: "Email", accessor: "email" },
     { label: "Địa chỉ", accessor: "address" },
+    {
+      label: "Ảnh CCCD",
+      accessor: "id_card_front_path",
+      render: (front, tenant) => (
+        <div className="d-flex gap-2 align-items-center">
+          {front && (
+            <img
+              src={front.startsWith("/") ? front : `/cccd/${front}`}
+              alt="CCCD trước"
+              style={{ width: 40, height: 28, objectFit: "cover", borderRadius: 4, border: "1px solid #eee", cursor: "pointer" }}
+              onClick={() =>
+                setViewCCCD({
+                  src: front.startsWith("/") ? front : `/cccd/${front}`,
+                  alt: "CCCD mặt trước",
+                })
+              }
+            />
+          )}
+          {tenant.id_card_back_path && (
+            <img
+              src={tenant.id_card_back_path.startsWith("/") ? tenant.id_card_back_path : `/cccd/${tenant.id_card_back_path}`}
+              alt="CCCD sau"
+              style={{ width: 40, height: 28, objectFit: "cover", borderRadius: 4, border: "1px solid #eee", cursor: "pointer" }}
+              onClick={() =>
+                setViewCCCD({
+                  src: tenant.id_card_back_path.startsWith("/") ? tenant.id_card_back_path : `/cccd/${tenant.id_card_back_path}`,
+                  alt: "CCCD mặt sau",
+                })
+              }
+            />
+          )}
+        </div>
+      ),
+    },
     {
       label: "Ngày tạo",
       accessor: "created_at",
@@ -153,18 +191,40 @@ export default function Tenants() {
     a.click();
   };
 
+  // Hàm upload file CCCD, trả về đường dẫn ảnh
+  const uploadCCCD = async (file, tenantId, type) => {
+    if (!file || !tenantId || !type) return "";
+    const formData = new FormData();
+    formData.append("file", file);
+    // Truyền tenant_id và loại mặt (front/back) vào query
+    const res = await fetch(`${CCCD_UPLOAD_API}?tenant_id=${tenantId}_${type}`, {
+      method: "POST",
+      body: formData,
+    });
+    const data = await res.json();
+    return data.image_path || "";
+  };
+
   // CRUD
   const createTenant = async () => {
     try {
+      let frontPath = form.id_card_front_path;
+      let backPath = form.id_card_back_path;
+      const tenantId = form.tenant_id;
+      if (frontFile) frontPath = await uploadCCCD(frontFile, tenantId, "front");
+      if (backFile) backPath = await uploadCCCD(backFile, tenantId, "back");
+
       const res = await fetch(TENANT_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, id_card_front_path: frontPath, id_card_back_path: backPath }),
       });
       if (!res.ok) throw new Error(await res.text());
       await fetchTenants();
       toast.success("✅ Thêm khách thuê thành công!");
       setShowModal(false);
+      setFrontFile(null);
+      setBackFile(null);
     } catch (err) {
       toast.error("Thêm khách thuê thất bại! " + err.message);
     }
@@ -172,15 +232,23 @@ export default function Tenants() {
 
   const updateTenant = async () => {
     try {
+      let frontPath = form.id_card_front_path;
+      let backPath = form.id_card_back_path;
+      const tenantId = form.tenant_id;
+      if (frontFile) frontPath = await uploadCCCD(frontFile, tenantId, "front");
+      if (backFile) backPath = await uploadCCCD(backFile, tenantId, "back");
+
       const res = await fetch(`${TENANT_URL}/${editingTenant.tenant_id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, id_card_front_path: frontPath, id_card_back_path: backPath }),
       });
       if (!res.ok) throw new Error(await res.text());
       await fetchTenants();
       toast.success("✏️ Cập nhật khách thuê thành công!");
       setShowModal(false);
+      setFrontFile(null);
+      setBackFile(null);
     } catch (err) {
       toast.error("Cập nhật khách thuê thất bại! " + err.message);
     }
@@ -266,6 +334,95 @@ export default function Tenants() {
     setForm((prev) => ({ ...prev, [field]: value }));
     setUnsavedChanges(true);
   };
+
+  function ZoomableDraggableImage({ src, alt }) {
+    const [zoomed, setZoomed] = useState(false);
+    const [dragging, setDragging] = useState(false);
+    const [pos, setPos] = useState({ x: 0, y: 0 });
+    const [start, setStart] = useState({ x: 0, y: 0 });
+    const [mouseDown, setMouseDown] = useState(false);
+    const [moved, setMoved] = useState(false);
+
+    const imgRef = useRef();
+
+    const handleClick = (e) => {
+      // Nếu vừa drag thì không zoom
+      if (moved) {
+        setMoved(false);
+        return;
+      }
+      setZoomed(!zoomed);
+      setPos({ x: 0, y: 0 });
+    };
+
+    const handleMouseDown = (e) => {
+      if (!zoomed) return;
+      setMouseDown(true);
+      setDragging(true);
+      setStart({ x: e.clientX - pos.x, y: e.clientY - pos.y });
+      setMoved(false);
+      document.body.style.cursor = "grabbing";
+    };
+
+    const handleMouseMove = (e) => {
+      if (mouseDown && zoomed) {
+        const dx = e.clientX - start.x;
+        const dy = e.clientY - start.y;
+        // Nếu di chuyển đủ xa thì coi là drag, không phải click
+        if (Math.abs(dx - pos.x) > 3 || Math.abs(dy - pos.y) > 3) {
+          setMoved(true);
+        }
+        setPos({ x: dx, y: dy });
+      }
+    };
+
+    const handleMouseUp = () => {
+      setMouseDown(false);
+      setDragging(false);
+      document.body.style.cursor = "default";
+    };
+
+    useEffect(() => {
+      if (mouseDown) {
+        window.addEventListener("mousemove", handleMouseMove);
+        window.addEventListener("mouseup", handleMouseUp);
+      } else {
+        window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+      }
+      return () => {
+        window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+      };
+      // eslint-disable-next-line
+    }, [mouseDown, zoomed, start, pos]);
+
+    return (
+      <img
+        ref={imgRef}
+        src={src}
+        alt={alt}
+        style={{
+          maxWidth: zoomed ? "none" : "100%",
+          maxHeight: zoomed ? "none" : "70vh",
+          width: zoomed ? "auto" : "100%",
+          height: zoomed ? "auto" : "auto",
+          borderRadius: 12,
+          border: "2px solid #eee",
+          transition: "transform 0.3s",
+          cursor: zoomed ? (dragging ? "grabbing" : "grab") : "zoom-in",
+          transform: zoomed
+            ? `scale(1.8) translate(${pos.x / 1.8}px, ${pos.y / 1.8}px)`
+            : "scale(1)",
+          boxShadow: zoomed ? "0 0 16px rgba(0,0,0,0.15)" : "none",
+          userSelect: "none",
+        }}
+        draggable={false}
+        onClick={handleClick}
+        onMouseDown={handleMouseDown}
+      />
+    );
+  }
 
   return (
     <div className="container mt-4 position-relative">
@@ -393,20 +550,38 @@ export default function Tenants() {
               </div>
               <div className="col-md-6">
                 <label className="form-label">Ảnh CMND/CCCD mặt trước</label>
+                {form.id_card_front_path && (
+                  <div className="mb-2">
+                    <img
+                      src={form.id_card_front_path.startsWith("/") ? form.id_card_front_path : `/cccd/${form.id_card_front_path}`}
+                      alt="CCCD trước"
+                      style={{ maxWidth: "100%", maxHeight: 120, borderRadius: 8, border: "1px solid #eee" }}
+                    />
+                  </div>
+                )}
                 <input
-                  type="text"
+                  type="file"
+                  accept="image/*"
                   className="form-control"
-                  value={form.id_card_front_path}
-                  onChange={(e) => handleFormChange("id_card_front_path", e.target.value)}
+                  onChange={e => setFrontFile(e.target.files[0])}
                 />
               </div>
               <div className="col-md-6">
                 <label className="form-label">Ảnh CMND/CCCD mặt sau</label>
+                {form.id_card_back_path && (
+                  <div className="mb-2">
+                    <img
+                      src={form.id_card_back_path.startsWith("/") ? form.id_card_back_path : `/cccd/${form.id_card_back_path}`}
+                      alt="CCCD sau"
+                      style={{ maxWidth: "100%", maxHeight: 120, borderRadius: 8, border: "1px solid #eee" }}
+                    />
+                  </div>
+                )}
                 <input
-                  type="text"
+                  type="file"
+                  accept="image/*"
                   className="form-control"
-                  value={form.id_card_back_path}
-                  onChange={(e) => handleFormChange("id_card_back_path", e.target.value)}
+                  onChange={e => setBackFile(e.target.files[0])}
                 />
               </div>
               <div className="col-12">
@@ -452,6 +627,33 @@ export default function Tenants() {
           }}
           onClose={() => setShowConfirmExit(false)}
         />
+
+        {/* Modal xem ảnh CCCD lớn */}
+        <Modal
+          isOpen={!!viewCCCD}
+          onClose={() => setViewCCCD(null)}
+          title={viewCCCD?.alt || "Ảnh CCCD"}
+          showConfirm={false}
+        >
+          {viewCCCD && (
+            <div style={{ textAlign: "center", position: "relative", overflow: "hidden" }}>
+              <div
+                style={{
+                  display: "inline-block",
+                  maxWidth: "100%",
+                  maxHeight: "70vh",
+                  position: "relative",
+                  cursor: "grab",
+                }}
+              >
+                <ZoomableDraggableImage src={viewCCCD.src} alt={viewCCCD.alt} />
+              </div>
+              <div className="mt-2 text-muted" style={{ fontSize: 14 }}>
+                Nhấn vào ảnh để phóng to / thu nhỏ, giữ chuột để di chuyển khi đã zoom
+              </div>
+            </div>
+          )}
+        </Modal>
       </div>
       <ToastContainer position="top-right" autoClose={3000} />
     </div>

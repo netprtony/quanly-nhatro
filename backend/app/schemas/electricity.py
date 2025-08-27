@@ -28,6 +28,8 @@ class ElectricityMeterUpdate(BaseModel):
 
 class ElectricityMeterOut(BaseModel):
     meter_id: int
+    full_name: str
+
     room_id: int
     month: date
     old_reading: int

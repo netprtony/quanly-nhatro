@@ -90,6 +90,11 @@ export default function Electricity() {
           : "N/A",
     },
     {
+      label: "Người sử dụng",
+      accessor: "full_name", // Trường mới lấy từ API
+      render: (value) => value || <span className="text-muted">Chưa có</span>,
+    },
+    {
       label: "Thao tác",
       accessor: "actions",
       render: (_, electricity) => (

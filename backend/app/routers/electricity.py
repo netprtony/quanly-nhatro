@@ -12,21 +12,58 @@ router = APIRouter(prefix="/electricity", tags=["Electricity"])
 
 @router.get("/", response_model=PaginatedElectricityMeterOut)
 def get_meters(
-    db:Session = Depends(database.get_db),
+    db: Session = Depends(database.get_db),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=200),
-    search: str = Query(None, description="Tìm theo phòng hoặc tháng")
+    search: str = Query(None, description="Tìm theo phòng hoặc tháng"),
+    sort_field: str = Query(None, description="Trường sắp xếp"),
+    sort_order: str = Query("asc", description="Thứ tự sắp xếp"),
+    tenant_id: str = Query(None, description="Lọc theo tenant_id"),
 ):
-    query = db.query(models.ElectricityMeter)
+    query = db.query(
+        models.ElectricityMeter,
+        models.Tenant.full_name
+    ).join(
+        models.Contract, models.Contract.room_id == models.ElectricityMeter.room_id
+    ).join(
+        models.Tenant, models.Contract.tenant_id == models.Tenant.tenant_id
+    )
+
+    if tenant_id:
+        query = query.filter(models.Contract.tenant_id == tenant_id)
+
     if search:
         query = query.join(models.Room).filter(
             (models.Room.room_number.ilike(f"%{search}%")) |
             (cast(models.ElectricityMeter.month, String).ilike(f"%{search}%"))
         )
 
+    valid_sort_fields = {
+        "meter_id": models.ElectricityMeter.meter_id,
+        "room_id": models.ElectricityMeter.room_id,
+        "month": models.ElectricityMeter.month,
+        "full_name": models.Tenant.full_name,
+        "created_at": models.ElectricityMeter.created_at,
+    }
+    if sort_field in valid_sort_fields:
+        col = valid_sort_fields[sort_field]
+        if sort_order == "desc":
+            query = query.order_by(col.desc())
+        else:
+            query = query.order_by(col.asc())
+
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
-    return {"total": total, "items": items}
+
+    # Trả về dữ liệu gồm ElectricityMeter và full_name
+    result = [
+        {
+            **item[0].__dict__,
+            "full_name": item[1]
+        }
+        for item in items
+    ]
+    return {"total": total, "items": result}
 
 @router.get("/{meter_id}", response_model=ElectricityMeterOut)
 def get_meter(meter_id: int, db: Session = Depends(database.get_db)):

@@ -1,10 +1,11 @@
 from datetime import date, datetime
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List
 from app import models, database
 from app.schemas import TenantCreate, TenantUpdate, TenantOut, PaginatedTenantOut, FilterRequest, TenantResponse
 from app import models, utils, database
+import os
 
 router = APIRouter(prefix="/tenants", tags=["Tenants"])
 
@@ -157,3 +158,36 @@ def get_tenant_from_user(user_id: int, db: Session = Depends(database.get_db)):
     if not user.tenant:
         raise HTTPException(status_code=404, detail="Tenant not found for this user")
     return user.tenant
+
+# ✅ Lấy thư mục gốc project (d:\NhaTroBaoBao)
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+
+# ✅ Thư mục FE chính cho CCCD
+UPLOAD_DIR = os.path.join(PROJECT_ROOT, "nha-tro-fe", "public", "cccd")
+
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif"}
+ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/gif"}
+
+@router.post("/upload-cccd")
+async def upload_cccd(
+    file: UploadFile = File(...),
+    tenant_id: str = Query(..., description="ID khách thuê để đặt tên file"),
+):
+    if file.content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(status_code=400, detail="Chỉ được upload file ảnh (jpg, png, gif)")
+
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Định dạng file không hợp lệ")
+
+    # Đặt tên file theo tenant_id, ví dụ: {tenant_id}_front.jpg hoặc {tenant_id}_back.jpg
+    filename = f"{tenant_id}_{file.filename}"
+    save_path = os.path.join(UPLOAD_DIR, filename)
+
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+    # Ghi đè file nếu đã tồn tại
+    with open(save_path, "wb") as buffer:
+        buffer.write(await file.read())
+
+    return {"image_path": f"/cccd/{filename}"}
