@@ -123,17 +123,7 @@ CREATE TABLE Payments (
     note TEXT,
     FOREIGN KEY (invoice_id) REFERENCES Invoices(invoice_id) ON DELETE CASCADE
 );
-CREATE TABLE RepairRequests (
-    request_id INT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id VARCHAR(15) NOT NULL,
-    room_id INT NOT NULL,
-    request_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    issue_description TEXT NOT NULL,
-    status ENUM('Pending', 'In Progress', 'Completed', 'Cancelled') DEFAULT 'Pending',
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (tenant_id) REFERENCES Tenants(tenant_id) ON DELETE CASCADE,
-    FOREIGN KEY (room_id) REFERENCES Rooms(room_id) ON DELETE CASCADE
-);
+
 CREATE TABLE Reservations (
     reservation_id INT AUTO_INCREMENT PRIMARY KEY,
     contact_phone VARCHAR(15) NOT NULL, 

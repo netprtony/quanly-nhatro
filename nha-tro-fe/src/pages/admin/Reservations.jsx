@@ -87,12 +87,12 @@ export default function Reservations() {
     }
   };
 
-  // Lấy danh sách phòng
+  // Lấy danh sách phòng còn trống (is_available=true)
   const fetchRooms = async () => {
     try {
-      const res = await fetch(`${ROOMS_API}?page=1&page_size=200`);
+      const res = await fetch("http://localhost:8000/rooms/all?filter_is_available=true");
       const data = await res.json();
-      setRooms(Array.isArray(data.items) ? data.items : []);
+      setRooms(Array.isArray(data) ? data : []);
     } catch (err) {
       toast.error("Không thể tải danh sách phòng!");
       setRooms([]);
@@ -227,7 +227,14 @@ export default function Reservations() {
         return <span className={className}>{display}</span>;
       }
     },
-    { label: "Ngày tạo", accessor: "created_at" },
+    { label: "Ngày tạo", accessor: "created_at",
+       render: (value) => {
+        if (!value) return "";
+        const date = new Date(value);
+        const pad = (n) => n.toString().padStart(2, "0");
+        return `${pad(date.getHours())}:${pad(date.getMinutes())} ${pad(date.getDate())}-${pad(date.getMonth() + 1)}-${date.getFullYear()}`;
+      },
+     },
     {
       label: "Thao tác",
       accessor: "actions",

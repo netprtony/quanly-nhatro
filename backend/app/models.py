@@ -35,11 +35,6 @@ class FeeTypeEnum(str, enum.Enum):
     Wifi = 'Wifi'
     Other = 'Other'
 
-class RepairStatusEnum(str, enum.Enum):
-    Pending = 'Pending'
-    InProgress = 'In Progress'
-    Completed = 'Completed'
-    Cancelled = 'Cancelled'
 
 class ReservationStatusEnum(str, enum.Enum):
     Pending = "Pending"
@@ -186,15 +181,6 @@ class Payment(Base):
     def room_number(self):
         return self.invoice.room.room_number if self.invoice and self.invoice.room else None
 
-class RepairRequest(Base):
-    __tablename__ = "RepairRequests"
-    request_id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(15), ForeignKey("Tenants.tenant_id", ondelete="CASCADE"), nullable=False)
-    room_id = Column(Integer, ForeignKey("Rooms.room_id", ondelete="CASCADE"), nullable=False)
-    request_date = Column(DateTime, default=datetime.datetime.utcnow)
-    issue_description = Column(Text, nullable=False)
-    status = Column(Enum(RepairStatusEnum), default=RepairStatusEnum.Pending)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
 class Reservation(Base):
     __tablename__ = "Reservations"

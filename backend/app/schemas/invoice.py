@@ -19,7 +19,7 @@ class InvoiceUpdate(BaseModel):
     month: Optional[date] = None
     total_amount: Optional[float] = None
     is_paid: Optional[bool] = None
-
+    
 
 # Schema trả về
 class InvoiceOut(InvoiceBase):

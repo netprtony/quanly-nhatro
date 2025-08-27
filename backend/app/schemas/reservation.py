@@ -20,9 +20,11 @@ class ReservationUpdate(BaseModel):
 
 class ReservationOut(BaseModel):
     reservation_id: int
+    
     contact_phone: str
     room_id: int
     status: str
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
