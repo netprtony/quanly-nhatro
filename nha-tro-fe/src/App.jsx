@@ -54,14 +54,7 @@ function App() {
 
       {/* ----------- CLIENT LAYOUT ----------- */}
       <Route path="/" element={<Layout />}>
-        <Route
-          index
-          element={
-            <GuestRoute>
-              <Home />
-            </GuestRoute>
-          }
-        />
+        <Route index element={<Home />} />
         <Route path="/home" element={<Home />} />
         <Route path="/rooms" element={<RoomUser />} />
         <Route path="/rooms/:roomId" element={<DetailRoom />} />

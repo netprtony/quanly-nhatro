@@ -17,9 +17,13 @@ def get_reservations(
 ):
     query = db.query(models.Reservation)
     if search:
-        query = query.join(models.Room).filter(
+        # Join Room và Tenant để tìm theo số phòng hoặc tên tenant
+        query = query.join(models.User, models.Reservation.user_id == models.User.id)
+        query = query.join(models.Tenant, models.User.id == models.Tenant.user_id)
+        query = query.filter(
             (models.Reservation.contact_phone.ilike(f"%{search}%")) |
-            (models.Room.room_number.ilike(f"%{search}%"))
+            (models.Room.room_number.ilike(f"%{search}%")) |
+            (models.Tenant.full_name.ilike(f"%{search}%"))
         )
     # Thêm xử lý sort
     valid_sort_fields = {

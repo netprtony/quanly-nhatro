@@ -201,6 +201,11 @@ export default function Reservations() {
     { label: "ID", accessor: "reservation_id" },
     { label: "Số điện thoại", accessor: "contact_phone" },
     {
+      label: "Tên người thuê",
+      accessor: "full_name",
+      render: (full_name, row) => full_name || row.full_name || ""
+    },
+    {
       label: "Phòng",
       accessor: "room_id",
       render: (room_id) => {

@@ -18,13 +18,15 @@ class ReservationUpdate(BaseModel):
     user_id: Optional[int] = None
     status: Optional[str] = None
 
+
 class ReservationOut(BaseModel):
     reservation_id: int
-    
+    user_id: Optional[int] = None
     contact_phone: str
     room_id: int
     status: str
     created_at: Optional[datetime] = None
+    full_name: Optional[str] = None  # Tên người thuê
 
     class Config:
         from_attributes = True

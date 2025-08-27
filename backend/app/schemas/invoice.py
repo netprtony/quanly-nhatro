@@ -4,6 +4,7 @@ from datetime import date, datetime
 
 # Base dùng cho create/update
 class InvoiceBase(BaseModel):
+    
     room_id: int
     month: date
     total_amount: Optional[float] = None
