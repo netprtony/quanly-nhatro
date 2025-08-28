@@ -28,8 +28,6 @@ class ElectricityMeterUpdate(BaseModel):
 
 class ElectricityMeterOut(BaseModel):
     meter_id: int
-    full_name: str
-
     room_id: int
     month: date
     old_reading: int
@@ -48,3 +46,12 @@ class PaginatedElectricityMeterOut(BaseModel):
 
     class Config:
         orm_mode = True
+
+class Filter(BaseModel):
+    field: str
+    operator: str
+    value: str
+
+
+class FilterRequest(BaseModel):
+    filters: List[Filter] = []   # ⚠️ tránh dùng Optional[List] = [] vì default mutable

@@ -41,6 +41,10 @@ export default function Electricity() {
   const [pageSize, setPageSize] = useState(20);
   const [totalRecords, setTotalRecords] = useState(0);
 
+  // Sắp xếp
+  const [sortField, setSortField] = useState("");
+  const [sortOrder, setSortOrder] = useState("asc");
+
   const fieldOptions = [
     { value: "room_id", label: "Phòng", type: "number" },
     { value: "month", label: "Tháng", type: "string" },
@@ -90,11 +94,6 @@ export default function Electricity() {
           : "N/A",
     },
     {
-      label: "Người sử dụng",
-      accessor: "full_name", // Trường mới lấy từ API
-      render: (value) => value || <span className="text-muted">Chưa có</span>,
-    },
-    {
       label: "Thao tác",
       accessor: "actions",
       render: (_, electricity) => (
@@ -121,19 +120,24 @@ export default function Electricity() {
   // Lấy danh sách hóa đơn điện có phân trang
   const fetchElectricities = async () => {
     try {
-      let query = `?page=${page}&page_size=${pageSize}`;
+      let data;
+      let sortParams = "";
+      if (sortField) sortParams += `&sort_field=${sortField}`;
+      if (sortOrder) sortParams += `&sort_order=${sortOrder}`;
       if (filters.length > 0) {
-        query += "&" + filters
-          .map(
-            (f) =>
-              `filter_${f.field}=${encodeURIComponent(
-                f.operator + f.value
-              )}`
-          )
-          .join("&");
+        // Gọi API filter nâng cao
+        const res = await axios.post(
+          `${ELECTRICITY_API}/filter?page=${page}&page_size=${pageSize}${sortParams}`,
+          { filters }
+        );
+        data = res.data;
+      } else {
+        // Gọi API thường
+        const res = await axios.get(
+          `${ELECTRICITY_API}?page=${page}&page_size=${pageSize}${sortParams}`
+        );
+        data = res.data;
       }
-      const res = await axios.get(ELECTRICITY_API + query);
-      const data = res.data;
       setElectricities(Array.isArray(data.items) ? data.items : []);
       setTotalRecords(data.total || 0);
     } catch (err) {
@@ -147,7 +151,7 @@ export default function Electricity() {
     fetchRooms();
     fetchElectricities();
     // eslint-disable-next-line
-  }, [filters, page, pageSize]);
+  }, [filters, page, pageSize, sortField, sortOrder]);
 
   const handleAdd = () => {
     setForm({
@@ -235,27 +239,20 @@ export default function Electricity() {
   const [autoOldReading, setAutoOldReading] = useState(null);
 
   // Hàm lấy chỉ số mới của tháng trước
-  const fetchPreviousMonthReading = async (room_id, month) => {
-    if (!room_id || !month) {
+  const fetchPreviousMonthReading = async (room_id) => {
+    if (!room_id) {
       setAutoOldReading(null);
       return;
     }
-    // Tính tháng trước
-    const [year, mon] = month.split("-");
-    let prevMonth = parseInt(mon) - 1;
-    let prevYear = parseInt(year);
-    if (prevMonth === 0) {
-      prevMonth = 12;
-      prevYear -= 1;
-    }
-    const prevMonthStr = `${prevYear}-${prevMonth.toString().padStart(2, "0")}-01`;
-
     try {
-      // Gọi API lấy công tơ điện của phòng và tháng trước
-      const res = await axios.get(`${ELECTRICITY_API}?room_id=${room_id}&month=${prevMonthStr}`);
-      if (res.data && res.data.length > 0) {
-        setAutoOldReading(res.data[0].new_reading);
-        setForm((prev) => ({ ...prev, old_reading: res.data[0].new_reading }));
+      // Gọi API lấy công tơ điện của phòng, tháng gần nhất
+      const res = await axios.get(
+        `${ELECTRICITY_API}?room_id=${room_id}&sort_field=month&sort_order=desc&page_size=1`
+      );
+      const items = res.data?.items || [];
+      if (items.length > 0) {
+        setAutoOldReading(items[0].new_reading);
+        setForm((prev) => ({ ...prev, old_reading: items[0].new_reading }));
       } else {
         setAutoOldReading(0);
         setForm((prev) => ({ ...prev, old_reading: 0 }));
@@ -266,13 +263,13 @@ export default function Electricity() {
     }
   };
 
-  // Khi chọn phòng hoặc tháng thì tự động lấy chỉ số cũ
+  // Khi chọn phòng thì tự động lấy chỉ số cũ tháng gần nhất
   useEffect(() => {
-    if (form.room_id && form.month && !editingElectricity) {
-      fetchPreviousMonthReading(form.room_id, form.month);
+    if (form.room_id && !editingElectricity) {
+      fetchPreviousMonthReading(form.room_id);
     }
     // eslint-disable-next-line
-  }, [form.room_id, form.month]);
+  }, [form.room_id]);
 
   const handleFormChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -342,10 +339,13 @@ export default function Electricity() {
       const exportRows = [];
       for (const room of roomsData) {
         // Tìm tháng gần nhất đã có hóa đơn điện
-        const resMeters = await axios.get(`${ELECTRICITY_API}?room_id=${room.room_id}&_sort=month&_order=desc&_limit=1`);
+        const resMeters = await axios.get(
+          `${ELECTRICITY_API}?room_id=${room.room_id}&sort_field=month&sort_order=desc&page_size=1`
+        );
         let oldReading = 0;
-        if (resMeters.data && resMeters.data.length > 0) {
-          oldReading = resMeters.data[0].new_reading;
+        const items = resMeters.data?.items || [];
+        if (items.length > 0) {
+          oldReading = items[0].new_reading;
         }
         exportRows.push({
           room_id: room.room_id,
@@ -521,6 +521,12 @@ export default function Electricity() {
           onPageSizeChange={(size) => {
             setPageSize(size);
             setPage(1);
+          }}
+          sortField={sortField}
+          sortOrder={sortOrder}
+          onSort={(field, order) => {
+            setSortField(field);
+            setSortOrder(order);
           }}
         />
 
