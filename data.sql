@@ -70,6 +70,7 @@ CREATE TABLE Contracts (
     num_people INT DEFAULT 1,         -- số lượng người ở
     num_vehicles INT DEFAULT 0,       -- số lượng xe
     contract_status ENUM('Active', 'Terminated', 'Pending') DEFAULT 'Active',
+    path_contract VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (tenant_id) REFERENCES Tenants(tenant_id) ON DELETE CASCADE,
     FOREIGN KEY (room_id) REFERENCES Rooms(room_id) ON DELETE CASCADE

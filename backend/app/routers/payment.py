@@ -11,54 +11,9 @@ import hmac
 import hashlib
 import json
 import os
-from dotenv import load_dotenv
-load_dotenv()
+
 router = APIRouter(prefix="/payments", tags=["Payments"])
-PAYOS_CLIENT_ID = os.getenv("PAYOS_CLIENT_ID")
-PAYOS_API_KEY = os.getenv("PAYOS_API_KEY")
-PAYOS_CHECKSUM_KEY = os.getenv("PAYOS_CHECKSUM_KEY")
-PAYOS_ENDPOINT = "https://api-merchant.payos.vn/v2/payment-requests"
-def generate_checksum(data, key):
-    raw_data = json.dumps(data, separators=(',', ':'))
-    return hmac.new(key.encode('utf-8'), raw_data.encode('utf-8'), hashlib.sha256).hexdigest()
 
-@router.post("/payos")
-def create_payment(body: PaymentRequest, db: Session = Depends(database.get_db)):
-    amount = int(body.amount)
-    invoice_id = body.invoice_id
-
-    # orderCode phải unique (dùng timestamp thay vì invoice_id)
-    order_code = int(datetime.datetime.now().timestamp())
-
-    payload = {
-        "orderCode": int(invoice_id),  # hoặc order_code, nhưng phải là số nguyên
-        "amount": int(amount),
-        "currency": "VND",
-        "description": f"Thanh toán hóa đơn #{invoice_id}",
-        "returnUrl": "http://localhost:3000/payment-success",
-        "cancelUrl": "http://localhost:3000/payment-failed"
-    }
-    payload["checksum"] = generate_checksum(payload, PAYOS_CHECKSUM_KEY)
-
-    headers = {
-        "x-client-id": PAYOS_CLIENT_ID,
-        "x-api-key": PAYOS_API_KEY,
-        "Content-Type": "application/json"
-    }
-
-    response = requests.post(PAYOS_ENDPOINT, headers=headers, json=payload)
-    data = response.json()
-
-    # Nếu thành công, cập nhật transaction_reference
-    if data.get("code") == "00" and data.get("data"):
-        checkout_url = data["data"].get("checkoutUrl")
-        transaction_reference = data["data"].get("transactionId")  # field chuẩn PayOS
-        invoice = db.query(models.Invoice).filter(models.Invoice.invoice_id == invoice_id).first()
-        if invoice and transaction_reference:
-            invoice.transaction_reference = transaction_reference
-            db.commit()
-
-    return data
 
 @router.get("/", response_model=PaginatedPaymentOut)
 def get_payments(
@@ -227,5 +182,72 @@ def filter_payment(
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
     return {"items": items, "total": total}
+
+@router.post("/momo-payment")
+def momo_payment(
+    amount: int,
+    order_info: str = "pay with MoMo",
+    redirect_url: str = "https://webhook.site/b3088a6a-2d17-4f8d-a383-71389a6c600b",
+    ipn_url: str = "https://webhook.site/b3088a6a-2d17-4f8d-a383-71389a6c600b",
+    payment_code: str = "",
+    auto_capture: bool = True,
+    lang: str = "vi"
+):
+    accessKey = 'F8BBA842ECF85'
+    secretKey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz'
+    partnerCode = 'MOMO'
+    requestType = "payWithMethod"
+    extraData = ''
+    orderGroupId = ''
+    storeId = "MomoTestStore"
+    partnerName = "Test"
+
+    orderId = partnerCode + str(int(datetime.datetime.now().timestamp() * 1000))
+    requestId = orderId
+
+    # Tạo raw signature
+    rawSignature = (
+        f"accessKey={accessKey}"
+        f"&amount={amount}"
+        f"&extraData={extraData}"
+        f"&ipnUrl={ipn_url}"
+        f"&orderId={orderId}"
+        f"&orderInfo={order_info}"
+        f"&partnerCode={partnerCode}"
+        f"&redirectUrl={redirect_url}"
+        f"&requestId={requestId}"
+        f"&requestType={requestType}"
+    )
+
+    # Tạo chữ ký HMAC SHA256
+    signature = hmac.new(
+        secretKey.encode('utf-8'),
+        rawSignature.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+
+    requestBody = {
+        "partnerCode": partnerCode,
+        "partnerName": partnerName,
+        "storeId": storeId,
+        "requestId": requestId,
+        "amount": str(amount),
+        "orderId": orderId,
+        "orderInfo": order_info,
+        "redirectUrl": redirect_url,
+        "ipnUrl": ipn_url,
+        "lang": lang,
+        "requestType": requestType,
+        "autoCapture": auto_capture,
+        "extraData": extraData,
+        "orderGroupId": orderGroupId,
+        "signature": signature
+    }
+
+    momo_url = "https://test-payment.momo.vn/v2/gateway/api/create"
+    headers = {"Content-Type": "application/json"}
+
+    response = requests.post(momo_url, data=json.dumps(requestBody), headers=headers)
+    return response.json()
 
 

@@ -2,10 +2,14 @@ from datetime import date
 import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import List
+from app import utils
 from app import models, database
 from app.schemas.contract import ContractCreate, ContractUpdate, ContractOut,PaginatedContract, FilterRequest, ContractDetailOut
-
+import os
+from docxtpl import DocxTemplate
+from fastapi.responses import FileResponse
+from docx2pdf import convert
+import pythoncom
 
 router = APIRouter(prefix="/contracts", tags=["Contracts"])
 
@@ -56,6 +60,7 @@ def get_contract(contract_id: int, db: Session = Depends(database.get_db)):
 
 @router.post("/", response_model=ContractOut, status_code=201)
 def create_contract(contract: ContractCreate, db: Session = Depends(database.get_db)):
+    # Đảm bảo path_contract được truyền vào và lưu đúng
     db_contract = models.Contract(**contract.dict())
     db.add(db_contract)
     db.commit()
@@ -176,3 +181,78 @@ def get_contract_by_tenant(tenant_id: str, db: Session = Depends(database.get_db
         "num_vehicles": contract_obj.num_vehicles,
         "contract_status": contract_obj.contract_status,
     }
+
+import os
+
+# Đường dẫn gốc backend (dùng cho template)
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+TEMPLATE_PATH = os.path.join(PROJECT_ROOT, "ContractFile", "Mau_Hop_Dong_Cho_Thue_Tro.docx")
+
+# Đường dẫn FE public (nằm ngoài backend)
+FE_PUBLIC_CONTRACTS_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "nha-tro-fe", "public", "contracts_file")
+)
+os.makedirs(FE_PUBLIC_CONTRACTS_DIR, exist_ok=True)
+
+@router.get("/export/{contract_id}")
+def export_contract(
+    contract_id: int,
+    file_type: str = Query("docx", enum=["docx", "pdf"]),
+    file_name: str = Query(None),
+    db: Session = Depends(database.get_db)
+):
+    # Lấy hợp đồng
+    contract = db.query(models.Contract).filter(models.Contract.contract_id == contract_id).first()
+    if not contract:
+        raise HTTPException(status_code=404, detail="Không tìm thấy hợp đồng")
+
+    # Lấy thông tin tenant
+    tenant = db.query(models.Tenant).filter(models.Tenant.tenant_id == contract.tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Không tìm thấy người thuê")
+    month_rent_read = utils.num2words_vnd(int(contract.monthly_rent)) if contract.monthly_rent else ""
+    deposit_amount_read = utils.num2words_vnd(int(contract.deposit_amount)) if contract.deposit_amount else ""
+    # Chuẩn bị dữ liệu context để render vào mẫu
+    start_date = datetime.date.today()
+    context = {
+        "day": start_date.day,
+        "month": start_date.month,
+        "year": start_date.year,
+        "tenant_name": tenant.full_name,
+        "tenant_id": tenant.tenant_id,
+        "deposit_amount": f"{contract.deposit_amount:,.0f}" if contract.deposit_amount else "0",
+        "monthly_rent": f"{contract.monthly_rent:,.0f}" if contract.monthly_rent else "0",
+        "monthly_rent_read": month_rent_read,
+        "deposit_amount_read": deposit_amount_read,
+    }
+
+    # Load file mẫu và render
+    doc = DocxTemplate(TEMPLATE_PATH)
+    doc.render(context)
+
+    # Tên file theo yêu cầu FE
+    safe_tenant_name = "".join(c if c.isalnum() else "_" for c in tenant.full_name)
+    ext = "pdf" if file_type == "pdf" else "docx"
+    filename = file_name if file_name else f"{safe_tenant_name}_contract.{ext}"
+    file_path = os.path.join(FE_PUBLIC_CONTRACTS_DIR, filename)
+
+    # Lưu file docx
+    doc.save(file_path if ext == "docx" else file_path.replace(".pdf", ".docx"))
+
+    # Nếu là PDF thì chuyển đổi
+    if file_type == "pdf":
+        from docx2pdf import convert
+        docx_path = file_path.replace(".pdf", ".docx")
+        try:
+            pythoncom.CoInitialize()  # Khởi tạo COM cho thread hiện tại
+            convert(docx_path, file_path)
+            pythoncom.CoUninitialize()  # Giải phóng COM sau khi xong
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Lỗi chuyển đổi PDF: {str(e)}")
+        contract.path_contract = f"/contracts_file/{filename}"
+        db.commit()
+        return FileResponse(file_path, media_type="application/pdf", filename=filename)
+    else:
+        contract.path_contract = f"/contracts_file/{filename}"
+        db.commit()
+        return FileResponse(file_path, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", filename=filename)

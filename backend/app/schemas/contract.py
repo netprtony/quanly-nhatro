@@ -12,6 +12,7 @@ class ContractBase(BaseModel):
     num_people: Optional[int] = 1
     num_vehicles: Optional[int] = 0
     contract_status: Optional[str] = "Active"
+    path_contract: Optional[str] = None
 
 class ContractCreate(ContractBase):
     pass
@@ -26,6 +27,7 @@ class ContractUpdate(BaseModel):
     num_vehicles: Optional[int] = None
     monthly_rent: Optional[float] = None
     contract_status: Optional[str] = None
+    path_contract: Optional[str] = None
 
 class ContractOut(ContractBase):
     contract_id: int
@@ -60,3 +62,4 @@ class ContractDetailOut(BaseModel):
     num_people: int
     num_vehicles: int
     contract_status: str
+    path_contract: str
