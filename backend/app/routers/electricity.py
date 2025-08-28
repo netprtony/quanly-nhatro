@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status
-from httpx import request
 from sqlalchemy.orm import Session
 from sqlalchemy import asc, desc, cast, String
 from typing import List
