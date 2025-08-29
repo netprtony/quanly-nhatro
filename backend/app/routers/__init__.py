@@ -13,6 +13,7 @@ from .invoice_detail import router as invoice_detail_router
 from .backup import router as backup_router
 from .report import router as report_router
 from .roomImage import router as room_image_router
+from .water import router as water_router
 __all__ = [
     "auth_router",
     "account_router",
@@ -28,5 +29,6 @@ __all__ = [
     "invoice_detail_router",
     "backup_router",
     "report_router",
-    "room_image_router"
+    "room_image_router",
+    "water_router"
 ]

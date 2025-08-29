@@ -24,7 +24,8 @@ export default function Sidebar() {
       ]} />
 
       <SidebarItem icon="electricity.svg" label="Dịch vụ" dropdown children={[
-        { label: "Công tơ điện", path: "/admin/electricity" }
+        { label: "Công tơ điện", path: "/admin/electricity" },
+        { label: "Công tơ nước", path: "/admin/water" }
       ]} />
 
       <SidebarItem icon="receipt.svg" label="Hóa Đơn" dropdown children={[

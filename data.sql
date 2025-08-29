@@ -90,7 +90,20 @@ CREATE TABLE ElectricityMeters (
     UNIQUE(room_id, month),
     FOREIGN KEY (room_id) REFERENCES Rooms(room_id) ON DELETE CASCADE
 );
-
+-- Bảng công tơ nước
+CREATE TABLE WaterMeters (
+    meter_id INT AUTO_INCREMENT PRIMARY KEY,
+    room_id INT NOT NULL,
+    month DATE NOT NULL,
+    old_reading INT NOT NULL, -- chỉ số cũ (m3)
+    new_reading INT NOT NULL, -- chỉ số mới (m3)
+    water_rate DECIMAL(10,2) DEFAULT 15000, -- giá 1m3 nước (vd: 15,000đ)
+    usage_m3 INT GENERATED ALWAYS AS (new_reading - old_reading) STORED, -- số m3 tiêu thụ
+    total_amount DECIMAL(10,2) GENERATED ALWAYS AS ((new_reading - old_reading) * water_rate) STORED,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(room_id, month),
+    FOREIGN KEY (room_id) REFERENCES Rooms(room_id) ON DELETE CASCADE
+);
 -- Bảng hóa đơn
 CREATE TABLE Invoices (
     invoice_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -107,12 +120,14 @@ CREATE TABLE Invoices (
 CREATE TABLE InvoiceDetails (
     detail_id INT AUTO_INCREMENT PRIMARY KEY,
     invoice_id INT NOT NULL,
-    meter_id INT,
+    electricity_meter_id INT,
+    water_meter_id  INT,
     fee_type ENUM('Rent', 'Electricity', 'Trash', 'Water', 'Wifi', 'Other') NOT NULL,
     amount DECIMAL(10,2) NOT NULL,
     note TEXT,
     FOREIGN KEY (invoice_id) REFERENCES Invoices(invoice_id) ON DELETE CASCADE,
-    FOREIGN KEY (meter_id) REFERENCES ElectricityMeters(meter_id) ON DELETE SET NULL
+    FOREIGN KEY (electricity_meter_id) REFERENCES ElectricityMeters(meter_id) ON DELETE SET NULL,
+	FOREIGN KEY (water_meter_id) REFERENCES WaterMeters(meter_id) ON DELETE SET NULL
 );
 CREATE TABLE Payments (
     payment_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -231,16 +246,16 @@ INSERT INTO RoomTypes (type_name, description, price_per_month) VALUES
 INSERT INTO Rooms (room_number, room_type_id, max_occupants, floor_number)
 VALUES 
 ('Phòng 1A', 1, 4, 0),
-('Phòng 2A', 1, 4, 0),
-('Phòng 3A', 1, 4, 0),
-('Phòng 4A', 1, 4, 0),
-('Phòng 5A', 1, 4, 0),
-('Phòng 6A', 1, 4, 0),
-('Phòng 7A', 1, 4, 0),
-('Phòng 8A', 1, 4, 0),
+('Phòng 2A', 2, 4, 0),
+('Phòng 3A', 3, 2, 0),
+('Phòng 4A', 4, 4, 0),
+('Phòng 5A', 5, 3, 0),
+('Phòng 6A', 6, 4, 0),
+('Phòng 7A', 7, 1, 0),
+('Phòng 8A', 8, 4, 0),
 
-('Phòng 1B', 1, 4, 0),
-('Phòng 2B', 1, 4, 0),
+('Phòng 1B', 9, 4, 0),
+('Phòng 2B', 10, 4, 0),
 ('Phòng 3B', 1, 4, 0),
 ('Phòng 4B', 1, 4, 0),
 ('Phòng 5B', 1, 4, 0),
@@ -248,13 +263,7 @@ VALUES
 ('Phòng 7B', 1, 4, 0),
 ('Phòng 8B', 1, 4, 0),
 ('Phòng 9B', 1, 4, 0);
-INSERT INTO RoomImages (room_id, image_path) VALUES
-(1, '/public/roomImage/images1.jfif'),
-(1, '/public/roomImage/images2.jfif'),
-(1, '/public/roomImage/images3.jfif'),
-(1, '/public/roomImage/images4.jfif'),
-(1, '/public/roomImage/images5.jfif'),
-(1, '/public/roomImage/images6.jfif');
+INSERT INTO `roomimages` VALUES (7,1,'/roomImage/1c801685-26f7-4949-b6b1-ce324e673d44_1755743014.jpg'),(8,2,'/roomImage/nha-tro-homestay 1.png'),(9,3,'/roomImage/z6940363114799-140893ff0d098a87f063ed43ca5eb211_1756109071.jpg'),(10,4,'/roomImage/images (7).jpg'),(11,5,'/roomImage/images (13).jpg'),(12,6,'/roomImage/uecuhb.jpg'),(13,7,'/roomImage/images4.jpg'),(14,8,'/roomImage/img-9698_1756086720.jpg'),(15,9,'/roomImage/gen-h-1_1756183493 (1).jpg'),(16,10,'/roomImage/img-6931_1756092450.jpg'),(17,11,'/roomImage/images6.jpg'),(18,12,'/roomImage/img-3621_1756184053.jpg'),(19,13,'/roomImage/images2.jpg'),(20,14,'/roomImage/images (7).jpg'),(21,15,'/roomImage/images.jpg'),(22,16,'/roomImage/img-3621_1756184053 (1).jpg'),(23,17,'/roomImage/2daf357b-a8ec-4cab-9e04-f2b268631c6e_1756181830.jpg');
 -- Thêm thiết bị cho các phòng
 INSERT INTO Devices (device_name, room_id, description, is_active)
 VALUES
@@ -344,20 +353,11 @@ VALUES
 ('Ổ cắm điện', 17, 'Ổ cắm 3 chấu', TRUE);
 
 -- Thêm khách thuê
-INSERT INTO Tenants (tenant_id, full_name, gender, date_of_birth, phone_number, email, id_card_front_path, id_card_back_path, address)
-VALUES 
-('079203029606', 'Huỳnh Vĩ Khang', 'Male', '2003-05-28', '0767487840', 'huynhvikhang913@gmail.com', '/public/cccd/front_079203029607.jpg', '/public/cccd/back_079203029607.jpg', '5/5A Nguyễn Thị Sóc, Bà Điểm, Hóc Môn, TP.HCM');
-INSERT INTO Tenants (tenant_id, full_name, gender, date_of_birth, phone_number, email, id_card_front_path, id_card_back_path, address, is_rent) VALUES
-('079203029607', 'Nguyen Van An', 'Male', '1990-05-15', '0905123456', 'an.nguyen@example.com', '/idcards/T001_front.jpg', '/idcards/T001_back.jpg', '123 Le Loi, Q1, HCMC', TRUE),
-('079203029608', 'Tran Thi Bich', 'Female', '1995-08-22', '0912345678', 'bich.tran@example.com', '/idcards/T002_front.jpg', '/idcards/T002_back.jpg', '456 Nguyen Hue, Q1, HCMC', TRUE),
-('079203029609', 'Le Van Cuong', 'Male', '1988-03-10', '0923456789', 'cuong.le@example.com', '/idcards/T003_front.jpg', '/idcards/T003_back.jpg', '789 Tran Hung Dao, Q5, HCMC', TRUE),
-('079203029610', 'Pham Thi Dung', 'Female', '1993-11-30', '0934567890', 'dung.pham@example.com', '/idcards/T004_front.jpg', '/idcards/T004_back.jpg', '101 Vo Van Tan, Q3, HCMC', TRUE),
-('079203029611', 'Hoang Van Em', 'Male', '1992-07-25', '0945678901', 'em.hoang@example.com', '/idcards/T005_front.jpg', '/idcards/T005_back.jpg', '202 Ly Tu Trong, Q1, HCMC', TRUE),
-('079203029612', 'Vo Thi Phuong', 'Female', '1996-02-14', '0956789012', 'phuong.vo@example.com', '/idcards/T006_front.jpg', '/idcards/T006_back.jpg', '303 Hai Ba Trung, Q3, HCMC', TRUE),
-('079203029613', 'Nguyen Van Hung', 'Male', '1985-09-05', '0967890123', 'hung.nguyen@example.com', '/idcards/T007_front.jpg', '/idcards/T007_back.jpg', '404 Nguyen Trai, Q5, HCMC', TRUE),
-('079203029614', 'Tran Van Khanh', 'Male', '1991-12-20', '0978901234', 'khanh.tran@example.com', '/idcards/T008_front.jpg', '/idcards/T008_back.jpg', '505 Le Van Sy, Q3, HCMC', TRUE),
-('079203029615', 'Le Thi Lan', 'Female', '1994-04-18', '0989012345', 'lan.le@example.com', '/idcards/T009_front.jpg', '/idcards/T009_back.jpg', '606 Cach Mang Thang 8, Q3, HCMC', TRUE),
-('079203029616', 'Pham Van Minh', 'Male', '1989-06-12', '0990123456', 'minh.pham@example.com', '/idcards/T010_front.jpg', '/idcards/T010_back.jpg', '707 Nguyen Dinh Chieu, Q3, HCMC', TRUE);
+LOCK TABLES `tenants` WRITE;
+/*!40000 ALTER TABLE `tenants` DISABLE KEYS */;
+INSERT INTO `tenants` VALUES ('079203029607','Nguyen Van An','Male','1990-05-15','0905123456','an.nguyen@example.com','/cccd/079203029607_front_download (1).jpg','/cccd/079203029607_back_download (2).jpg',1,'123 Le Loi, Q1, HCMC','2025-08-28 05:53:51'),('079203029608','Tran Thi Bich','Female','1995-08-22','0912345678','bich.tran@example.com','/cccd/079203029608_front_download.jpg','/cccd/079203029608_back_download (2).jpg',1,'456 Nguyen Hue, Q1, HCMC','2025-08-28 05:53:51'),('079203029609','Le Van Cuong','Male','1988-03-10','0923456789','cuong.le@example.com','/cccd/079203029609_front_download.jpg','/cccd/079203029609_back_download (2).jpg',1,'789 Tran Hung Dao, Q5, HCMC','2025-08-28 05:53:51'),('079203029610','Pham Thi Dung','Female','1993-11-30','0934567890','dung.pham@example.com','/cccd/079203029610_front_download (1).jpg','/cccd/079203029610_back_download (2).jpg',1,'101 Vo Van Tan, Q3, HCMC','2025-08-28 05:53:51'),('079203029611','Hoang Van Em','Male','1992-07-25','0945678901','em.hoang@example.com','/cccd/079203029611_front_download.jpg','/cccd/079203029611_back_download (2).jpg',1,'202 Ly Tu Trong, Q1, HCMC','2025-08-28 05:53:51'),('079203029612','Vo Thi Phuong','Female','1996-02-14','0956789012','phuong.vo@example.com','/cccd/079203029612_front_download (1).jpg','/cccd/079203029612_back_download (2).jpg',1,'303 Hai Ba Trung, Q3, HCMC','2025-08-28 05:53:51'),('079203029613','Nguyen Van Hung','Male','1985-09-05','0967890123','hung.nguyen@example.com','/cccd/079203029613_front_download.jpg','/cccd/079203029613_back_download (2).jpg',1,'404 Nguyen Trai, Q5, HCMC','2025-08-28 05:53:51'),('079203029614','Tran Van Khanh','Male','1991-12-20','0978901234','khanh.tran@example.com','/cccd/079203029614_front_download.jpg','/cccd/079203029614_back_download (2).jpg',1,'505 Le Van Sy, Q3, HCMC','2025-08-28 05:53:51'),('079203029615','Le Thi Lan','Female','1994-04-18','0989012345','lan.le@example.com','/cccd/079203029615_front_download.jpg','/cccd/079203029615_back_download (2).jpg',1,'606 Cach Mang Thang 8, Q3, HCMC','2025-08-28 05:53:51'),('079203029616','Pham Van Minh','Male','1989-06-12','0990123456','minh.pham@example.com','/cccd/079203029616_front_download.jpg','/cccd/079203029616_back_download (2).jpg',1,'707 Nguyen Dinh Chieu, Q3, HCMC','2025-08-28 05:53:51');
+/*!40000 ALTER TABLE `tenants` ENABLE KEYS */;
+UNLOCK TABLES;
 INSERT INTO Users (username, email, password, tenant_id, role, is_active) VALUES
 ('an.nguyen', 'an.nguyen@example.com', '$2a$12$YbgMrDVLpsncrlxrjam0EO4yosTojsqK5nqs1sIhgW/aGz5QsHO0e', '079203029607', 'USER', TRUE),
 ('bich.tran', 'bich.tran@example.com', '$2a$12$YbgMrDVLpsncrlxrjam0EO4yosTojsqK5nqs1sIhgW/aGz5QsHO0e', '079203029608', 'USER', TRUE),
@@ -398,55 +398,20 @@ INSERT INTO ElectricityMeters (room_id, month, old_reading, new_reading, electri
 (8, '2025-07-01', 4500, 4800, 3500.00),
 (9, '2025-07-01', 5000, 5100, 3500.00),
 (10, '2025-07-01', 5500, 5800, 3500.00);
+INSERT WaterMeters (room_id, month, old_reading, new_reading, water_rate) VALUES
+(1, '2025-07-01', 1000, 1200, 15000.00),
+(2, '2025-07-01', 1500, 1800, 15000.00),
+(3, '2025-07-01', 2000, 2300, 15000.00),
+(4, '2025-07-01', 2500, 2700, 15000.00),
+(5, '2025-07-01', 3000, 3100, 15000.00),
+(6, '2025-07-01', 3500, 3800, 15000.00),
+(7, '2025-07-01', 4000, 4300, 15000.00),
+(8, '2025-07-01', 4500, 4800, 15000.00),
+(9, '2025-07-01', 5000, 5100, 15000.00),
+(10, '2025-07-01', 5500, 5800, 15000.00);
 
--- Thêm hóa đơn
-INSERT INTO Invoices (room_id, month, total_amount, is_paid) VALUES
-(1, '2025-01-01', 3500000.00, FALSE),
-(2, '2025-01-01', 5500000.00, TRUE),
-(3, '2025-01-01', 7500000.00, FALSE),
-(4, '2025-01-01', 6500000.00, TRUE),
-(5, '2025-01-01', 3000000.00, FALSE),
-(6, '2025-01-01', 5000000.00, TRUE),
-(7, '2025-01-01', 8500000.00, FALSE),
-(8, '2025-01-01', 10500000.00, TRUE),
-(9, '2025-01-01', 2500000.00, FALSE),
-(10, '2025-01-01', 12500000.00, TRUE);
 
--- Thêm chi tiết hóa đơn
-INSERT INTO InvoiceDetails (invoice_id, meter_id, fee_type, amount, note) VALUES
-(1, 1, 'Rent', 3000000.00, 'Tiền thuê tháng 1'),
-(1, 1, 'Electricity', 700000.00, 'Tiền điện tháng 1'),
-(2, 2, 'Rent', 5000000.00, 'Tiền thuê tháng 1'),
-(2, 2, 'Electricity', 1050000.00, 'Tiền điện tháng 1'),
-(3, 3, 'Rent', 7000000.00, 'Tiền thuê tháng 1'),
-(3, 3, 'Electricity', 1050000.00, 'Tiền điện tháng 1'),
-(4, 4, 'Rent', 6000000.00, 'Tiền thuê tháng 1'),
-(4, 4, 'Electricity', 700000.00, 'Tiền điện tháng 1'),
-(5, 5, 'Rent', 2500000.00, 'Tiền thuê tháng 1'),
-(5, 5, 'Electricity', 350000.00, 'Tiền điện tháng 1'),
-(6, 6, 'Rent', 4500000.00, 'Tiền thuê tháng 1'),
-(6, 6, 'Electricity', 1050000.00, 'Tiền điện tháng 1'),
-(7, 7, 'Rent', 8000000.00, 'Tiền thuê tháng 1'),
-(7, 7, 'Electricity', 1050000.00, 'Tiền điện tháng 1'),
-(8, 8, 'Rent', 10000000.00, 'Tiền thuê tháng 1'),
-(8, 8, 'Electricity', 1050000.00, 'Tiền điện tháng 1'),
-(9, 9, 'Rent', 2000000.00, 'Tiền thuê tháng 1'),
-(9, 9, 'Electricity', 350000.00, 'Tiền điện tháng 1'),
-(10, 10, 'Rent', 12000000.00, 'Tiền thuê tháng 1'),
-(10, 10, 'Electricity', 1050000.00, 'Tiền điện tháng 1');
-
--- Thêm thanh toán
-INSERT INTO Payments (invoice_id, paid_amount, payment_date, payment_method, transaction_reference, note) VALUES
-(2, 5500000.00, '2025-01-05 10:00:00', 'Momo', 'MM123456', 'Thanh toán hóa đơn tháng 1'),
-(4, 6500000.00, '2025-01-06 11:00:00', 'BankTransfer', 'BT123456', 'Thanh toán hóa đơn tháng 1'),
-(6, 5000000.00, '2025-01-07 12:00:00', 'Cash', NULL, 'Thanh toán hóa đơn tháng 1'),
-(8, 10500000.00, '2025-01-08 13:00:00', 'ZaloPay', 'ZP123456', 'Thanh toán hóa đơn tháng 1'),
-(10, 12500000.00, '2025-01-09 14:00:00', 'Momo', 'MM789012', 'Thanh toán hóa đơn tháng 1'),
-(2, 5500000.00, '2025-02-05 10:00:00', 'Momo', 'MM123457', 'Thanh toán hóa đơn tháng 2'),
-(4, 6500000.00, '2025-02-06 11:00:00', 'BankTransfer', 'BT123457', 'Thanh toán hóa đơn tháng 2'),
-(6, 5000000.00, '2025-02-07 12:00:00', 'Cash', NULL, 'Thanh toán hóa đơn tháng 2'),
-(8, 10500000.00, '2025-02-08 13:00:00', 'ZaloPay', 'ZP123457', 'Thanh toán hóa đơn tháng 2'),
-(10, 12500000.00, '2025-02-09 14:00:00', 'Momo', 'MM789013', 'Thanh toán hóa đơn tháng 2');
+-
 
 
 -- Thêm thông báo

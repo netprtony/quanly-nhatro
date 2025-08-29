@@ -101,6 +101,7 @@ class Room(Base):
     images = relationship("RoomImage", back_populates="room", cascade="all, delete-orphan")
     # ✅ thêm dòng này để khớp với ElectricityMeter.room
     meters = relationship("ElectricityMeter", back_populates="room", cascade="all, delete")
+    water_meters = relationship("WaterMeter", back_populates="room", cascade="all, delete")
 class RoomImage(Base):
     __tablename__ = "RoomImages"
 
@@ -145,7 +146,24 @@ class ElectricityMeter(Base):
 
     created_at = Column(TIMESTAMP, server_default=func.now())
 
-    room = relationship("Room", back_populates="meters")
+    room = relationship("Room", back_populates="meters")   
+class WaterMeter(Base):
+    __tablename__ = "WaterMeter"
+
+    meter_id = Column(Integer, primary_key=True, autoincrement=True)
+    room_id = Column(Integer, ForeignKey("Rooms.room_id", ondelete="CASCADE"), nullable=False)
+    month = Column(Date, nullable=False)
+    old_reading = Column(Integer, nullable=False)
+    new_reading = Column(Integer, nullable=False)
+    water_rate  = Column(DECIMAL(10,2), default=3500)
+
+    # GENERATED columns
+    usage_m3 = Column(Integer, Computed("new_reading - old_reading", persisted=True))
+    total_amount = Column(DECIMAL(10,2), Computed("(new_reading - old_reading) * water_rate", persisted=True))
+
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+    room = relationship("Room", back_populates="water_meters")    
 class Invoice(Base):
     __tablename__ = "Invoices"
     invoice_id = Column(Integer, primary_key=True, index=True)
@@ -159,7 +177,8 @@ class InvoiceDetail(Base):
     __tablename__ = "InvoiceDetails"
     detail_id = Column(Integer, primary_key=True, index=True)
     invoice_id = Column(Integer, ForeignKey("Invoices.invoice_id", ondelete="CASCADE"), nullable=False)
-    meter_id = Column(Integer, ForeignKey("ElectricityMeters.meter_id", ondelete="SET NULL"), nullable=True)
+    electricity_meter_id = Column(Integer, ForeignKey("ElectricityMeters.meter_id", ondelete="SET NULL"), nullable=True)
+    water_meter_id =  Column(Integer, ForeignKey("WaterMeters.meter_id", ondelete="SET NULL"), nullable=True)
     fee_type = Column(Enum(FeeTypeEnum), nullable=False)
     amount = Column(DECIMAL(10, 2), nullable=False)
     note = Column(Text)

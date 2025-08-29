@@ -1,83 +1,81 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import axios from "axios";
 import Table from "/src/components/Table.jsx";
+import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
 import Modal from "/src/components/Modal.jsx";
 import ModalConfirm from "/src/components/ModalConfirm.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-export default function Waters() {
-  // Mock dữ liệu hóa đơn nước
-  const [waters, setWaters] = useState([
-    {
-      water_id: 1,
-      room_number: "101",
-      month: "2024-06",
-      old_index: 120,
-      new_index: 135,
-      price_per_m3: 15000,
-      note: "Chỉ số đầu tháng 6",
-    },
-    {
-      water_id: 2,
-      room_number: "202",
-      month: "2024-06",
-      old_index: 200,
-      new_index: 215,
-      price_per_m3: 15000,
-      note: "",
-    },
-    {
-      water_id: 3,
-      room_number: "303",
-      month: "2024-06",
-      old_index: 90,
-      new_index: 100,
-      price_per_m3: 15000,
-      note: "",
-    },
-  ]);
+const ROOMS_API = "http://localhost:8000/rooms/all";
+const WATER_API = "http://localhost:8000/water";
 
+export default function Waters() {
+  const [waters, setWaters] = useState([]);
+  const [rooms, setRooms] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingWater, setEditingWater] = useState(null);
   const [form, setForm] = useState({
-    room_number: "",
+    room_id: "",
     month: "",
-    old_index: "",
-    new_index: "",
-    price_per_m3: 15000,
+    old_reading: "",
+    new_reading: "",
+    water_rate: 15000,
     note: "",
   });
-
   const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [showConfirmExit, setShowConfirmExit] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [waterToDelete, setWaterToDelete] = useState(null);
 
+  // Phân trang, lọc, sort
+  const [filters, setFilters] = useState([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [sortField, setSortField] = useState("");
+  const [sortOrder, setSortOrder] = useState("asc");
+
+  const fieldOptions = [
+    { value: "room_id", label: "Phòng", type: "number" },
+    { value: "month", label: "Tháng", type: "string" },
+    { value: "old_reading", label: "Chỉ số cũ", type: "number" },
+    { value: "new_reading", label: "Chỉ số mới", type: "number" },
+    { value: "water_rate", label: "Đơn giá", type: "number" },
+  ];
+
   const columns = [
-    { label: "ID", accessor: "water_id" },
-    { label: "Phòng", accessor: "room_number" },
+    { label: "ID", accessor: "meter_id" },
+    {
+      label: "Phòng",
+      accessor: "room_id",
+      render: (room_id) => {
+        const room = rooms.find((r) => r.room_id === room_id);
+        return room ? room.room_number : room_id;
+      },
+    },
     { label: "Tháng", accessor: "month" },
-    { label: "Chỉ số cũ", accessor: "old_index" },
-    { label: "Chỉ số mới", accessor: "new_index" },
+    { label: "Chỉ số cũ", accessor: "old_reading" },
+    { label: "Chỉ số mới", accessor: "new_reading" },
     {
       label: "Số m³",
-      accessor: "calc_m3",
-      render: (_, row) => row.new_index - row.old_index,
+      accessor: "usage_m3",
+      render: (_, row) => row.new_reading - row.old_reading,
     },
     {
       label: "Thành tiền",
-      accessor: "calc_total",
-      render: (_, row) =>
-        typeof row.new_index === "number" && typeof row.old_index === "number"
+      accessor: "total_amount",
+      render: (value) =>
+        typeof value === "number"
           ? new Intl.NumberFormat("vi-VN", {
               style: "currency",
               currency: "VND",
-            }).format((row.new_index - row.old_index) * row.price_per_m3)
+            }).format(value)
           : "N/A",
     },
     {
       label: "Đơn giá (m³)",
-      accessor: "price_per_m3",
+      accessor: "water_rate",
       render: (value) =>
         typeof value === "number"
           ? new Intl.NumberFormat("vi-VN", {
@@ -92,20 +90,73 @@ export default function Waters() {
       accessor: "actions",
       render: (_, water) => (
         <div className="d-flex gap-2 justify-content-center">
-          <button className="btn btn-sm btn-warning" onClick={() => handleEdit(water)}>Sửa</button>
-          <button className="btn btn-sm btn-danger" onClick={() => handleDelete(water.water_id)}>Xóa</button>
+          <button
+            className="btn btn-sm btn-warning"
+            onClick={() => handleEdit(water)}
+          >
+            Sửa
+          </button>
+          <button
+            className="btn btn-sm btn-danger"
+            onClick={() => handleDelete(water.meter_id)}
+          >
+            Xóa
+          </button>
         </div>
       ),
     },
   ];
 
+  // Lấy danh sách phòng
+  const fetchRooms = async () => {
+    try {
+      const res = await axios.get(`${ROOMS_API}?filter_is_available=false`);
+      setRooms(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      setRooms([]);
+    }
+  };
+
+  // Lấy danh sách hóa đơn nước có phân trang
+  const fetchWaters = async () => {
+    try {
+      let sortParams = "";
+      if (sortField) sortParams += `&sort_field=${sortField}`;
+      if (sortOrder) sortParams += `&sort_order=${sortOrder}`;
+      let data;
+      if (filters.length > 0) {
+        const res = await axios.post(
+          `${WATER_API}/filter?page=${page}&page_size=${pageSize}${sortParams}`,
+          { filters }
+        );
+        data = res.data;
+      } else {
+        const res = await axios.get(
+          `${WATER_API}?page=${page}&page_size=${pageSize}${sortParams}`
+        );
+        data = res.data;
+      }
+      setWaters(Array.isArray(data.items) ? data.items : []);
+      setTotalRecords(data.total || 0);
+    } catch {
+      setWaters([]);
+      setTotalRecords(0);
+    }
+  };
+
+  useEffect(() => {
+    fetchRooms();
+    fetchWaters();
+    // eslint-disable-next-line
+  }, [filters, page, pageSize, sortField, sortOrder]);
+
   const handleAdd = () => {
     setForm({
-      room_number: "",
+      room_id: "",
       month: "",
-      old_index: "",
-      new_index: "",
-      price_per_m3: 15000,
+      old_reading: "",
+      new_reading: "",
+      water_rate: 15000,
       note: "",
     });
     setEditingWater(null);
@@ -115,11 +166,11 @@ export default function Waters() {
 
   const handleEdit = (water) => {
     setForm({
-      room_number: water.room_number,
+      room_id: water.room_id ? String(water.room_id) : "",
       month: water.month,
-      old_index: water.old_index,
-      new_index: water.new_index,
-      price_per_m3: water.price_per_m3,
+      old_reading: water.old_reading,
+      new_reading: water.new_reading,
+      water_rate: water.water_rate,
       note: water.note || "",
     });
     setEditingWater(water);
@@ -132,36 +183,45 @@ export default function Waters() {
     setShowConfirmDelete(true);
   };
 
-  const confirmDelete = () => {
-    setWaters((prev) => prev.filter((w) => w.water_id !== waterToDelete));
-    toast.success("🗑️ Xóa hóa đơn nước thành công!");
-    setShowConfirmDelete(false);
-    setWaterToDelete(null);
+  const confirmDelete = async () => {
+    try {
+      await axios.delete(`${WATER_API}/${waterToDelete}`);
+      toast.success("🗑️ Xóa hóa đơn nước thành công!");
+      fetchWaters();
+    } catch {
+      toast.error("❌ Lỗi xóa hóa đơn nước!");
+    } finally {
+      setShowConfirmDelete(false);
+      setWaterToDelete(null);
+    }
   };
 
-  const handleSubmitWater = () => {
-    if (editingWater) {
-      // Sửa hóa đơn nước
-      setWaters((prev) =>
-        prev.map((w) =>
-          w.water_id === editingWater.water_id
-            ? { ...w, ...form }
-            : w
-        )
-      );
-      toast.success("✏️ Cập nhật hóa đơn nước thành công!");
-    } else {
-      // Thêm hóa đơn nước mới
-      setWaters((prev) => [
-        ...prev,
-        {
-          ...form,
-          water_id: prev.length ? Math.max(...prev.map((w) => w.water_id)) + 1 : 1,
-        },
-      ]);
-      toast.success("✅ Thêm hóa đơn nước thành công!");
+  const handleSubmitWater = async () => {
+    if (parseInt(form.old_reading) > parseInt(form.new_reading)) {
+      toast.error("❌ Chỉ số mới phải lớn hơn hoặc bằng chỉ số cũ!");
+      return;
     }
-    setShowModal(false);
+    const payload = {
+      ...form,
+      room_id: form.room_id ? parseInt(form.room_id) : null,
+      old_reading: form.old_reading ? parseInt(form.old_reading) : 0,
+      new_reading: form.new_reading ? parseInt(form.new_reading) : 0,
+      water_rate: form.water_rate ? parseFloat(form.water_rate) : 15000,
+      month: form.month ? form.month + "-01" : "",
+    };
+    try {
+      if (editingWater) {
+        await axios.put(`${WATER_API}/${editingWater.meter_id}`, payload);
+        toast.success("✏️ Cập nhật hóa đơn nước thành công!");
+      } else {
+        await axios.post(WATER_API, payload);
+        toast.success("✅ Thêm hóa đơn nước thành công!");
+      }
+      setShowModal(false);
+      fetchWaters();
+    } catch {
+      toast.error("❌ Lỗi khi lưu hóa đơn nước!");
+    }
   };
 
   const handleCloseModal = () => {
@@ -185,13 +245,31 @@ export default function Waters() {
           ➕ Thêm hóa đơn nước
         </button>
 
-        <Table columns={columns} data={waters} />
+        <Table
+          columns={columns}
+          data={waters}
+          page={page}
+          pageSize={pageSize}
+          totalRecords={totalRecords}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          sortField={sortField}
+          sortOrder={sortOrder}
+          onSort={(field, order) => {
+            setSortField(field);
+            setSortOrder(order);
+          }}
+        />
 
         {/* Modal Thêm / Sửa */}
         <Modal
           isOpen={showModal}
           onClose={handleCloseModal}
-          title={editingWater ? "✏️ Chỉnh sửa hóa đơn nước" : "➕ Thêm hóa đơn nước"}
+          title={
+            editingWater
+              ? "✏️ Chỉnh sửa hóa đơn nước"
+              : "➕ Thêm hóa đơn nước"
+          }
           showConfirm
           onConfirm={handleSubmitWater}
         >
@@ -199,13 +277,19 @@ export default function Waters() {
             <div className="row g-3">
               <div className="col-md-6">
                 <label className="form-label">Phòng</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={form.room_number}
-                  onChange={(e) => handleFormChange("room_number", e.target.value)}
+                <select
+                  className="form-select"
+                  value={form.room_id}
+                  onChange={(e) => handleFormChange("room_id", e.target.value)}
                   required
-                />
+                >
+                  <option value="">-- Chọn phòng --</option>
+                  {rooms.map((room) => (
+                    <option key={room.room_id} value={room.room_id}>
+                      {room.room_number}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="col-md-6">
                 <label className="form-label">Tháng</label>
@@ -222,8 +306,8 @@ export default function Waters() {
                 <input
                   type="number"
                   className="form-control"
-                  value={form.old_index}
-                  onChange={(e) => handleFormChange("old_index", parseInt(e.target.value) || 0)}
+                  value={form.old_reading}
+                  onChange={(e) => handleFormChange("old_reading", e.target.value)}
                   required
                 />
               </div>
@@ -232,8 +316,8 @@ export default function Waters() {
                 <input
                   type="number"
                   className="form-control"
-                  value={form.new_index}
-                  onChange={(e) => handleFormChange("new_index", parseInt(e.target.value) || 0)}
+                  value={form.new_reading}
+                  onChange={(e) => handleFormChange("new_reading", e.target.value)}
                   required
                 />
               </div>
@@ -242,8 +326,8 @@ export default function Waters() {
                 <input
                   type="number"
                   className="form-control"
-                  value={form.price_per_m3}
-                  onChange={(e) => handleFormChange("price_per_m3", parseInt(e.target.value) || 0)}
+                  value={form.water_rate}
+                  onChange={(e) => handleFormChange("water_rate", e.target.value)}
                   required
                 />
               </div>
@@ -260,7 +344,6 @@ export default function Waters() {
           </form>
         </Modal>
 
-        {/* Modal xác nhận xóa */}
         <ModalConfirm
           isOpen={showConfirmDelete}
           title="Xác nhận xóa"
@@ -271,7 +354,6 @@ export default function Waters() {
           onClose={() => setShowConfirmDelete(false)}
         />
 
-        {/* Modal xác nhận thoát khi có thay đổi */}
         <ModalConfirm
           isOpen={showConfirmExit}
           title="Thoát mà chưa lưu?"
@@ -286,7 +368,6 @@ export default function Waters() {
           onClose={() => setShowConfirmExit(false)}
         />
       </div>
-
       <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
