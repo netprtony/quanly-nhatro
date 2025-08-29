@@ -145,7 +145,7 @@ CREATE TABLE Reservations (
     contact_phone VARCHAR(15) NOT NULL, 
     room_id INT NOT NULL,
     user_id INT NULL,
-    status ENUM('Pending', 'Confirmed', 'Cancelled' ) DEFAULT 'Pending',
+    status ENUM('Pending', 'Confirmed', 'Cancelled', 'Signed' ) DEFAULT 'Pending',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE,
     FOREIGN KEY (room_id) REFERENCES Rooms(room_id) ON DELETE CASCADE,

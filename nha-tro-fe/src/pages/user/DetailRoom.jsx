@@ -9,6 +9,7 @@ import {
   FaInfoCircle,
 } from "react-icons/fa";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { Modal, Button, Form } from "react-bootstrap";
 
 const ROOM_API = "http://localhost:8000/rooms";
 const ROOM_IMAGE_API = "http://localhost:8000/room-images";
@@ -19,6 +20,11 @@ export default function DetailRoom() {
   const [room, setRoom] = useState(null);
   const [images, setImages] = useState([]);
   const [lightboxImg, setLightboxImg] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     fetch(`${ROOM_API}/${roomId}`)
@@ -28,6 +34,29 @@ export default function DetailRoom() {
       .then((res) => res.json())
       .then((data) => setImages(data));
   }, [roomId]);
+
+  const handleReserve = async () => {
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetch("http://localhost:8000/reservations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          room_id: room.room_id,
+          contact_phone: phone,
+          status: "pending",
+        }),
+      });
+      if (!res.ok) throw new Error("Đặt phòng thất bại!");
+      setSuccess("Đặt phòng thành công! Quản lý sẽ liên hệ bạn sớm.");
+      setPhone("");
+    } catch (e) {
+      setError(e.message || "Có lỗi xảy ra!");
+    }
+    setLoading(false);
+  };
 
   if (!room) {
     return (
@@ -207,7 +236,7 @@ export default function DetailRoom() {
                   {room.is_available ? (
                     <button
                       className="btn btn-warning text-dark fw-bold px-4"
-                      onClick={() => alert("Liên hệ quản lý để đặt phòng!")}
+                      onClick={() => setShowModal(true)}
                     >
                       Đặt phòng
                     </button>
@@ -251,6 +280,46 @@ export default function DetailRoom() {
           </div>
         </div>
       )}
+
+      {/* Modal đặt phòng */}
+      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Đặt phòng {room.room_number}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {success ? (
+            <div className="alert alert-success">{success}</div>
+          ) : (
+            <Form>
+              <Form.Group>
+                <Form.Label>Số điện thoại liên hệ</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="Nhập số điện thoại"
+                  disabled={loading}
+                />
+              </Form.Group>
+              {error && <div className="text-danger mt-2">{error}</div>}
+            </Form>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowModal(false)}>
+            Đóng
+          </Button>
+          {!success && (
+            <Button
+              variant="warning"
+              onClick={handleReserve}
+              disabled={loading || !phone}
+            >
+              {loading ? "Đang gửi..." : "Xác nhận đặt phòng"}
+            </Button>
+          )}
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }

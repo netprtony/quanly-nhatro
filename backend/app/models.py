@@ -40,6 +40,7 @@ class ReservationStatusEnum(str, enum.Enum):
     Pending = "Pending"
     Confirmed = "Confirmed"
     Cancelled = "Cancelled"
+    Signed = "Signed"
 
 # --- MODEL DEFINITIONS ---
 class Tenant(Base):
