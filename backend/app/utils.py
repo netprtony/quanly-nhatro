@@ -54,58 +54,78 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 
 def num2words_vnd(number) -> str:
     """Chuyển số thành chữ tiếng Việt cho tiền VND."""
-    # Sửa: ép kiểu int nếu là float hoặc str
     try:
         number = int(float(number))
     except Exception:
         return "Không đồng"
+
+    if number == 0:
+        return "Không đồng"
+
     units = ["", "nghìn", "triệu", "tỷ", "nghìn tỷ", "triệu tỷ", "tỷ tỷ"]
     num_words = {
         0: "không", 1: "một", 2: "hai", 3: "ba", 4: "bốn",
         5: "năm", 6: "sáu", 7: "bảy", 8: "tám", 9: "chín"
     }
 
-    def read_three_digits(n):
+    def read_three_digits(n, full=False):
         hundred = n // 100
         ten = (n % 100) // 10
         unit = n % 10
         parts = []
+
+        # Hàng trăm
         if hundred > 0:
             parts.append(num_words[hundred] + " trăm")
-        elif n > 99 or (ten > 0 or unit > 0):
+        elif full:
             parts.append("không trăm")
+
+        # Hàng chục
         if ten > 1:
             parts.append(num_words[ten] + " mươi")
             if unit == 1:
                 parts.append("mốt")
+            elif unit == 4:
+                parts.append("tư")
             elif unit == 5:
                 parts.append("lăm")
             elif unit > 0:
                 parts.append(num_words[unit])
         elif ten == 1:
             parts.append("mười")
-            if unit == 5:
+            if unit == 1:
+                parts.append("một")
+            elif unit == 4:
+                parts.append("bốn")
+            elif unit == 5:
                 parts.append("lăm")
             elif unit > 0:
                 parts.append(num_words[unit])
         elif ten == 0 and unit > 0:
-            parts.append("linh")
+            if hundred > 0 or full:
+                parts.append("linh")
             parts.append(num_words[unit])
+
         return " ".join(parts)
 
-    if number == 0:
-        return "Không đồng"
-    parts = []
+    # Tách số thành từng nhóm 3 chữ số
     num_str = str(number)
     groups = []
     while num_str:
         groups.insert(0, int(num_str[-3:]))
         num_str = num_str[:-3]
+
+    parts = []
     for i, group in enumerate(groups):
         if group > 0:
-            part = read_three_digits(group)
+            part = read_three_digits(group, full=(i > 0))
             unit = units[len(groups) - i - 1]
             parts.append(f"{part} {unit}".strip())
+        else:
+            # nhóm 0 nhưng cần đọc "không trăm..." nếu ở giữa
+            if i < len(groups) - 1 and any(g > 0 for g in groups[i+1:]):
+                parts.append(read_three_digits(group, full=True))
+
     result = " ".join(parts)
     result = result[0].upper() + result[1:] + " đồng"
     return result

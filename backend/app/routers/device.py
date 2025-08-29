@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from httpx import request
 from sqlalchemy.orm import Session
 from typing import List
 from app import models, database
-from app.schemas.device import DeviceCreate, DeviceUpdate, DeviceOut, PaginatedDevices
+from app.schemas.device import DeviceCreate, DeviceUpdate, DeviceOut, PaginatedDevices,FilterRequest
 
 router = APIRouter(prefix="/devices", tags=["Devices"])
 
@@ -58,3 +59,55 @@ def delete_device(device_id: int, db: Session = Depends(database.get_db)):
     db.delete(db_device)
     db.commit()
     return {"message": "Device deleted successfully"}
+
+@router.post("/filter", response_model=PaginatedDevices)
+def filter_devices(
+    request: FilterRequest,
+    db: Session = Depends(database.get_db),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=200)
+):
+    query = db.query(models.Device)
+    valid_fields = {
+        "device_name": models.Device.device_name,
+        "room_id": models.Device.room_id,
+        "is_active": models.Device.is_active,
+        "description": models.Device.description,
+    }
+    for f in request.filters:
+        col_type = valid_fields.get(f.field)
+        if not col_type:
+            continue
+
+        col, py_type = col_type
+
+        # ép kiểu value
+        try:
+            if py_type == bool:
+                val = f.value.lower() in ("true", "1", "yes")
+            else:
+                val = py_type(f.value)
+        except Exception:
+            # nếu không ép được thì bỏ qua filter này
+            continue
+
+        if f.operator == "=":
+            query = query.filter(col == val)
+        elif f.operator == "!=":
+            query = query.filter(col != val)
+        elif f.operator == ">":
+            query = query.filter(col > val)
+        elif f.operator == "<":
+            query = query.filter(col < val)
+        elif f.operator == ">=":
+            query = query.filter(col >= val)
+        elif f.operator == "<=":
+            query = query.filter(col <= val)
+        elif f.operator == "~":
+            # chỉ apply LIKE cho chuỗi
+            if py_type == str:
+                query = query.filter(col.ilike(f"%{val}%"))
+
+    total = query.count()
+    items = query.offset((page - 1) * page_size).limit(page_size).all()
+    return {"items": items, "total": total}

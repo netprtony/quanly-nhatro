@@ -168,9 +168,13 @@ export default function Electricity() {
   };
 
   const handleEdit = (electricity) => {
+    let monthValue = "";
+    if (electricity.month) {
+      monthValue = electricity.month.slice(0, 7);
+    }
     setForm({
       room_id: electricity.room_id ? String(electricity.room_id) : "",
-      month: electricity.month,
+      month: monthValue,
       old_reading: electricity.old_reading,
       new_reading: electricity.new_reading,
       electricity_rate: electricity.electricity_rate,

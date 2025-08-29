@@ -29,3 +29,12 @@ class PaginatedDevices(BaseModel):
 
     class Config:
         orm_mode = True
+        
+class Filter(BaseModel):
+    field: str
+    operator: str
+    value: str
+
+
+class FilterRequest(BaseModel):
+    filters: List[Filter] = []   # ⚠️ tránh dùng Optional[List] = [] vì default mutable

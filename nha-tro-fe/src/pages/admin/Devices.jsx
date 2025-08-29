@@ -25,13 +25,15 @@ export default function Devices() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [totalRecords, setTotalRecords] = useState(0);
-  
+  const [sortField, setSortField] = useState();
+  const [sortOrder, setSortOrder] = useState();
   const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [showConfirmExit, setShowConfirmExit] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [deviceToDelete, setDeviceToDelete] = useState(null);
   const [filters, setFilters] = useState([]);
   const [newFilter, setNewFilter] = useState({ field: "device_name", operator: "~", value: "" });
+  const [search, setSearch] = useState("");
 
   const fieldOptions = [
     { value: "device_name", label: "Tên thiết bị", type: "string" },
@@ -54,7 +56,10 @@ export default function Devices() {
     {
       label: "Trạng thái",
       accessor: "is_active",
-      render: (is_active) => (is_active ? "Đang hoạt động" : "Không hoạt động"),
+      render: (is_active) => {
+        let badgeClass = is_active ? "bg-success" : "bg-secondary";
+        return <span className={`badge ${badgeClass}`}>{is_active ? "Đang hoạt động" : "Không hoạt động"}</span>;
+      }
     },
     { label: "Mô tả", accessor: "description" },
     {
@@ -69,29 +74,31 @@ export default function Devices() {
     },
   ];
 
-  const fetchDevices = async () => {
+  const fetchDevices = async (field = sortField, order = sortOrder) => {
     try {
-      let query = `?page=${page}&page_size=${pageSize}`;
-      if (filters.length > 0) {
-        query += "&" + filters
-          .map(
-            (f) =>
-              `filter_${f.field}=${encodeURIComponent(
-                f.operator + f.value
-              )}`
-          )
-          .join("&");
-      }
-       const res = await fetch(DEVICES_API + query);
-        const data = await res.json();
-        setDevices(Array.isArray(data.items) ? data.items : []);
-        setTotalRecords(data.total || 0);
-    } catch (err) {
-      toast.error("❌ Lỗi khi lấy danh sách thiết bị!");
-      setDevices([]);
-      setTotalRecords(0);
-    }
-  };
+          let url = `${DEVICES_API}?page=${page}&page_size=${pageSize}`;
+          if (search) url += `&search=${encodeURIComponent(search)}`;
+          if (field) url += `&sort_field=${field}`;
+          if (order) url += `&sort_order=${order}`;
+          let res, data;
+          if (filters.length > 0) {
+            res = await fetch(url.replace(DEVICES_API, DEVICES_API + "/filter"), {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ filters, sort_field: field, sort_order: order }),
+            });
+          } else {
+            res = await fetch(url);
+          }
+          data = await res.json();
+          setDevices(Array.isArray(data.items) ? data.items : []);
+          setTotalRecords(data.total || 0);
+        } catch (err) {
+          toast.error("Không thể tải danh sách thiết bị!");
+          setDevices([]);
+          setTotalRecords(0);
+        }
+      };
 
   const fetchRooms = async () => {
       try {
@@ -108,8 +115,36 @@ export default function Devices() {
   useEffect(() => {
     fetchDevices();
     fetchRooms();
-  }, [filters, page, pageSize]);
+  }, [filters, page, pageSize, search, sortField, sortOrder]);
+  const exportCSV = () => {
+    if (contracts.length === 0) return;
+    const headers = Object.keys(contracts[0]);
+    const csv = [
+      headers.join(","),
+      ...contracts.map((row) =>
+        headers.map((h) => JSON.stringify(row[h] ?? "")).join(",")
+      ),
+    ].join("\n");
 
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "contracts.csv";
+    a.click();
+  };
+
+  // Export JSON
+  const exportJSON = () => {
+    const blob = new Blob([JSON.stringify(contracts, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "contracts.json";
+    a.click();
+  };
   const handleAdd = () => {
     setForm({
       device_name: "",
@@ -269,6 +304,10 @@ export default function Devices() {
             onAddFilter={(f) => setFilters((prev) => [...prev, f])}
             onRemoveFilter={(i) => setFilters((prev) => prev.filter((_, idx) => idx !== i))}
             compact
+            onLoad={fetchDevices}
+            onSearch={setSearch}exportCSV
+            onExportCSV={exportCSV}
+            onExportJSON={exportJSON}
           />
         </div>
 
@@ -284,6 +323,13 @@ export default function Devices() {
               setPage(1);
               fetchRooms();
               }}
+              onSort={(field, order) => {
+            setSortField(field);
+            setSortOrder(order);
+            fetchContracts(field, order);
+          }}
+          sortField={sortField}
+          sortOrder={sortOrder}
             />
 
         {/* Modal Thêm / Sửa */}

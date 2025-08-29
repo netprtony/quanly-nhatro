@@ -8,7 +8,6 @@ from app.schemas.contract import ContractCreate, ContractUpdate, ContractOut,Pag
 import os
 from docxtpl import DocxTemplate
 from fastapi.responses import FileResponse
-from docx2pdf import convert
 import pythoncom
 
 router = APIRouter(prefix="/contracts", tags=["Contracts"])
@@ -210,8 +209,8 @@ def export_contract(
     tenant = db.query(models.Tenant).filter(models.Tenant.tenant_id == contract.tenant_id).first()
     if not tenant:
         raise HTTPException(status_code=404, detail="Không tìm thấy người thuê")
-    month_rent_read = utils.num2words_vnd(int(contract.monthly_rent)) if contract.monthly_rent else ""
-    deposit_amount_read = utils.num2words_vnd(int(contract.deposit_amount)) if contract.deposit_amount else ""
+    month_rent_read = utils.num2words_vnd(int(contract.monthly_rent)) 
+    deposit_amount_read = utils.num2words_vnd(int(contract.deposit_amount))
     # Chuẩn bị dữ liệu context để render vào mẫu
     start_date = datetime.date.today()
     context = {

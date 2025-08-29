@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import asc, desc, cast, String
@@ -5,8 +6,24 @@ from typing import List
 from app import models, database
 from app.schemas.water import WaterMeterCreate, PaginatedWaterMeterOut, WaterMeterUpdate, WaterMeterOut, FilterRequest
 from datetime import date
-router = APIRouter(prefix="/water", tags=["Water"])
-
+router = APIRouter(
+    prefix="/water",  # tất cả route sẽ bắt đầu bằng /water
+    tags=["Water Meter"]
+)
+@router.get("/latest", response_model=WaterMeterOut)
+def get_latest_water_bill(
+    room_id: int = Query(..., description="ID của phòng cần lấy hóa đơn mới nhất"),
+    db: Session = Depends(database.get_db),
+):
+    meter = (
+        db.query(models.WaterMeter)
+        .filter(models.WaterMeter.room_id == room_id)
+        .order_by(desc(models.WaterMeter.month))
+        .first()
+    )
+    if not meter:
+        raise HTTPException(status_code=404, detail="No water bill found for this room")
+    return meter
 @router.get("/", response_model=PaginatedWaterMeterOut)
 def get_meters(
 	db: Session = Depends(database.get_db),
@@ -149,3 +166,4 @@ def filter_water_meters(
 	items = query.offset((page - 1) * page_size).limit(page_size).all()
 
 	return {"total": total, "items": items}
+

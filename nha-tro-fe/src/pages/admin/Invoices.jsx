@@ -394,55 +394,16 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
     try {
       let invoiceId;
       if (editingInvoice) {
+        // Sửa hóa đơn
         const res = await fetch(`${INVOICE_API}/${editingInvoice.invoice_id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
         if (!res.ok) throw new Error(await res.text());
-        invoiceId = editingInvoice.invoice_id;
-        toast.success("✏️ Cập nhật hóa đơn thành công!");
-
-        // Lấy chi tiết hóa đơn hiện tại
-        const detailRes = await fetch(`${INVOICE_DETAIL_API}/by-invoice/${invoiceId}`);
-        const details = await detailRes.json();
-
-        // Xử lý từng loại phí mặc định
-        for (const fee of DEFAULT_FEES) {
-          const checkedFee = defaultFees.find(f => f.key === fee.key);
-          const existedDetail = details.find(d => d.fee_type === fee.key);
-
-          if (checkedFee && checkedFee.checked) {
-            // Nếu đã check và chưa có thì thêm mới
-            if (!existedDetail) {
-              await fetch(INVOICE_DETAIL_API, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  invoice_id: invoiceId,
-                  fee_type: fee.key,
-                  amount: checkedFee.amount,
-                  note: `Phí ${fee.label} tháng ${form.month}`,
-                }),
-              });
-            } else if (existedDetail.amount !== checkedFee.amount) {
-              // Nếu đã có nhưng số tiền thay đổi thì cập nhật
-              await fetch(`${INVOICE_DETAIL_API}/${existedDetail.detail_id}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  amount: checkedFee.amount,
-                  note: `Phí ${fee.label} tháng ${form.month}`,
-                }),
-              });
-            }
-          } else if (existedDetail) {
-            // Nếu bỏ check và đã có thì xóa
-            await fetch(`${INVOICE_DETAIL_API}/${existedDetail.detail_id}`, {
-              method: "DELETE",
-            });
-          }
-        }
+        const data = await res.json();
+        invoiceId = data.invoice_id || data.id;
+        toast.success("✏️ Sửa hóa đơn thành công!");
       } else {
         // Thêm mới hóa đơn
         const res = await fetch(INVOICE_API, {
@@ -456,50 +417,46 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
         toast.success("✅ Thêm hóa đơn thành công!");
 
         // --- Tự động thêm chi tiết hóa đơn điện ---
-        const elecRes = await fetch(`${ELECTRICITY_API}?room_id=${form.room_id}`);
-        const elecData = await elecRes.json();
-        // Tìm công tơ điện tháng gần nhất <= tháng hóa đơn
-        const targetMonth = form.month;
-        const nearestElec = Array.isArray(elecData)
-          ? elecData
-              .filter(m => m.month && m.month.slice(0, 7) <= targetMonth)
-              .sort((a, b) => b.month.localeCompare(a.month))[0]
-          : null;
-        if (nearestElec) {
-          await fetch(INVOICE_DETAIL_API, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              invoice_id: invoiceId,
-              fee_type: "Electricity",
-              electricity_meter_id: nearestElec.meter_id,
-              amount: nearestElec.total_amount,
-              note: `Tiền điện tháng ${nearestElec.month?.slice(0, 7)}`,
-            }),
-          });
-        }
+        try {
+          const elecRes = await fetch(`${ELECTRICITY_API}/latest?room_id=${form.room_id}`);
+          if (elecRes.ok) {
+            const elecData = await elecRes.json();
+            if (elecData && elecData.meter_id && elecData.month?.slice(0, 7) <= form.month) {
+              await fetch(INVOICE_DETAIL_API, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  invoice_id: invoiceId,
+                  fee_type: "Electricity",
+                  electricity_meter_id: elecData.meter_id,
+                  amount: elecData.total_amount,
+                  note: `Tiền điện tháng ${elecData.month?.slice(0, 7)}`,
+                }),
+              });
+            }
+          }
+        } catch {}
 
         // --- Tự động thêm chi tiết hóa đơn nước ---
-        const waterRes = await fetch(`${WATER_API}?room_id=${form.room_id}`);
-        const waterData = await waterRes.json();
-        const nearestWater = Array.isArray(waterData)
-          ? waterData
-              .filter(m => m.month && m.month.slice(0, 7) <= targetMonth)
-              .sort((a, b) => b.month.localeCompare(a.month))[0]
-          : null;
-        if (nearestWater) {
-          await fetch(INVOICE_DETAIL_API, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              invoice_id: invoiceId,
-              fee_type: "Water",
-              water_meter_id: nearestWater.meter_id,
-              amount: nearestWater.total_amount,
-              note: `Tiền nước tháng ${nearestWater.month?.slice(0, 7)}`,
-            }),
-          });
-        }
+        try {
+          const waterRes = await fetch(`${WATER_API}/latest?room_id=${form.room_id}`);
+          if (waterRes.ok) {
+            const waterData = await waterRes.json();
+            if (waterData && waterData.meter_id && waterData.month?.slice(0, 7) <= form.month) {
+              await fetch(INVOICE_DETAIL_API, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  invoice_id: invoiceId,
+                  fee_type: "Water",
+                  water_meter_id: waterData.meter_id,
+                  amount: waterData.total_amount,
+                  note: `Tiền nước tháng ${waterData.month?.slice(0, 7)}`,
+                }),
+              });
+            }
+          }
+        } catch {}
 
         // Thêm các chi tiết hóa đơn mặc định khác (Trash, Wifi, ...)
         for (const fee of defaultFees) {

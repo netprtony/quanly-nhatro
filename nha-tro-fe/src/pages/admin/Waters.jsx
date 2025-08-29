@@ -84,7 +84,7 @@ export default function Waters() {
             }).format(value)
           : "N/A",
     },
-    { label: "Ghi chú", accessor: "note" },
+   
     {
       label: "Thao tác",
       accessor: "actions",
@@ -165,9 +165,15 @@ export default function Waters() {
   };
 
   const handleEdit = (water) => {
+    // Chuyển water.month (YYYY-MM-DD) về YYYY-MM cho input type="month"
+    let monthValue = "";
+    if (water.month) {
+      // Nếu là dạng "2025-08-01" thì lấy "2025-08"
+      monthValue = water.month.slice(0, 7);
+    }
     setForm({
       room_id: water.room_id ? String(water.room_id) : "",
-      month: water.month,
+      month: monthValue,
       old_reading: water.old_reading,
       new_reading: water.new_reading,
       water_rate: water.water_rate,

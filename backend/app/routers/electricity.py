@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status
 from sqlalchemy.orm import Session
 from sqlalchemy import asc, desc, cast, String
@@ -9,7 +10,20 @@ import pandas as pd
 from io import BytesIO
 from fastapi.responses import StreamingResponse
 router = APIRouter(prefix="/electricity", tags=["Electricity"])
-
+@router.get("/latest", response_model=ElectricityMeterOut)
+def get_latest_electricity_bill(
+    room_id: int = Query(..., description="ID của phòng cần lấy hóa đơn mới nhất"),
+    db: Session = Depends(database.get_db),
+):
+    meter = (
+        db.query(models.ElectricityMeter)
+        .filter(models.ElectricityMeter.room_id == room_id)
+        .order_by(desc(models.ElectricityMeter.month))
+        .first()
+    )
+    if not meter:
+        raise HTTPException(status_code=404, detail="No electricity bill found for this room")
+    return meter
 @router.get("/", response_model=PaginatedElectricityMeterOut)
 def get_meters(
     db: Session = Depends(database.get_db),
@@ -155,3 +169,4 @@ def filter_electricity_meters(
     items = query.offset((page - 1) * page_size).limit(page_size).all()
 
     return {"total": total, "items": items}
+
