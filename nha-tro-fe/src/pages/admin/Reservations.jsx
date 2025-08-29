@@ -228,6 +228,9 @@ export default function Reservations() {
         } else if (status === "Cancelled") {
           className = "badge bg-danger";
           display = "Đã hủy";
+        } else if (status === "Signed") {
+          className = "badge bg-info";
+          display = "Đã ký";
         }
         return <span className={className}>{display}</span>;
       }
@@ -412,6 +415,7 @@ export default function Reservations() {
                   <option value="Pending">Chờ xác nhận</option>
                   <option value="Confirmed">Đã xác nhận</option>
                   <option value="Cancelled">Đã hủy</option>
+                  <option value="Signed">Đã ký</option>
                 </select>
               </div>
             </div>
