@@ -120,6 +120,7 @@ class Contract(Base):
     end_date = Column(Date)
     deposit_amount = Column(DECIMAL(10, 2))
     monthly_rent = Column(DECIMAL(10, 2))
+    path_contract = Column(String(255), nullable=False)
 
     # thêm 2 cột mới
     num_people = Column(Integer, default=1, nullable=False)    # số lượng người ở

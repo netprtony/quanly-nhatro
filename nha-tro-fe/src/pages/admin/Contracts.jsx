@@ -9,6 +9,7 @@ import "react-toastify/dist/ReactToastify.css";
 const CONTRACT_URL = "http://localhost:8000/contracts";
 const ROOMS_API = "http://localhost:8000/rooms";
 const TENANTS_API = "http://localhost:8000/tenants";
+const CONTRACT_EXPORT_API = "http://localhost:8000/contracts/export";
 
 export default function Contracts() {
   const [contracts, setContracts] = useState([]);
@@ -33,6 +34,11 @@ export default function Contracts() {
   const [showConfirmExit, setShowConfirmExit] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [contractToDelete, setContractToDelete] = useState(null);
+  const [loadingExport, setLoadingExport] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportingContract, setExportingContract] = useState(null);
+  const [exportType, setExportType] = useState("docx"); // "docx" hoặc "pdf"
+  const [customFileName, setCustomFileName] = useState("");
 
   // Bộ lọc nâng cao, tìm kiếm, phân trang, sort
   const [filters, setFilters] = useState([]);
@@ -121,6 +127,14 @@ export default function Contracts() {
         <div className="d-flex gap-2 justify-content-center">
           <button className="btn btn-sm btn-warning" onClick={() => handleEdit(contract)}>Sửa</button>
           <button className="btn btn-sm btn-danger" onClick={() => handleDelete(contract.contract_id)}>Xóa</button>
+          <button
+            className="btn btn-sm btn-success"
+            onClick={() => handleExportContract(contract)}
+            disabled={loadingExport}
+            title="Tạo/Xuất hợp đồng"
+          >
+            {loadingExport ? "Đang xuất..." : "Tạo file"}
+          </button>
         </div>
       ),
     },
@@ -156,9 +170,9 @@ export default function Contracts() {
   // Lấy danh sách phòng cho combobox
   const fetchRooms = async () => {
     try {
-      const res = await fetch(`${ROOMS_API}?page=1&page_size=200`);
+      const res = await fetch(`${ROOMS_API}/all?filter_is_available=true`);
       const data = await res.json();
-      setRooms(Array.isArray(data.items) ? data.items : []);
+      setRooms(Array.isArray(data) ? data : []);
     } catch (err) {
       toast.error("Không thể tải danh sách phòng!");
       setRooms([]);
@@ -279,6 +293,46 @@ export default function Contracts() {
     } catch (err) {
       toast.error("Xóa hợp đồng thất bại! " + err.message);
     }
+  };
+
+  // Hàm mở modal xuất hợp đồng
+  const handleExportContract = (contract) => {
+    setExportingContract(contract);
+    const tenant = tenants.find(t => t.tenant_id === contract.tenant_id);
+    const safeTenantName = tenant
+      ? tenant.full_name.replace(/[^a-zA-Z0-9]/g, "_")
+      : "contract";
+    setCustomFileName(`${safeTenantName}_contract`);
+    setExportType("docx");
+    setShowExportModal(true);
+  };
+
+  // Hàm thực hiện xuất file
+  const doExportContract = async () => {
+    if (!exportingContract) return;
+    setLoadingExport(true);
+    try {
+      const fileExt = exportType === "pdf" ? "pdf" : "docx";
+      const fileName = customFileName ? `${customFileName}.${fileExt}` : `contract.${fileExt}`;
+      const res = await fetch(
+        `${CONTRACT_EXPORT_API}/${exportingContract.contract_id}?file_type=${exportType}&file_name=${encodeURIComponent(fileName)}`
+      );
+      if (!res.ok) throw new Error(await res.text());
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      toast.success("✅ Đã xuất hợp đồng!");
+      setShowExportModal(false);
+      await fetchContracts();
+    } catch (err) {
+      toast.error("Xuất hợp đồng thất bại! " + err.message);
+    }
+    setLoadingExport(false);
   };
 
   const handleAdd = () => {
@@ -556,6 +610,58 @@ export default function Contracts() {
           }}
           onClose={() => setShowConfirmExit(false)}
         />
+
+        {/* Modal chọn loại file và tên file khi xuất hợp đồng */}
+        <Modal
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          title="Tạo/Xuất hợp đồng"
+          showConfirm
+          onConfirm={doExportContract}
+          confirmText={loadingExport ? "Đang xuất..." : "Tải về"}
+          confirmDisabled={loadingExport}
+        >
+          <div className="mb-3">
+            <label className="form-label">Chọn loại file</label>
+            <div className="d-flex gap-3">
+              <div>
+                <input
+                  type="radio"
+                  id="docx"
+                  name="exportType"
+                  value="docx"
+                  checked={exportType === "docx"}
+                  onChange={() => setExportType("docx")}
+                />
+                <label htmlFor="docx" className="ms-2">Word (.docx)</label>
+              </div>
+              <div>
+                <input
+                  type="radio"
+                  id="pdf"
+                  name="exportType"
+                  value="pdf"
+                  checked={exportType === "pdf"}
+                  onChange={() => setExportType("pdf")}
+                />
+                <label htmlFor="pdf" className="ms-2">PDF (.pdf)</label>
+              </div>
+            </div>
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Tên file</label>
+            <input
+              type="text"
+              className="form-control"
+              value={customFileName}
+              onChange={e => setCustomFileName(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))}
+              placeholder="Tên file không dấu, không khoảng trắng"
+            />
+            <div className="form-text">
+              File sẽ được lưu với tên: <b>{customFileName}.{exportType}</b>
+            </div>
+          </div>
+        </Modal>
       </div>
       <ToastContainer position="top-right" autoClose={3000} />
     </div>
