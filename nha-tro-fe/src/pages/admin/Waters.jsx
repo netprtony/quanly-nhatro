@@ -245,6 +245,17 @@ export default function Waters() {
           ➕ Thêm hóa đơn nước
         </button>
 
+        {/* Bộ lọc nâng cao */}
+        <div className="mb-3">
+          <AdvancedFilters
+            fieldOptions={fieldOptions}
+            filters={filters}
+            onAddFilter={(f) => setFilters((prev) => [...prev, f])}
+            onRemoveFilter={(i) => setFilters((prev) => prev.filter((_, idx) => idx !== i))}
+            compact
+          />
+        </div>
+
         <Table
           columns={columns}
           data={waters}

@@ -20,15 +20,17 @@ const FEE_TYPES = [
 ];
 
 const ELECTRICITY_API = "http://localhost:8000/electricity";
+const WATER_API = "http://localhost:8000/water";
 
 const DEFAULT_FEES = [
   { key: "Trash", label: "Rác", defaultAmount: 50000 },
-  { key: "Water", label: "Nước", defaultAmount: 300000 },
+  // { key: "Water", label: "Nước", defaultAmount: 300000 }, // ❌ Bỏ phí nước mặc định
   { key: "Wifi", label: "Wifi", defaultAmount: 30000 },
 ];
 
 export default function Invoices() {
   const [electricityMeters, setElectricityMeters] = useState([]);
+  const [waterMeters, setWaterMeters] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -69,7 +71,8 @@ export default function Invoices() {
   const [editingDetail, setEditingDetail] = useState(null);
   const [detailForm, setDetailForm] = useState({
     invoice_id: "",
-    meter_id: "",
+    electricity_meter_id: "",
+    water_meter_id: "",
     fee_type: "",
     amount: "",
     note: "",
@@ -148,7 +151,8 @@ export default function Invoices() {
   // --- CRUD chi tiết hóa đơn ---
   const detailColumns = [
     { label: "ID", accessor: "detail_id" },
-    { label: "Chỉ số điện", accessor: "meter_id" },
+    { label: "Công tơ điện", accessor: "electricity_meter_id" },
+    { label: "Công tơ nước", accessor: "water_meter_id" },
     { label: "Loại phí", accessor: "fee_type" },
     {
       label: "Số tiền",
@@ -383,7 +387,7 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
     const payload = {
       ...form,
       room_id: form.room_id ? parseInt(form.room_id) : null,
-      total_amount: form.total_amount ? parseFloat(form.total_amount) : 0,
+      total_amount: 0, // Không nhập tay khi thêm mới
       is_paid: form.is_paid,
       month: form.month ? form.month + "-01" : "",
     };
@@ -451,9 +455,55 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
         invoiceId = data.invoice_id || data.id;
         toast.success("✅ Thêm hóa đơn thành công!");
 
-        // Thêm các chi tiết hóa đơn mặc định
+        // --- Tự động thêm chi tiết hóa đơn điện ---
+        const elecRes = await fetch(`${ELECTRICITY_API}?room_id=${form.room_id}`);
+        const elecData = await elecRes.json();
+        // Tìm công tơ điện tháng gần nhất <= tháng hóa đơn
+        const targetMonth = form.month;
+        const nearestElec = Array.isArray(elecData)
+          ? elecData
+              .filter(m => m.month && m.month.slice(0, 7) <= targetMonth)
+              .sort((a, b) => b.month.localeCompare(a.month))[0]
+          : null;
+        if (nearestElec) {
+          await fetch(INVOICE_DETAIL_API, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              invoice_id: invoiceId,
+              fee_type: "Electricity",
+              electricity_meter_id: nearestElec.meter_id,
+              amount: nearestElec.total_amount,
+              note: `Tiền điện tháng ${nearestElec.month?.slice(0, 7)}`,
+            }),
+          });
+        }
+
+        // --- Tự động thêm chi tiết hóa đơn nước ---
+        const waterRes = await fetch(`${WATER_API}?room_id=${form.room_id}`);
+        const waterData = await waterRes.json();
+        const nearestWater = Array.isArray(waterData)
+          ? waterData
+              .filter(m => m.month && m.month.slice(0, 7) <= targetMonth)
+              .sort((a, b) => b.month.localeCompare(a.month))[0]
+          : null;
+        if (nearestWater) {
+          await fetch(INVOICE_DETAIL_API, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              invoice_id: invoiceId,
+              fee_type: "Water",
+              water_meter_id: nearestWater.meter_id,
+              amount: nearestWater.total_amount,
+              note: `Tiền nước tháng ${nearestWater.month?.slice(0, 7)}`,
+            }),
+          });
+        }
+
+        // Thêm các chi tiết hóa đơn mặc định khác (Trash, Wifi, ...)
         for (const fee of defaultFees) {
-          if (fee.checked) {
+          if (fee.checked && !["Electricity", "Water"].includes(fee.key)) {
             await fetch(INVOICE_DETAIL_API, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -497,7 +547,8 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
   const handleAddDetail = async () => {
     setDetailForm({
       invoice_id: selectedInvoiceId,
-      meter_id: "",
+      electricity_meter_id: "",
+      water_meter_id: "",
       fee_type: "",
       amount: "",
       note: "",
@@ -523,7 +574,8 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
   const handleEditDetail = (detail) => {
     setDetailForm({
       invoice_id: detail.invoice_id,
-      meter_id: detail.meter_id || "",
+      electricity_meter_id: detail.electricity_meter_id || "",
+      water_meter_id: detail.water_meter_id || "",
       fee_type: detail.fee_type,
       amount: detail.amount,
       note: detail.note || "",
@@ -558,7 +610,8 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
     const payload = {
       ...detailForm,
       invoice_id: selectedInvoiceId,
-      meter_id: detailForm.meter_id ? parseInt(detailForm.meter_id) : null,
+      electricity_meter_id: detailForm.electricity_meter_id ? parseInt(detailForm.electricity_meter_id) : null,
+      water_meter_id: detailForm.water_meter_id ? parseInt(detailForm.water_meter_id) : null,
       amount: detailForm.amount ? parseFloat(detailForm.amount) : 0,
       fee_type: detailForm.fee_type,
       note: detailForm.note,
@@ -592,12 +645,12 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
   };
 
   const handleDetailFormChange = async (field, value) => {
-    // Nếu chọn meter_id (hóa đơn điện) thì tự động lấy total_amount
-    if (field === "meter_id" && detailForm.fee_type === "Electricity") {
-      const meter = electricityMeters.find(m => String(m.meter_id) === String(value));
+    // Nếu chọn electricity_meter_id (hóa đơn điện) thì tự động lấy total_amount
+    if (field === "electricity_meter_id" && detailForm.fee_type === "Electricity") {
+      const meter = electricityMeters.find(m => String(m.electricity_meter_id) === String(value));
       setDetailForm((prev) => ({
         ...prev,
-        meter_id: value,
+        electricity_meter_id: value,
         amount: meter ? meter.total_amount : "",
       }));
       setDetailUnsaved(true);
@@ -617,6 +670,20 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
           setElectricityMeters(Array.isArray(data) ? data : []);
         } catch {
           setElectricityMeters([]);
+        }
+      }
+    }
+
+    // Nếu chọn loại phí là "Water", load lại danh sách công tơ nước nếu chưa có
+    if (field === "fee_type" && value === "Water") {
+      const invoice = invoices.find(inv => inv.invoice_id === selectedInvoiceId);
+      if (invoice && invoice.room_id) {
+        try {
+          const res = await fetch(`${WATER_API}?room_id=${invoice.room_id}`);
+          const data = await res.json();
+          setWaterMeters(Array.isArray(data) ? data : []);
+        } catch {
+          setWaterMeters([]);
         }
       }
     }
@@ -677,98 +744,100 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
             onConfirm={handleSubmitInvoice}
           >
             <form>
-            <div className="row g-3">
-              <div className="col-md-6">
-              <label className="form-label">Phòng</label>
-              <select
-                className="form-select"
-                value={form.room_id}
-                onChange={(e) => handleFormChange("room_id", e.target.value)}
-                required
-              >
-                <option value="">-- Chọn phòng --</option>
-                {rooms.map(room => (
-                <option key={room.room_id} value={room.room_id}>
-                  {room.room_number}
-                </option>
-                ))}
-              </select>
-              </div>
-              <div className="col-md-6">
-              <label className="form-label">Tháng</label>
-              <input
-                type="month"
-                className="form-control"
-                value={form.month}
-                onChange={(e) => handleFormChange("month", e.target.value)}
-                required
-              />
-              </div>
-              <div className="col-md-6">
-                <label className="form-label">Số tiền (VND)</label>
+              <div className="row g-3">
+                <div className="col-md-6">
+                <label className="form-label">Phòng</label>
+                <select
+                  className="form-select"
+                  value={form.room_id}
+                  onChange={(e) => handleFormChange("room_id", e.target.value)}
+                  required
+                >
+                  <option value="">-- Chọn phòng --</option>
+                  {rooms.map(room => (
+                  <option key={room.room_id} value={room.room_id}>
+                    {room.room_number}
+                  </option>
+                  ))}
+                </select>
+                </div>
+                <div className="col-md-6">
+                <label className="form-label">Tháng</label>
                 <input
-                  type="text"
+                  type="month"
                   className="form-control"
-                  value={
-                    detailForm.amount
-                      ? new Intl.NumberFormat("vi-VN").format(detailForm.amount)
-                      : ""
-                  }
-                  onChange={(e) => {
-                    // Bỏ dấu chấm phân cách trước khi lưu
-                    const rawValue = e.target.value.replace(/\./g, "").replace(/,/g, "");
-                    const numericValue = rawValue ? parseInt(rawValue, 10) : "";
-                    handleDetailFormChange("amount", numericValue);
-                  }}
+                  value={form.month}
+                  onChange={(e) => handleFormChange("month", e.target.value)}
                   required
                 />
-              </div>
-              <div className="col-md-6">
-              <label className="form-label">Trạng thái</label>
-              <select
-                className="form-select"
-                value={form.is_paid ? "true" : "false"}
-                onChange={(e) => handleFormChange("is_paid", e.target.value === "true")}
-                required
-              >
-                <option value="false">Chưa thanh toán</option>
-                <option value="true">Đã thanh toán</option>
-              </select>
-              </div>
-            </div>
-            {/* Thêm các phí mặc định */}
-            <div className="row g-3">
-            <div className="col-12">
-            <label className="form-label">Các loại phí mặc định</label>
-            <div className="row">
-              {defaultFees.map((fee, idx) => (
-                <div className="col-md-4 mb-2" key={fee.key}>
-                  <div className="form-check d-flex align-items-center">
+                </div>
+                {/* Ẩn textbox Số tiền khi thêm mới */}
+                {editingInvoice && (
+                  <div className="col-md-6">
+                    <label className="form-label">Số tiền (VND)</label>
                     <input
-                      className="form-check-input"
-                      type="checkbox"
-                      checked={fee.checked}
-                      onChange={e => handleDefaultFeeChange(idx, "checked", e.target.checked)}
-                      id={`fee-${fee.key}`}
-                    />
-                    <label className="form-check-label ms-2 me-2" htmlFor={`fee-${fee.key}`}>
-                      {fee.label}
-                    </label>
-                    <input
-                      type="number"
+                      type="text"
                       className="form-control"
-                      style={{ width: "100px" }}
-                      value={fee.amount}
-                      min={0}
-                      onChange={e => handleDefaultFeeChange(idx, "amount", e.target.value)}
-                      disabled={!fee.checked}
+                      value={
+                        detailForm.amount
+                          ? new Intl.NumberFormat("vi-VN").format(detailForm.amount)
+                          : ""
+                      }
+                      onChange={(e) => {
+                        const rawValue = e.target.value.replace(/\./g, "").replace(/,/g, "");
+                        const numericValue = rawValue ? parseInt(rawValue, 10) : "";
+                        handleDetailFormChange("amount", numericValue);
+                      }}
+                      required
                     />
                   </div>
+                )}
+                <div className="col-md-6">
+                <label className="form-label">Trạng thái</label>
+                <select
+                  className="form-select"
+                  value={form.is_paid ? "true" : "false"}
+                  onChange={(e) => handleFormChange("is_paid", e.target.value === "true")}
+                  required
+                >
+                  <option value="false">Chưa thanh toán</option>
+                  <option value="true">Đã thanh toán</option>
+                </select>
                 </div>
-              ))}
-            </div>
-            </div>
-            </div>
+              </div>
+              {/* Thêm các phí mặc định */}
+              <div className="row g-3">
+              <div className="col-12">
+              <label className="form-label">Các loại phí mặc định</label>
+              <div className="row">
+                {defaultFees.map((fee, idx) => (
+                  <div className="col-md-4 mb-2" key={fee.key}>
+                    <div className="form-check d-flex align-items-center">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        checked={fee.checked}
+                        onChange={e => handleDefaultFeeChange(idx, "checked", e.target.checked)}
+                        id={`fee-${fee.key}`}
+                      />
+                      <label className="form-check-label ms-2 me-2" htmlFor={`fee-${fee.key}`}>
+                        {fee.label}
+                      </label>
+                      <input
+                        type="number"
+                        className="form-control"
+                        style={{ width: "100px" }}
+                        value={fee.amount}
+                        min={0}
+                        onChange={e => handleDefaultFeeChange(idx, "amount", e.target.value)}
+                        disabled={!fee.checked}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              </div>
+              </div>
             </form>
           </Modal>
 
@@ -851,8 +920,8 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
                           setElectricityMeters([]);
                         }
                       } else {
-                        // Reset meter_id nếu không phải điện
-                        handleDetailFormChange("meter_id", null);
+                        // Reset electricity_meter_id nếu không phải điện
+                        handleDetailFormChange("electricity_meter_id", null);
                       }
                     }}
                     required
@@ -871,12 +940,31 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
                       <label className="form-label">Hóa đơn điện</label>
                       <select
                         className="form-select"
-                        value={detailForm.meter_id || ""}
-                        onChange={(e) => handleDetailFormChange("meter_id", e.target.value)}
+                        value={detailForm.electricity_meter_id || ""}
+                        onChange={(e) => handleDetailFormChange("electricity_meter_id", e.target.value)}
                         required
                       >
                         <option value="">-- Chọn hóa đơn điện --</option>
                         {electricityMeters.map((meter) => (
+                          <option key={meter.meter_id} value={meter.meter_id}>
+                            {`Tháng ${meter.month?.slice(0, 7)} | Cũ: ${meter.old_reading} | Mới: ${meter.new_reading}`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                {/* Nếu chọn Water thì hiện combobox chọn công tơ nước */}
+                {detailForm.fee_type === "Water" && (
+                    <div className="col-md-6">
+                      <label className="form-label">Hóa đơn nước</label>
+                      <select
+                        className="form-select"
+                        value={detailForm.water_meter_id || ""}
+                        onChange={(e) => handleDetailFormChange("water_meter_id", e.target.value)}
+                        required
+                      >
+                        <option value="">-- Chọn hóa đơn nước --</option>
+                        {waterMeters.map((meter) => (
                           <option key={meter.meter_id} value={meter.meter_id}>
                             {`Tháng ${meter.month?.slice(0, 7)} | Cũ: ${meter.old_reading} | Mới: ${meter.new_reading}`}
                           </option>
@@ -930,7 +1018,8 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
                       setEditingDetail(null);
                       setDetailForm({
                         invoice_id: selectedInvoiceId,
-                        meter_id: "",
+                        electricity_meter_id: "",
+                        water_meter_id: "",
                         fee_type: "",
                         amount: "",
                         note: "",

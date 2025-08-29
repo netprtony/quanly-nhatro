@@ -21,7 +21,8 @@ def get_invoice_details(
     valid_sort_fields = {
         "detail_id": models.InvoiceDetail.detail_id,
         "invoice_id": models.InvoiceDetail.invoice_id,
-        "meter_id": models.InvoiceDetail.meter_id,
+        "electricity_meter_id": models.InvoiceDetail.electricity_meter_id,
+        "water_meter_id": models.InvoiceDetail.water_meter_id,
         "fee_type": models.InvoiceDetail.fee_type,
         "amount": models.InvoiceDetail.amount,
     }

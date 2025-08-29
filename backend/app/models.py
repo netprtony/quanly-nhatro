@@ -101,7 +101,7 @@ class Room(Base):
       # ✅ Quan hệ với RoomImages (1 phòng có nhiều ảnh)
     images = relationship("RoomImage", back_populates="room", cascade="all, delete-orphan")
     # ✅ thêm dòng này để khớp với ElectricityMeter.room
-    meters = relationship("ElectricityMeter", back_populates="room", cascade="all, delete")
+    electricity_meters = relationship("ElectricityMeter", back_populates="room", cascade="all, delete")
     water_meters = relationship("WaterMeter", back_populates="room", cascade="all, delete")
 class RoomImage(Base):
     __tablename__ = "RoomImages"
@@ -147,9 +147,9 @@ class ElectricityMeter(Base):
 
     created_at = Column(TIMESTAMP, server_default=func.now())
 
-    room = relationship("Room", back_populates="meters")   
+    room = relationship("Room", back_populates="electricity_meters")   
 class WaterMeter(Base):
-    __tablename__ = "WaterMeter"
+    __tablename__ = "WaterMeters"
 
     meter_id = Column(Integer, primary_key=True, autoincrement=True)
     room_id = Column(Integer, ForeignKey("Rooms.room_id", ondelete="CASCADE"), nullable=False)
