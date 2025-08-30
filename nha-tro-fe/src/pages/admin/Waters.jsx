@@ -6,13 +6,16 @@ import Modal from "/src/components/Modal.jsx";
 import ModalConfirm from "/src/components/ModalConfirm.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import ExcelJS from "exceljs";
+import * as FileSaver from "file-saver";
 
-const ROOMS_API = "http://localhost:8000/rooms/all";
+const ROOMS_API = "http://localhost:8000/rooms";
 const WATER_API = "http://localhost:8000/water";
 
 export default function Waters() {
   const [waters, setWaters] = useState([]);
-  const [rooms, setRooms] = useState([]);
+  const [roomsAll, setRoomsAll] = useState([]);
+  const [roomsAvailable, setRoomsAvailable] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingWater, setEditingWater] = useState(null);
   const [form, setForm] = useState({
@@ -27,6 +30,8 @@ export default function Waters() {
   const [showConfirmExit, setShowConfirmExit] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [waterToDelete, setWaterToDelete] = useState(null);
+  const [waterRateInput, setWaterRateInput] = useState(15000);
+  const fileInputRef = useRef();
 
   // Phân trang, lọc, sort
   const [filters, setFilters] = useState([]);
@@ -50,7 +55,7 @@ export default function Waters() {
       label: "Phòng",
       accessor: "room_id",
       render: (room_id) => {
-        const room = rooms.find((r) => r.room_id === room_id);
+        const room = roomsAll.find((r) => r.room_id === room_id);
         return room ? room.room_number : room_id;
       },
     },
@@ -107,13 +112,27 @@ export default function Waters() {
     },
   ];
 
-  // Lấy danh sách phòng
-  const fetchRooms = async () => {
+  // Lấy danh sách phòng tất cả
+  const fetchRoomsAll = async () => {
     try {
-      const res = await axios.get(`${ROOMS_API}?filter_is_available=false`);
-      setRooms(Array.isArray(res.data) ? res.data : []);
-    } catch {
-      setRooms([]);
+      const res = await axios.get(`${ROOMS_API}?page=1&page_size=200`);
+      const data = res.data;
+      setRoomsAll(Array.isArray(data.items) ? data.items : []);
+    } catch (err) {
+      toast.error("Không thể tải danh sách phòng!");
+      setRoomsAll([]);
+    }
+  };
+
+  // Lấy danh sách phòng còn trống
+  const fetchRoomsAvailable = async () => {
+    try {
+      const res = await axios.get(`${ROOMS_API}/all?filter_is_available=true`);
+      const data = res.data;
+      setRoomsAvailable(Array.isArray(data) ? data : []);
+    } catch (err) {
+      toast.error("Không thể tải danh sách phòng!");
+      setRoomsAvailable([]);
     }
   };
 
@@ -145,12 +164,14 @@ export default function Waters() {
   };
 
   useEffect(() => {
-    fetchRooms();
+    fetchRoomsAll();
+    // Nếu cần dùng phòng trống, gọi fetchRoomsAvailable();
     fetchWaters();
     // eslint-disable-next-line
   }, [filters, page, pageSize, sortField, sortOrder]);
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
+    await fetchRoomsAvailable();
     setForm({
       room_id: "",
       month: "",
@@ -243,13 +264,180 @@ export default function Waters() {
     setUnsavedChanges(true);
   };
 
+  // Xuất file ghi số nước tháng mới
+  const handleExportExcel = async () => {
+    try {
+      // Lấy danh sách phòng đang có người ở
+      const resRooms = await axios.get(`${ROOMS_API}?filter_is_available=False`);
+      const roomsData = Array.isArray(resRooms.data) ? resRooms.data : [];
+
+      // Lấy tháng hiện tại
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const currentMonthStr = `${year}-${month}`;
+
+      // Lấy chỉ số cũ (new_reading tháng trước) cho từng phòng
+      const exportRows = [];
+      for (const room of roomsData) {
+        const resMeters = await axios.get(
+          `${WATER_API}?room_id=${room.room_id}&sort_field=month&sort_order=desc&page_size=1`
+        );
+        let oldReading = 0;
+        const items = resMeters.data?.items || [];
+        if (items.length > 0) {
+          oldReading = items[0].new_reading;
+        }
+        exportRows.push({
+          room_id: room.room_id,
+          room_number: room.room_number,
+          month: currentMonthStr,
+          old_reading: oldReading,
+          new_reading: "",
+          water_rate: waterRateInput,
+        });
+      }
+
+      // Tạo file Excel
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Ghi số nước tháng mới");
+      worksheet.columns = [
+        { header: "room_id", key: "room_id", width: 10 },
+        { header: "room_number", key: "room_number", width: 15 },
+        { header: "month", key: "month", width: 10 },
+        { header: "old_reading", key: "old_reading", width: 15 },
+        { header: "new_reading", key: "new_reading", width: 15 },
+        { header: "water_rate", key: "water_rate", width: 18 },
+      ];
+      exportRows.forEach(row => worksheet.addRow(row));
+      const buffer = await workbook.xlsx.writeBuffer();
+      const filename = `ghi_so_nuoc_${currentMonthStr}.xlsx`;
+      FileSaver.saveAs(new Blob([buffer]), filename);
+      toast.success("✅ Đã xuất file ghi số nước tháng mới!");
+    } catch (err) {
+      toast.error("❌ Lỗi xuất file Excel!");
+    }
+  };
+
+  // Import file Excel ghi số nước
+  const handleImportExcel = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    try {
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(await file.arrayBuffer());
+      const worksheet = workbook.worksheets[0];
+      const rows = [];
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return; // Bỏ header
+        const [
+          room_id,
+          room_number,
+          month,
+          old_reading,
+          new_reading,
+          water_rate,
+        ] = row.values.slice(1);
+        rows.push({
+          room_id,
+          room_number,
+          month,
+          old_reading,
+          new_reading,
+          water_rate,
+          rowNumber,
+        });
+      });
+
+      let hasError = false;
+      let errorMessages = [];
+      for (const r of rows) {
+        if (
+          !r.room_id ||
+          !r.month ||
+          r.old_reading === undefined ||
+          r.new_reading === undefined ||
+          !r.water_rate
+        ) {
+          hasError = true;
+          errorMessages.push(
+            `Thiếu dữ liệu ở dòng ${r.rowNumber}: room_id=${r.room_id}, month=${r.month}, old_reading=${r.old_reading}, new_reading=${r.new_reading}, water_rate=${r.water_rate}`
+          );
+          continue;
+        }
+        if (parseInt(r.old_reading) > parseInt(r.new_reading)) {
+          hasError = true;
+          errorMessages.push(
+            `Lỗi ở dòng ${r.rowNumber}: Chỉ số mới phải lớn hơn hoặc bằng chỉ số cũ!`
+          );
+          continue;
+        }
+        // Gửi từng hóa đơn nước lên backend
+        try {
+          await axios.post(WATER_API, {
+            room_id: parseInt(r.room_id),
+            month: r.month.length === 7 ? r.month + "-01" : r.month,
+            old_reading: parseInt(r.old_reading),
+            new_reading: parseInt(r.new_reading),
+            water_rate: parseFloat(r.water_rate),
+          });
+        } catch (err) {
+          hasError = true;
+          errorMessages.push(
+            `Lỗi ở dòng ${r.rowNumber}: ${err.response?.data?.detail || err.message}`
+          );
+        }
+      }
+
+      if (hasError) {
+        toast.error(
+          "Có lỗi khi import:\n" + errorMessages.join("\n"),
+          { autoClose: false }
+        );
+      } else {
+        toast.success("✅ Import hóa đơn nước thành công!");
+      }
+      fetchWaters();
+    } catch (err) {
+      toast.error("❌ Lỗi đọc file Excel!");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
   return (
     <div className="container mt-4 position-relative">
       <div className="p-4 rounded shadow bg-white">
-        <h3 className="mb-3">🚰 Quản lý nước</h3>
-        <button className="btn btn-success mb-3" onClick={handleAdd}>
-          ➕ Thêm hóa đơn nước
-        </button>
+        <div className="d-flex align-items-center justify-content-between mb-3">
+          <h3 className="mb-0">🚰 Quản lý nước</h3>
+          <div>
+            <button className="btn btn-success me-2" onClick={handleAdd}>
+              ➕ Thêm hóa đơn nước
+            </button>
+            <button className="btn btn-outline-primary me-2" onClick={handleExportExcel}>
+              ⬇️ Ghi số nước tháng mới
+            </button>
+            <input
+              type="number"
+              className="form-control btn-outline- d-inline-block me-2"
+              style={{ width: 120, verticalAlign: "middle" }}
+              value={waterRateInput}
+              onChange={e => setWaterRateInput(Number(e.target.value))}
+              min={0}
+              placeholder="Đơn giá nước"
+            />
+            <label className="btn btn-outline-success mb-0">
+              ⬆️ Import Excel
+              <input
+                type="file"
+                accept=".xlsx"
+                style={{ display: "none" }}
+                ref={fileInputRef}
+                onChange={handleImportExcel}
+              />
+            </label>
+          </div>
+        </div>
 
         {/* Bộ lọc nâng cao */}
         <div className="mb-3">
@@ -275,6 +463,7 @@ export default function Waters() {
           onSort={(field, order) => {
             setSortField(field);
             setSortOrder(order);
+            fetchRoomsAll();
           }}
         />
 
@@ -301,7 +490,7 @@ export default function Waters() {
                   required
                 >
                   <option value="">-- Chọn phòng --</option>
-                  {rooms.map((room) => (
+                  {roomsAvailable.map((room) => (
                     <option key={room.room_id} value={room.room_id}>
                       {room.room_number}
                     </option>

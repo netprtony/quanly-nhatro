@@ -9,13 +9,13 @@ import "react-toastify/dist/ReactToastify.css";
 import ExcelJS from "exceljs";
 import * as FileSaver from "file-saver";
 
-const ROOMS_API = "http://localhost:8000/rooms/all";
+const ROOMS_API = "http://localhost:8000/rooms";
 const ELECTRICITY_API = "http://localhost:8000/electricity";
 
 export default function Electricity() {
   const [electricities, setElectricities] = useState([]);
-  const [rooms, setRooms] = useState([]);
-  const [showModal, setShowModal] = useState(false);
+  const [roomsAll, setRoomsAll] = useState([]);
+  const [roomsAvailable, setRoomsAvailable] = useState([]);
   const [editingElectricity, setEditingElectricity] = useState(null);
   const [electricityRateInput, setElectricityRateInput] = useState(3500);
   const [form, setForm] = useState({
@@ -26,6 +26,7 @@ export default function Electricity() {
     electricity_rate: electricityRateInput,
     note: "",
   });
+  const [showModal, setShowModal] = useState(false);
   const fileInputRef = useRef();
   const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [showConfirmExit, setShowConfirmExit] = useState(false);
@@ -59,7 +60,7 @@ export default function Electricity() {
       label: "Phòng",
       accessor: "room_id",
       render: (room_id) => {
-        const room = rooms.find(r => r.room_id === room_id);
+        const room = roomsAll.find(r => r.room_id === room_id);
         return room ? room.room_number : room_id;
       }
     },
@@ -105,15 +106,27 @@ export default function Electricity() {
     },
   ];
 
-  // Lấy danh sách phòng (lấy nhiều để đủ cho combobox)
-  const fetchRooms = async () => {
+  // Lấy danh sách phòng tất cả
+  const fetchRoomsAll = async () => {
     try {
-      // Gọi API get_all_rooms với filter_is_available=false
-      const res = await axios.get(`${ROOMS_API}?filter_is_available=false`);
-      setRooms(Array.isArray(res.data) ? res.data : []);
+      const res = await axios.get(`${ROOMS_API}?page=1&page_size=200`);
+      const data = res.data;
+      setRoomsAll(Array.isArray(data.items) ? data.items : []);
     } catch (err) {
-      toast.error("❌ Lỗi khi lấy danh sách phòng!");
-      setRooms([]);
+      toast.error("Không thể tải danh sách phòng!");
+      setRoomsAll([]);
+    }
+  };
+
+  // Lấy danh sách phòng còn trống
+  const fetchRoomsAvailable = async () => {
+    try {
+      const res = await axios.get(`${ROOMS_API}/all?filter_is_available=true`);
+      const data = res.data;
+      setRoomsAvailable(Array.isArray(data) ? data : []);
+    } catch (err) {
+      toast.error("Không thể tải danh sách phòng!");
+      setRoomsAvailable([]);
     }
   };
 
@@ -148,12 +161,13 @@ export default function Electricity() {
   };
 
   useEffect(() => {
-    fetchRooms();
+    fetchRoomsAll();
     fetchElectricities();
     // eslint-disable-next-line
   }, [filters, page, pageSize, sortField, sortOrder]);
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
+    await fetchRoomsAvailable();
     setForm({
       room_id: "",
       month: "",
@@ -531,6 +545,7 @@ export default function Electricity() {
           onSort={(field, order) => {
             setSortField(field);
             setSortOrder(order);
+            fetchRoomsAll();
           }}
         />
 
@@ -552,7 +567,7 @@ export default function Electricity() {
                   required
                 >
                   <option value="">-- Chọn phòng --</option>
-                  {rooms.map(room => (
+                  {roomsAvailable.map(room => (
                     <option key={room.room_id} value={room.room_id}>
                       {room.room_number}
                     </option>
