@@ -9,8 +9,8 @@ import "react-toastify/dist/ReactToastify.css";
 import ExcelJS from "exceljs";
 import * as FileSaver from "file-saver";
 
-const ROOMS_API = "http://localhost:8000/rooms";
-const ELECTRICITY_API = "http://localhost:8000/electricity";
+const ROOMS_API = "http://localhost:8000/rooms/";
+const ELECTRICITY_API = "http://localhost:8000/electricity/";
 
 export default function Electricity() {
   const [electricities, setElectricities] = useState([]);
@@ -121,7 +121,7 @@ export default function Electricity() {
   // Lấy danh sách phòng còn trống
   const fetchRoomsAvailable = async () => {
     try {
-      const res = await axios.get(`${ROOMS_API}/all?filter_is_available=true`);
+      const res = await axios.get(`${ROOMS_API}all?filter_is_available=true`);
       const data = res.data;
       setRoomsAvailable(Array.isArray(data) ? data : []);
     } catch (err) {

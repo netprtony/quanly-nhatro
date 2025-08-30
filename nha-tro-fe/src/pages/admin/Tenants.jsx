@@ -6,7 +6,7 @@ import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const TENANT_URL = "http://localhost:8000/tenants";
+const TENANT_URL = "http://localhost:8000/tenants/";
 const CCCD_UPLOAD_API = "http://localhost:8000/tenants/upload-cccd";
 
 export default function Tenants() {

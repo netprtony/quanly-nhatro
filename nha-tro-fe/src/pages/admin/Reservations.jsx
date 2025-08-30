@@ -6,9 +6,9 @@ import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const RESERVATION_URL = "http://localhost:8000/reservations";
-const USERS_API = "http://localhost:8000/accounts";
-const ROOMS_API = "http://localhost:8000/rooms";
+const RESERVATION_URL = "http://localhost:8000/reservations/";
+const USERS_API = "http://localhost:8000/accounts/";
+const ROOMS_API = "http://localhost:8000/rooms/";
 
 export default function Reservations() {
   const [reservations, setReservations] = useState([]);

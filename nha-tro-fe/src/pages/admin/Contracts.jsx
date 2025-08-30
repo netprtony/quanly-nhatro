@@ -6,9 +6,9 @@ import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const CONTRACT_URL = "http://localhost:8000/contracts";
-const ROOMS_API = "http://localhost:8000/rooms";
-const TENANTS_API = "http://localhost:8000/tenants";
+const CONTRACT_URL = "http://localhost:8000/contracts/";
+const ROOMS_API = "http://localhost:8000/rooms/";
+const TENANTS_API = "http://localhost:8000/tenants/";
 const CONTRACT_EXPORT_API = "http://localhost:8000/contracts/export";
 
 export default function Contracts() {

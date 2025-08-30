@@ -6,8 +6,8 @@ import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const PAYMENT_API = "http://localhost:8000/payments";
-const INVOICE_API = "http://localhost:8000/invoices";
+const PAYMENT_API = "http://localhost:8000/payments/";
+const INVOICE_API = "http://localhost:8000/invoices/";
 const UNPAID_INVOICE_API = "http://localhost:8000/invoices/unpaid-invoices";
 export default function Payment() {
   const [payments, setPayments] = useState([]);

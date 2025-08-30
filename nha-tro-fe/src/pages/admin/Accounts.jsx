@@ -6,7 +6,7 @@ import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const ACCOUNT_URL = "http://localhost:8000/accounts";
+const ACCOUNT_URL = "http://localhost:8000/accounts/";
 
 export default function Accounts() {
   const [accounts, setAccounts] = useState([]);

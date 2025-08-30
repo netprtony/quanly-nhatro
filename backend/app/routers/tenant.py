@@ -30,13 +30,17 @@ def get_tenants(
     if search:
         query = query.filter(
             (models.Tenant.full_name.ilike(f"%{search}%")) |
-            (models.Tenant.phone_number.ilike(f"%{search}%"))
+            (models.Tenant.phone_number.ilike(f"%{search}%")) |
+            (models.Tenant.email.ilike(f"%{search}%")) |
+            (models.Tenant.address.ilike(f"%{search}%"))
         )
     # thêm xử lý sort
     valid_sort_fields = {
+        "tenant_id": models.Tenant.tenant_id,
         "full_name": models.Tenant.full_name,
         "phone_number": models.Tenant.phone_number,
         "email": models.Tenant.email,
+        "address": models.Tenant.address,
         "created_at": models.Tenant.created_at,
     }
     if sort_field in valid_sort_fields:

@@ -7,8 +7,8 @@ import ModalConfirm from "/src/components/ModalConfirm.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const DEVICES_API = "http://localhost:8000/devices";
-const ROOMS_API = "http://localhost:8000/rooms";
+const DEVICES_API = "http://localhost:8000/devices/";
+const ROOMS_API = "http://localhost:8000/rooms/";
 
 export default function Devices() {
   const [devices, setDevices] = useState([]);
@@ -32,7 +32,6 @@ export default function Devices() {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [deviceToDelete, setDeviceToDelete] = useState(null);
   const [filters, setFilters] = useState([]);
-  const [newFilter, setNewFilter] = useState({ field: "device_name", operator: "~", value: "" });
   const [search, setSearch] = useState("");
 
   const fieldOptions = [
@@ -221,69 +220,9 @@ export default function Devices() {
     setUnsavedChanges(true);
   };
 
-  const addFilter = () => {
-    if (!newFilter.field || newFilter.value === "") {
-      toast.warn("Vui lòng chọn trường và nhập giá trị lọc");
-      return;
-    }
-    setFilters((prev) => [...prev, { ...newFilter }]);
-    setNewFilter((prev) => ({ ...prev, value: "" }));
-  };
 
-  const removeFilter = (index) => {
-    setFilters((prev) => prev.filter((_, i) => i !== index));
-  };
 
-  const getValueByPath = (obj, path) => {
-    return path.split('.').reduce((o, p) => (o ? o[p] : undefined), obj);
-  };
 
-  const evaluateFilter = (f, device) => {
-    const raw = getValueByPath(device, f.field);
-    if (raw === undefined || raw === null) return false;
-
-    // normalize boolean field input
-    if (f.field === 'is_active') {
-      const target = f.value === 'true' || f.value === true || f.value === '1';
-      if (f.operator === '=') return raw === target;
-      if (f.operator === '!=') return raw !== target;
-      return false;
-    }
-
-    // numeric comparison when possible
-    const maybeNum = Number(raw);
-    const targetNum = Number(f.value);
-    const isNumeric = !isNaN(maybeNum) && !isNaN(targetNum);
-
-    if (isNumeric) {
-      switch (f.operator) {
-        case '>': return maybeNum > targetNum;
-        case '<': return maybeNum < targetNum;
-        case '>=': return maybeNum >= targetNum;
-        case '<=': return maybeNum <= targetNum;
-        case '=': return maybeNum === targetNum;
-        case '~':
-          const diff = Math.abs(maybeNum - targetNum);
-          const tol = Math.max(1, Math.abs(targetNum) * 0.1);
-          return diff <= tol;
-        default: return false;
-      }
-    }
-
-    // string operations
-    const rawStr = String(raw).toLowerCase();
-    const valStr = String(f.value).toLowerCase();
-    if (f.operator === '=') return rawStr === valStr;
-    if (f.operator === '~') return rawStr.includes(valStr);
-    return false;
-  };
-
-  const applyFilters = (list) => {
-    if (!filters || filters.length === 0) return list;
-    return list.filter((item) => filters.every((f) => evaluateFilter(f, item)));
-  };
-
-  const filteredDevices = applyFilters(devices);
 
   return (
     <div className="container mt-4 position-relative">
@@ -402,6 +341,19 @@ export default function Devices() {
           cancelText="Hủy"
           onConfirm={confirmDelete}
           onCancel={() => setShowConfirmDelete(false)}
+        />
+         <ModalConfirm
+          isOpen={showConfirmExit}
+          title="Thoát mà chưa lưu?"
+          message="Bạn có thay đổi chưa được lưu. Thoát không?"
+          confirmText="Thoát"
+          cancelText="Ở lại"
+          onConfirm={() => {
+            setShowModal(false);
+            setShowConfirmExit(false);
+            setUnsavedChanges(false);
+          }}
+          onClose={() => setShowConfirmExit(false)}
         />
       </div>
 

@@ -6,10 +6,10 @@ import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const INVOICE_API = "http://localhost:8000/invoices";
-const ROOMS_API = "http://localhost:8000/rooms";
+const INVOICE_API = "http://localhost:8000/invoices/";
+const ROOMS_API = "http://localhost:8000/rooms/";
 const INVOICE_DETAIL_API = "http://localhost:8000/invoice-details";
-const INVOICE_EXPORT_API = "http://localhost:8000/invoices/export";
+const INVOICE_EXPORT_API = "http://localhost:8000/invoices/export/";
 
 const FEE_TYPES = [
   { value: "Rent", label: "Thuê phòng" },
@@ -20,8 +20,8 @@ const FEE_TYPES = [
   { value: "Other", label: "Khác" },
 ];
 
-const ELECTRICITY_API = "http://localhost:8000/electricity";
-const WATER_API = "http://localhost:8000/water";
+const ELECTRICITY_API = "http://localhost:8000/electricity/";
+const WATER_API = "http://localhost:8000/water/";
 
 const DEFAULT_FEES = [
   { key: "Trash", label: "Rác", defaultAmount: 50000 },

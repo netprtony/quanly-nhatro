@@ -6,9 +6,9 @@ import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const ROOM_URL = "http://localhost:8000/rooms";
-const ROOMTYPE_URL = "http://localhost:8000/roomtypes";
-const ROOM_IMAGE_URL = "http://localhost:8000/room-images";
+const ROOM_URL = "http://localhost:8000/rooms/";
+const ROOMTYPE_URL = "http://localhost:8000/roomtypes/";
+const ROOM_IMAGE_URL = "http://localhost:8000/room-images/";
 
 export default function Rooms() {
   const [rooms, setRooms] = useState([]);
