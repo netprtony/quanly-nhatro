@@ -228,9 +228,56 @@ END;
 DELIMITER ;
 DELIMITER //
 
+DELIMITER ;
+DELIMITER $$
 
+CREATE TRIGGER PreventDeleteRoom
+BEFORE DELETE ON Rooms
+FOR EACH ROW
+BEGIN
+    DECLARE cnt INT;
+    SELECT COUNT(*) INTO cnt
+    FROM Contracts
+    WHERE room_id = OLD.room_id
+      AND contract_status = 'Active'
+      AND (end_date IS NULL OR end_date >= CURDATE());
+
+    IF cnt > 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Không thể xóa phòng: phòng đang có hợp đồng thuê hoạt động';
+    END IF;
+END$$
 
 DELIMITER ;
+DELIMITER $$
+
+CREATE TRIGGER PreventUpdateRoom
+BEFORE UPDATE ON Rooms
+FOR EACH ROW
+BEGIN
+    DECLARE cnt INT;
+
+    -- Nếu có hợp đồng hoạt động thì chỉ cho phép sửa room_type_id và max_occupants
+    SELECT COUNT(*) INTO cnt
+    FROM Contracts
+    WHERE room_id = OLD.room_id
+      AND contract_status = 'Active'
+      AND (end_date IS NULL OR end_date >= CURDATE());
+
+    IF cnt > 0 THEN
+        -- Nếu sửa các trường khác ngoài room_type_id và max_occupants thì chặn
+        IF (NEW.room_number <> OLD.room_number
+            OR NEW.is_available <> OLD.is_available
+            OR NEW.floor_number <> OLD.floor_number
+            OR NEW.description <> OLD.description) THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Chỉ được phép sửa room_type_id và max_occupants khi phòng đang có hợp đồng hoạt động';
+        END IF;
+    END IF;
+END$$
+
+DELIMITER ;
+
 INSERT INTO RoomTypes (type_name, description, price_per_month) VALUES
 ('Standard', 'Phòng cơ bản, không điều hòa', 3000000.00),
 ('Deluxe', 'Phòng có điều hòa, ban công', 5000000.00),
@@ -243,26 +290,26 @@ INSERT INTO RoomTypes (type_name, description, price_per_month) VALUES
 ('Economy', 'Phòng tiết kiệm, tiện nghi cơ bản', 2000000.00),
 ('Luxury', 'Phòng sang trọng, đầy đủ tiện nghi', 12000000.00);
 -- Thêm phòng
-INSERT INTO Rooms (room_number, room_type_id, max_occupants, floor_number)
+INSERT INTO Rooms (room_number, room_type_id, max_occupants, floor_number, is_available)
 VALUES 
-('Phòng 1A', 1, 4, 0),
-('Phòng 2A', 2, 4, 0),
-('Phòng 3A', 3, 2, 0),
-('Phòng 4A', 4, 4, 0),
-('Phòng 5A', 5, 3, 0),
-('Phòng 6A', 6, 4, 0),
-('Phòng 7A', 7, 1, 0),
-('Phòng 8A', 8, 4, 0),
+('Phòng 1A', 1, 4, 0, 0),
+('Phòng 2A', 2, 4, 0, 0),
+('Phòng 3A', 3, 2, 0, 0),
+('Phòng 4A', 4, 4, 0, 0),
+('Phòng 5A', 5, 3, 0, 0),
+('Phòng 6A', 6, 4, 0, 0),
+('Phòng 7A', 7, 1, 0, 0),
+('Phòng 8A', 8, 4, 0, 0),
 
-('Phòng 1B', 9, 4, 0),
-('Phòng 2B', 10, 4, 0),
-('Phòng 3B', 1, 4, 0),
-('Phòng 4B', 1, 4, 0),
-('Phòng 5B', 1, 4, 0),
-('Phòng 6B', 1, 4, 0),
-('Phòng 7B', 1, 4, 0),
-('Phòng 8B', 1, 4, 0),
-('Phòng 9B', 1, 4, 0);
+('Phòng 1B', 9, 4, 0, 0),
+('Phòng 2B', 10, 4, 0, 0),
+('Phòng 3B', 1, 4, 0, 1),
+('Phòng 4B', 1, 4, 0, 1),
+('Phòng 5B', 1, 4, 0, 1),
+('Phòng 6B', 1, 4, 0, 1),
+('Phòng 7B', 1, 4, 0, 1),
+('Phòng 8B', 1, 4, 0, 1),
+('Phòng 9B', 1, 4, 0, 1);
 INSERT INTO `roomimages` VALUES (7,1,'/roomImage/1c801685-26f7-4949-b6b1-ce324e673d44_1755743014.jpg'),(8,2,'/roomImage/nha-tro-homestay 1.png'),(9,3,'/roomImage/z6940363114799-140893ff0d098a87f063ed43ca5eb211_1756109071.jpg'),(10,4,'/roomImage/images (7).jpg'),(11,5,'/roomImage/images (13).jpg'),(12,6,'/roomImage/uecuhb.jpg'),(13,7,'/roomImage/images4.jpg'),(14,8,'/roomImage/img-9698_1756086720.jpg'),(15,9,'/roomImage/gen-h-1_1756183493 (1).jpg'),(16,10,'/roomImage/img-6931_1756092450.jpg'),(17,11,'/roomImage/images6.jpg'),(18,12,'/roomImage/img-3621_1756184053.jpg'),(19,13,'/roomImage/images2.jpg'),(20,14,'/roomImage/images (7).jpg'),(21,15,'/roomImage/images.jpg'),(22,16,'/roomImage/img-3621_1756184053 (1).jpg'),(23,17,'/roomImage/2daf357b-a8ec-4cab-9e04-f2b268631c6e_1756181830.jpg');
 -- Thêm thiết bị cho các phòng
 INSERT INTO Devices (device_name, room_id, description, is_active)
@@ -273,7 +320,7 @@ VALUES
 ('Ổ cắm điện', 1, 'Ổ cắm 3 chấu', TRUE),
 
 -- Phòng 2A
-('Quạt trần', 2, 'Quạt trần 3 cánh', TRUE),
+('Điều hòa ', 2, 'Quạt trần 3 cánh', TRUE),
 ('Đèn LED', 2, 'Đèn chiếu sáng 20W', TRUE),
 ('Ổ cắm điện', 2, 'Ổ cắm 3 chấu', TRUE),
 
@@ -281,36 +328,45 @@ VALUES
 ('Quạt trần', 3, 'Quạt trần 3 cánh', TRUE),
 ('Đèn LED', 3, 'Đèn chiếu sáng 20W', TRUE),
 ('Ổ cắm điện', 3, 'Ổ cắm 3 chấu', TRUE),
+('TIvi Oled ', 3, 'Tivi đời mới ', TRUE),
 
 -- Phòng 4A
 ('Quạt trần', 4, 'Quạt trần 3 cánh', TRUE),
 ('Đèn LED', 4, 'Đèn chiếu sáng 20W', TRUE),
 ('Ổ cắm điện', 4, 'Ổ cắm 3 chấu', TRUE),
+('Bếp điện từ ', 4, 'Bếp Toshiba đa chức năng ',TRUE),
 
 -- Phòng 5A
 ('Quạt trần', 5, 'Quạt trần 3 cánh', TRUE),
 ('Đèn LED', 5, 'Đèn chiếu sáng 20W', TRUE),
 ('Ổ cắm điện', 5, 'Ổ cắm 3 chấu', TRUE),
+('Giường ', 5, 'Giường gỗ mun ', TRUE),
 
 -- Phòng 6A
 ('Quạt trần', 6, 'Quạt trần 3 cánh', TRUE),
 ('Đèn LED', 6, 'Đèn chiếu sáng 20W', TRUE),
 ('Ổ cắm điện', 6, 'Ổ cắm 3 chấu', TRUE),
+('Giường ', 6, 'Giường gỗ mun ', TRUE),
 
 -- Phòng 7A
 ('Quạt trần', 7, 'Quạt trần 3 cánh', TRUE),
 ('Đèn LED', 7, 'Đèn chiếu sáng 20W', TRUE),
 ('Ổ cắm điện', 7, 'Ổ cắm 3 chấu', TRUE),
+('Giường ', 7, 'Giường gỗ mun ', TRUE),
+('Bếp điện từ ', 7, 'Bếp Toshiba đa chức năng ',TRUE),
 
 -- Phòng 8A
 ('Quạt trần', 8, 'Quạt trần 3 cánh', TRUE),
 ('Đèn LED', 8, 'Đèn chiếu sáng 20W', TRUE),
 ('Ổ cắm điện', 8, 'Ổ cắm 3 chấu', TRUE),
 
+
 -- Phòng 1B
 ('Quạt trần', 9, 'Quạt trần 3 cánh', TRUE),
 ('Đèn LED', 9, 'Đèn chiếu sáng 20W', TRUE),
 ('Ổ cắm điện', 9, 'Ổ cắm 3 chấu', TRUE),
+('Tủ lạnh', 9, 'Tủ lạnh Toshiba  3 ngăn  ',TRUE),
+('Bếp điện từ ', 9, 'Bếp Toshiba đa chức năng ',TRUE),
 
 -- Phòng 2B
 ('Quạt trần', 10, 'Quạt trần 3 cánh', TRUE),
@@ -373,16 +429,16 @@ INSERT INTO Users (username, email, password, tenant_id, role, is_active) VALUES
 
 -- Thêm hợp đồng
 INSERT INTO Contracts (tenant_id, room_id, start_date, end_date, deposit_amount, monthly_rent, contract_status) VALUES
-('079203029607', 1, '2025-01-01', '2026-01-01', 3000000.00, 3000000.00, 'Active'),
-('079203029608', 2, '2025-02-01', '2026-02-01', 5000000.00, 5000000.00, 'Active'),
-('079203029609', 3, '2025-03-01', '2026-03-01', 7000000.00, 7000000.00, 'Active'),
-('079203029610', 4, '2025-04-01', '2026-04-01', 6000000.00, 6000000.00, 'Active'),
-('079203029611', 5, '2025-05-01', '2026-05-01', 2500000.00, 2500000.00, 'Active'),
-('079203029612', 6, '2025-06-01', '2026-06-01', 4500000.00, 4500000.00, 'Active'),
-('079203029613', 7, '2025-07-01', '2026-07-01', 8000000.00, 8000000.00, 'Active'),
-('079203029614', 8, '2025-08-01', '2026-08-01', 10000000.00, 10000000.00, 'Active'),
-('079203029615', 9, '2025-09-01', '2026-09-01', 2000000.00, 2000000.00, 'Active'),
-('079203029616', 10, '2025-10-01', '2026-10-01', 12000000.00, 12000000.00, 'Active');
+('079203029607', 1, '2025-01-01', '2026-01-01', 300000.00, 3000000.00, 'Active'),
+('079203029608', 2, '2025-02-01', '2026-02-01', 500000.00, 5000000.00, 'Active'),
+('079203029609', 3, '2025-03-01', '2026-03-01', 700000.00, 7000000.00, 'Active'),
+('079203029610', 4, '2025-04-01', '2026-04-01', 600000.00, 6000000.00, 'Active'),
+('079203029611', 5, '2025-05-01', '2026-05-01', 250000.00, 2500000.00, 'Active'),
+('079203029612', 6, '2025-06-01', '2026-06-01', 450000.00, 4500000.00, 'Active'),
+('079203029613', 7, '2025-07-01', '2026-07-01', 800000.00, 8000000.00, 'Active'),
+('079203029614', 8, '2025-08-01', '2026-08-01', 1000000.00, 10000000.00, 'Active'),
+('079203029615', 9, '2025-09-01', '2026-09-01', 200000.00, 2000000.00, 'Active'),
+('079203029616', 10, '2025-10-01', '2026-10-01', 1200000.00, 12000000.00, 'Active');
 -- Thêm đặt chỗ trước
 
 

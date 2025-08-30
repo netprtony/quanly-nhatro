@@ -13,7 +13,8 @@ const CONTRACT_EXPORT_API = "http://localhost:8000/contracts/export";
 
 export default function Contracts() {
   const [contracts, setContracts] = useState([]);
-  const [rooms, setRooms] = useState([]);
+  const [roomsAll, setRoomsAll] = useState([]);
+  const [roomsAvailable, setRoomsAvailable] = useState([]);
   const [tenants, setTenants] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingContract, setEditingContract] = useState(null);
@@ -69,7 +70,7 @@ export default function Contracts() {
       label: "Phòng",
       accessor: "room_id",
       render: (room_id) => {
-        const room = rooms.find((r) => r.room_id === room_id);
+        const room = roomsAll.find((r) => r.room_id === room_id);
         return room ? room.room_number : room_id;
       },
     },
@@ -167,18 +168,28 @@ export default function Contracts() {
     }
   };
 
-  // Lấy danh sách phòng cho combobox
-  const fetchRooms = async () => {
+  // Lấy danh sách phòng tất cả
+  const fetchRoomsAll = async () => {
+    try {
+      const res = await fetch(`${ROOMS_API}?page=1&page_size=200`);
+      const data = await res.json();
+      setRoomsAll(Array.isArray(data.items) ? data.items : []);
+    } catch (err) {
+      toast.error("Không thể tải danh sách phòng!");
+      setRoomsAll([]);
+    }
+  };
+  // Lấy danh sách phòng còn trống
+  const fetchRoomsAvailable = async () => {
     try {
       const res = await fetch(`${ROOMS_API}/all?filter_is_available=true`);
       const data = await res.json();
-      setRooms(Array.isArray(data) ? data : []);
+      setRoomsAvailable(Array.isArray(data) ? data : []);
     } catch (err) {
       toast.error("Không thể tải danh sách phòng!");
-      setRooms([]);
+      setRoomsAvailable([]);
     }
   };
-
   // Lấy danh sách khách thuê cho combobox
   const fetchTenants = async () => {
     try {
@@ -193,7 +204,7 @@ export default function Contracts() {
 
   useEffect(() => {
     fetchContracts();
-    fetchRooms();
+    fetchRoomsAll();
     fetchTenants();
     // eslint-disable-next-line
   }, [filters, page, pageSize, search, sortField, sortOrder]);
@@ -335,7 +346,8 @@ export default function Contracts() {
     setLoadingExport(false);
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
+    await fetchRoomsAvailable(); // Chỉ lấy phòng còn trống khi thêm mới
     setForm({
       contract_id: "",
       room_id: "",
@@ -344,8 +356,8 @@ export default function Contracts() {
       end_date: "",
       deposit_amount: "",
       monthly_rent: "",
-      num_people: 1,         // Mặc định 1 người
-      num_vehicles: 0,       // Mặc định 0 xe
+      num_people: 1,
+      num_vehicles: 0,
       contract_status: "Active",
     });
     setEditingContract(null);
@@ -357,7 +369,7 @@ export default function Contracts() {
     setForm({
       contract_id: contract.contract_id,
       room_id: contract.room_id ? String(contract.room_id) : "",
-      tenant_id: contract.tenant_id || "",
+      tenant_id: contract.tenant_id,
       start_date: contract.start_date || "",
       end_date: contract.end_date || "",
       deposit_amount: contract.deposit_amount || "",
@@ -435,7 +447,7 @@ export default function Contracts() {
           onPageSizeChange={(size) => {
             setPageSize(size);
             setPage(1);
-            fetchRooms();
+            fetchRoomsAll();
           }}
           onSort={(field, order) => {
             setSortField(field);
@@ -465,7 +477,7 @@ export default function Contracts() {
                   required
                 >
                   <option value="">-- Chọn phòng --</option>
-                  {rooms.map((room) => (
+                  {roomsAvailable.map((room) => (
                     <option key={room.room_id} value={room.room_id}>
                       {room.room_number}
                     </option>

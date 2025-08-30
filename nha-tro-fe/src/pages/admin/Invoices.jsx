@@ -664,8 +664,14 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
   const handleExportInvoice = (invoice) => {
     setExportingInvoice(invoice);
     const room = rooms.find(r => r.room_id === invoice.room_id);
+    // Remove Vietnamese diacritics and unsafe chars
+    const removeDiacritics = (str) =>
+      str
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]/g, "_");
     const safeRoomNumber = room
-      ? room.room_number.replace(/[^a-zA-Z0-9]/g, "_")
+      ? removeDiacritics(room.room_number)
       : "invoice";
     setCustomFileName(`${safeRoomNumber}_invoice`);
     setExportType("docx");

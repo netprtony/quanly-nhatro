@@ -95,84 +95,49 @@ export default function Contract() {
         <div
           className="card shadow-lg rounded-4 mx-auto"
           style={{
-            maxWidth: 600,
+            maxWidth: "1400px", // tăng chiều ngang khung chứa
             background: "rgba(171, 209, 198, 0.13)",
             border: "2px solid #f9bc60",
             color: "#fff",
           }}
         >
           <div className="card-body">
-            <div className="mb-3">
-              <span className="fw-bold" style={{ color: "#f9bc60" }}>
-                Mã hợp đồng:
-              </span>{" "}
-              {contract.contract_id}
+            {/* Hiển thị PDF nếu có */}
+            {contract.path_contract && (
+              <div className="mt-4">
+                <div className="fw-bold mb-2 text-center text-warning">📄 Hợp đồng PDF</div>
+                <div className="mb-3 text-center">
+                  <iframe
+                    src={contract.path_contract}
+                    title="Hợp đồng PDF"
+                    width="100%"
+                    height="900px"
+                    style={{
+                      border: "2px solid #f9bc60",
+                      borderRadius: "12px",
+                      background: "#fff",
+                      minWidth: "600px",
+                      width: "100%",
+                      maxWidth: "none", // bỏ giới hạn chiều ngang
+                    }}
+                  />
+                </div>
+                <div className="text-center">
+                  <a
+                    href={contract.path_contract}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-warning fw-bold"
+                    style={{ fontSize: "1.1rem" }}
+                    download
+                  >
+                    📥 Tải hợp đồng PDF
+                  </a>
+                </div>
+              </div>
+            )}
             </div>
-            <div className="mb-3">
-              <span className="fw-bold" style={{ color: "#f9bc60" }}>
-                Khách thuê:
-              </span>{" "}
-              {contract.full_name}
-            </div>
-            <div className="mb-3">
-              <span className="fw-bold" style={{ color: "#f9bc60" }}>
-                Phòng:
-              </span>{" "}
-              {contract.room_number}
-            </div>
-            <div className="mb-3">
-              <span className="fw-bold" style={{ color: "#f9bc60" }}>
-                Ngày bắt đầu:
-              </span>{" "}
-              {contract.start_date
-                ? new Date(contract.start_date).toLocaleDateString("vi-VN")
-                : ""}
-            </div>
-            <div className="mb-3">
-              <span className="fw-bold" style={{ color: "#f9bc60" }}>
-                Ngày kết thúc:
-              </span>{" "}
-              {contract.end_date
-                ? new Date(contract.end_date).toLocaleDateString("vi-VN")
-                : ""}
-            </div>
-            <div className="mb-3">
-              <span className="fw-bold" style={{ color: "#f9bc60" }}>
-                Tiền đặt cọc:
-              </span>{" "}
-              {contract.deposit_amount?.toLocaleString("vi-VN", {
-                style: "currency",
-                currency: "VND",
-              })}
-            </div>
-            <div className="mb-3">
-              <span className="fw-bold" style={{ color: "#f9bc60" }}>
-                Tiền thuê hàng tháng:
-              </span>{" "}
-              {contract.monthly_rent?.toLocaleString("vi-VN", {
-                style: "currency",
-                currency: "VND",
-              })}
-            </div>
-            <div className="mb-3">
-              <span className="fw-bold" style={{ color: "#f9bc60" }}>
-                Số người ở:
-              </span>{" "}
-              {contract.num_people}
-            </div>
-            <div className="mb-3">
-              <span className="fw-bold" style={{ color: "#f9bc60" }}>
-                Số xe gửi:
-              </span>{" "}
-              {contract.num_vehicles}
-            </div>
-            <div className="mb-3">
-              <span className="fw-bold" style={{ color: "#f9bc60" }}>
-                Trạng thái hợp đồng:
-              </span>{" "}
-              {contract.contract_status}
-            </div>
-          </div>
+
         </div>
       </div>
     </div>

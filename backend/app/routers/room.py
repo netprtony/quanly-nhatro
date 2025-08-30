@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pymysql import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional
@@ -92,28 +93,56 @@ def create_room(room: room_schema.RoomCreate, db: Session = Depends(database.get
     db.refresh(new_room)
     return new_room
 
-# ✅ Update existing room
 @router.put("/{room_id}", response_model=room_schema.RoomSchema)
 def update_room(room_id: int, room_data: room_schema.RoomCreate, db: Session = Depends(database.get_db)):
     room = db.query(models.Room).filter(models.Room.room_id == room_id).first()
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
-
-    for field, value in room_data.dict().items():
-        setattr(room, field, value)
-
-    db.commit()
-    db.refresh(room)
+    try:
+        for field, value in room_data.dict().items():
+            setattr(room, field, value)
+        db.commit()
+        db.refresh(room)
+    except OperationalError as e:  
+        db.rollback()
+        # ✅ Lấy message từ MySQL trigger SIGNAL
+        if e.orig.args and len(e.orig.args) > 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e.orig.args[1])  # "Chỉ được phép sửa room_type_id ..."
+            )
+        raise HTTPException(status_code=400, detail="Database error")
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Dữ liệu không hợp lệ")
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
     return room
 
-# ✅ Delete room
+
 @router.delete("/{room_id}", status_code=204)
 def delete_room(room_id: int, db: Session = Depends(database.get_db)):
     room = db.query(models.Room).filter(models.Room.room_id == room_id).first()
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
-    db.delete(room)
-    db.commit()
+    try:
+        db.delete(room)
+        db.commit()
+    except OperationalError as e:
+        db.rollback()
+        if e.orig.args and len(e.orig.args) > 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e.orig.args[1])  # Thông báo từ trigger
+            )
+        raise HTTPException(status_code=400, detail="Database error")
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Không thể xóa do ràng buộc dữ liệu")
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
     return None
 
 @router.post("/filter", response_model=room_schema.PaginatedRoomOut)

@@ -370,13 +370,23 @@ export default function Payment() {
                 <select
                   className="form-select"
                   value={form.invoice_id}
-                  onChange={(e) => handleFormChange("invoice_id", e.target.value)}
+                  onChange={(e) => {
+                    const invoiceId = e.target.value;
+                    handleFormChange("invoice_id", invoiceId);
+                    // Tìm hóa đơn vừa chọn
+                    const selectedInvoice = unpaidInvoices.find(inv => inv.invoice_id === parseInt(invoiceId));
+                    if (selectedInvoice) {
+                      handleFormChange("amount", selectedInvoice.total_amount);
+                    } else {
+                      handleFormChange("amount", "");
+                    }
+                  }}
                   required
                 >
                   <option value="">-- Chọn hóa đơn --</option>
                 {unpaidInvoices.map(inv => (
                   <option key={inv.invoice_id} value={inv.invoice_id}>
-                      {`#${inv.invoice_id} - Phòng ${inv.room_number} - Tháng ${inv.month?.slice(0,7)} - Số tiền: ${inv.total_amount.toLocaleString("vi-VN")} ₫`}
+                      {`#${inv.invoice_id} - ${inv.room_number} - Tháng ${inv.month?.slice(0,7)}`}
                     </option>
                   ))}
                 </select>
@@ -498,7 +508,7 @@ export default function Payment() {
                 <option value="">-- Chọn hóa đơn --</option>
                 {unpaidInvoices.map(inv => (
                   <option key={inv.invoice_id} value={inv.invoice_id}>
-                  {`#${inv.invoice_id} - Phòng ${inv.room_number} - Tháng ${inv.month?.slice(0,7)} - Số tiền: ${inv.total_amount.toLocaleString("vi-VN")} ₫`}
+                  {`#${inv.invoice_id} - ${inv.room_number} - Tháng ${inv.month?.slice(0,7)}`}
                 </option>
                 ))}
               </select>

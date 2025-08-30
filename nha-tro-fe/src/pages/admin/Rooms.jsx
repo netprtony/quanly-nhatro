@@ -309,7 +309,15 @@ export default function Rooms() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const errMsg = await res.text();
+        if (errMsg.includes("hợp đồng thuê hoạt động") || errMsg.includes("Chỉ được phép sửa")) {
+          toast.error("Không thể sửa phòng: phòng đang có khách thuê hoặc hợp đồng hoạt động!");
+        } else {
+          toast.error("Cập nhật phòng thất bại! " + errMsg);
+        }
+        return;
+      }
       await fetchRooms();
       toast.success("✏️ Cập nhật phòng thành công!");
       setShowModal(false);
@@ -323,7 +331,15 @@ export default function Rooms() {
       const res = await fetch(`${ROOM_URL}/${roomToDelete}`, {
         method: "DELETE",
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const errMsg = await res.text();
+        if (errMsg.includes("hợp đồng thuê hoạt động")) {
+          toast.error("Không thể xóa phòng: phòng đang có khách thuê hoặc hợp đồng hoạt động!");
+        } else {
+          toast.error("Xóa phòng thất bại! " + errMsg);
+        }
+        return;
+      }
       await fetchRooms();
       toast.success("🗑️ Xóa phòng thành công!");
       setShowConfirmDelete(false);

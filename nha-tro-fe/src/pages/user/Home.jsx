@@ -26,12 +26,6 @@ const features = [
     link: "/invoices",
   },
   {
-    title: "Đặt phòng online",
-    description: "Gửi yêu cầu đặt phòng trực tuyến.",
-    icon: "📅",
-    link: "/reservations",
-  },
-  {
     title: "Lịch sử thanh toán",
     description: "Xem lịch sử thanh toán tiền trọ, điện, nước.",
     icon: "📊",

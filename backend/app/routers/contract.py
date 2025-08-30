@@ -179,6 +179,7 @@ def get_contract_by_tenant(tenant_id: str, db: Session = Depends(database.get_db
         "num_people": contract_obj.num_people,
         "num_vehicles": contract_obj.num_vehicles,
         "contract_status": contract_obj.contract_status,
+        "path_contract": getattr(contract_obj, "path_contract", None)  # Luôn trả về trường này
     }
 
 import os
