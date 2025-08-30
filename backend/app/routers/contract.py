@@ -9,7 +9,7 @@ import os
 from docxtpl import DocxTemplate
 from fastapi.responses import FileResponse
 import pythoncom
-
+from docx2pdf import convert
 router = APIRouter(prefix="/contracts", tags=["Contracts"])
 
 @router.get("/", response_model=PaginatedContract)
@@ -240,7 +240,7 @@ def export_contract(
 
     # Nếu là PDF thì chuyển đổi
     if file_type == "pdf":
-        from docx2pdf import convert
+        
         docx_path = file_path.replace(".pdf", ".docx")
         try:
             pythoncom.CoInitialize()  # Khởi tạo COM cho thread hiện tại

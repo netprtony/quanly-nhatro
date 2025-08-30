@@ -18,7 +18,8 @@ def get_devices(
     if search:
         query = query.join(models.Room).filter(
             (models.Device.device_name.ilike(f"%{search}%")) |
-            (models.Room.room_number.ilike(f"%{search}%"))
+            (models.Room.room_number.ilike(f"%{search}%")) |
+            (models.Device.description.ilike(f"%{search}%"))
         )
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()

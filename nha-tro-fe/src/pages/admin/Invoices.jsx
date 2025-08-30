@@ -9,6 +9,7 @@ import "react-toastify/dist/ReactToastify.css";
 const INVOICE_API = "http://localhost:8000/invoices";
 const ROOMS_API = "http://localhost:8000/rooms";
 const INVOICE_DETAIL_API = "http://localhost:8000/invoice-details";
+const INVOICE_EXPORT_API = "http://localhost:8000/invoices/export";
 
 const FEE_TYPES = [
   { value: "Rent", label: "Thuê phòng" },
@@ -143,6 +144,14 @@ export default function Invoices() {
           <button className="btn btn-sm btn-info" onClick={() => handleViewDetail(invoice.invoice_id)}>Xem</button>
           <button className="btn btn-sm btn-warning" onClick={() => handleEdit(invoice)}>Sửa</button>
           <button className="btn btn-sm btn-danger" onClick={() => handleDelete(invoice.invoice_id)}>Xóa</button>
+          <button
+            className="btn btn-sm btn-success"
+            onClick={() => handleExportInvoice(invoice)}
+            disabled={loadingExport}
+            title="Tạo/Xuất hóa đơn"
+          >
+            {loadingExport ? "Đang xuất..." : "Tạo file"}
+          </button>
         </div>
       ),
     },
@@ -646,6 +655,50 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
     }
   };
 
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportingInvoice, setExportingInvoice] = useState(null);
+  const [exportType, setExportType] = useState("docx");
+  const [customFileName, setCustomFileName] = useState("");
+  const [loadingExport, setLoadingExport] = useState(false);
+
+  const handleExportInvoice = (invoice) => {
+    setExportingInvoice(invoice);
+    const room = rooms.find(r => r.room_id === invoice.room_id);
+    const safeRoomNumber = room
+      ? room.room_number.replace(/[^a-zA-Z0-9]/g, "_")
+      : "invoice";
+    setCustomFileName(`${safeRoomNumber}_invoice`);
+    setExportType("docx");
+    setShowExportModal(true);
+  };
+
+  const doExportInvoice = async () => {
+    if (!exportingInvoice) return;
+    setLoadingExport(true);
+    try {
+      const fileExt = exportType === "pdf" ? "pdf" : "docx";
+      const fileName = customFileName ? `${customFileName}.${fileExt}` : `invoice.${fileExt}`;
+      const res = await fetch(
+        `${INVOICE_EXPORT_API}/${exportingInvoice.invoice_id}?file_type=${exportType}&file_name=${encodeURIComponent(fileName)}`
+      );
+      if (!res.ok) throw new Error(await res.text());
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      toast.success("✅ Đã xuất hóa đơn!");
+      setShowExportModal(false);
+      await fetchInvoices();
+    } catch (err) {
+      toast.error("Xuất hóa đơn thất bại! " + err.message);
+    }
+    setLoadingExport(false);
+  };
+
   return (
     <div className="container mt-4 position-relative">
       <div className="p-4 rounded shadow bg-white">
@@ -1001,8 +1054,60 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
             onClose={() => setShowDetailConfirmDelete(false)}
           />
         </Modal>
+
+        <Modal
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          title="Tạo/Xuất hóa đơn"
+          showConfirm
+          onConfirm={doExportInvoice}
+          confirmText={loadingExport ? "Đang xuất..." : "Tải về"}
+          confirmDisabled={loadingExport}
+        >
+          <div className="mb-3">
+            <label className="form-label">Chọn loại file</label>
+            <div className="d-flex gap-3">
+              <div>
+                <input
+                  type="radio"
+                  id="docx"
+                  name="exportType"
+                  value="docx"
+                  checked={exportType === "docx"}
+                  onChange={() => setExportType("docx")}
+                />
+                <label htmlFor="docx" className="ms-2">Word (.docx)</label>
+              </div>
+              <div>
+                <input
+                  type="radio"
+                  id="pdf"
+                  name="exportType"
+                  value="pdf"
+                  checked={exportType === "pdf"}
+                  onChange={() => setExportType("pdf")}
+                />
+                <label htmlFor="pdf" className="ms-2">PDF (.pdf)</label>
+              </div>
+            </div>
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Tên file</label>
+            <input
+              type="text"
+              className="form-control"
+              value={customFileName}
+              onChange={e => setCustomFileName(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))}
+              placeholder="Tên file không dấu, không khoảng trắng"
+            />
+            <div className="form-text">
+              File sẽ được lưu với tên: <b>{customFileName}.{exportType}</b>
+            </div>
+          </div>
+        </Modal>
+
+        <ToastContainer position="top-right" autoClose={3000} />
       </div>
-      <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 }

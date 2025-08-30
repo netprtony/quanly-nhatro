@@ -1,10 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, utils
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from app import models, database
 from app.schemas.invoice import InvoiceCreate, InvoiceUpdate, InvoiceOut, PaginatedInvoiceOut, FilterRequest, UnpaidInvoiceOut
 from datetime import date, datetime
 from typing import List
-
+import os
+from docxtpl import DocxTemplate
+from docx2pdf import convert
+import pythoncom
 router = APIRouter(prefix="/invoices", tags=["Invoices"])
 
 @router.get("/", response_model=PaginatedInvoiceOut)
@@ -166,3 +170,120 @@ def filter_invoices(
     items = query.offset((page - 1) * page_size).limit(page_size).all()
     return {"items": items, "total": total}
 
+# Đường dẫn gốc backend (dùng cho template)
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+TEMPLATE_PATH = os.path.join(PROJECT_ROOT, "InvoiceFile", "invoice_template.docx")
+FE_PUBLIC_INVOICE_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "nha-tro-fe", "public", "invoices_file")
+)
+os.makedirs(FE_PUBLIC_INVOICE_DIR, exist_ok=True)
+@router.get("/export/{invoice_id}")
+def export_invoice(
+    invoice_id: int,
+    file_type: str = Query("docx", description="Loại file xuất: docx hoặc pdf"),
+    file_name: str = Query(None, description="Tên file xuất, nếu không có sẽ dùng định dạng mặc định"),
+    db: Session = Depends(database.get_db),
+):
+    # Lấy hóa đơn
+    invoice = db.query(models.Invoice).filter(models.Invoice.invoice_id == invoice_id).first()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Không tìm thấy hóa đơn")
+    # Lấy chi tiết hợp đồng
+    invoice_details = db.query(models.InvoiceDetail)\
+        .filter(models.InvoiceDetail.invoice_id == invoice_id)\
+        .order_by(models.InvoiceDetail.detail_id.desc())\
+        .all()
+    if not invoice_details:
+        raise HTTPException(status_code=404, detail="Không tìm thấy chi tiết hóa đơn")
+    # Lấy hợp đồng để biết thông tin phòng
+    contract = db.query(models.Contract).filter(models.Contract.room_id == invoice.room_id).first()
+    if not contract:
+        raise HTTPException(status_code=404, detail="Không tìm thấy hợp đồng cho phòng này")
+    # Lấy thông tin tenant
+    tenant = db.query(models.Tenant).filter(models.Tenant.tenant_id == invoice.tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Không tìm thấy người thuê")
+    # Lấy thông tin phòng mà khách thuê đang ở
+    room = db.query(models.Room).filter(models.Room.room_id == contract.room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Không tìm thấy phòng cho hợp đồng này")
+    # lấy loại phòng theo room_id
+    roomType = db.query(models.RoomType).filter(models.RoomType.room_type_id == room.room_type_id).first()
+    mustPay = invoice.total_amount
+    deposit_amount = contract.deposit
+    if contract.deposit != 0:
+        mustPay = invoice.total_amount - contract.deposit
+        contract.deposit = 0
+    mustPay_read = utils.num2words_vnd(mustPay)
+    start_date = datetime.date.today()
+    # Lấy chỉ số điện cũ và mới từ chi tiết hóa đơn
+    oldEM = None
+    newEM = None
+    for detail in invoice_details:
+        if detail.fee_type == "Electricity":
+            oldEM = detail.old_electric_meter
+            newEM = detail.new_electric_meter
+            break
+    oldWater = None
+    newWater = None
+    for detail in invoice_details:
+        if detail.fee_type == "Water":
+            oldWater = detail.old_water_meter
+            newWater = detail.new_water_meter
+            break
+    amountTrash = None
+    for detail in invoice_details:
+        if detail.fee_type == "Trash":
+            amountTrash = detail.amount
+            break
+    amountWF = None
+    for detail in invoice_details:
+        if detail.fee_type == "Water":
+            amountWF = detail.amount
+            break
+    context = {
+        "day": start_date.day,
+        "month": start_date.month,
+        "year": start_date.year,
+        "floor_number": room.floor_number,
+        "room_number": room.room_number,
+        "tenant_name": tenant.full_name,
+        "mustPay_read": mustPay_read,
+        "mustPay": mustPay,
+        "type_name": roomType.type_name,
+        "amountRoom": roomType.price_per_month,
+        "oldEM": oldEM,
+        "newEM": newEM,
+        "oldWater": oldWater,
+        "newWater": newWater,
+        "amountTrash": amountTrash,
+        "amountWF": amountWF,
+        "deposit_amount": deposit_amount,
+    }
+    doc = DocxTemplate(TEMPLATE_PATH)
+    doc.render(context)
+
+    # Tên file theo yêu cầu FE
+    safe_room_number = "".join(room.room_number.split(" "))
+    ext = "pdf" if file_type == "pdf" else "docx"
+    filename = file_name if file_name else f"invoice_{invoice_id}_{safe_room_number}.{ext}"
+    file_path = os.path.join(FE_PUBLIC_INVOICE_DIR, filename)
+    doc.save(file_path if ext == "docx" else file_path.replace(".pdf", ".docx"))
+
+    # Nếu là PDF thì chuyển đổi
+    if file_type == "pdf":
+        
+        docx_path = file_path.replace(".pdf", ".docx")
+        try:
+            pythoncom.CoInitialize()  # Khởi tạo COM cho thread hiện tại
+            convert(docx_path, file_path)
+            pythoncom.CoUninitialize()  # Giải phóng COM sau khi xong
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Lỗi chuyển đổi PDF: {str(e)}")
+        invoice.path_invoice = f"/invoices_file/{filename}"
+        db.commit()
+        return FileResponse(file_path, media_type="application/pdf", filename=filename)
+    else:
+        invoice.path_invoice = f"/invoices_file/{filename}"
+        db.commit()
+        return FileResponse(file_path, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", filename=filename)
