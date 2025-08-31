@@ -182,7 +182,7 @@ export default function Contracts() {
   // Lấy danh sách phòng còn trống
   const fetchRoomsAvailable = async () => {
     try {
-      const res = await fetch(`${ROOMS_API}/all?filter_is_available=true`);
+      const res = await fetch(`${ROOMS_API}all?filter_is_available=false`);
       const data = await res.json();
       setRoomsAvailable(Array.isArray(data) ? data : []);
     } catch (err) {
