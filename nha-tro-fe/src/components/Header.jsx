@@ -9,13 +9,14 @@ import {
   Button,
   Container,
 } from "react-bootstrap";
-import { FaAngleDown } from "react-icons/fa";
+import { FaAngleDown, FaBell } from "react-icons/fa";
 import { useUser } from "../contexts/UserContext";
 import Modal from "./Modal.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const TENANT_API = "http://localhost:8000/tenants/from-user/";
+const NOTIFICATION_API = "http://localhost:8000/notifications/user/";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -31,6 +32,9 @@ export default function Header() {
   });
   const [loading, setLoading] = useState(false);
   const [tenantInfo, setTenantInfo] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotiDropdown, setShowNotiDropdown] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Lấy token từ localStorage mỗi lần đổi mật khẩu
   const getToken = () => localStorage.getItem("token");
@@ -52,6 +56,42 @@ export default function Header() {
         .catch(() => setTenantInfo(null));
     }
   }, [showProfile, currentUser]);
+
+  // Lấy thông báo khi mở dropdown
+  useEffect(() => {
+    if (showNotiDropdown && currentUser?.id) {
+      fetch(`${NOTIFICATION_API}${currentUser.id}?skip=0&limit=10`)
+        .then(res => res.json())
+        .then(data => setNotifications(Array.isArray(data) ? data : []))
+        .catch(() => setNotifications([]));
+    }
+  }, [showNotiDropdown, currentUser]);
+
+  // Lấy số lượng thông báo chưa đọc mỗi khi user đăng nhập hoặc khi dropdown mở
+  useEffect(() => {
+    if (currentUser?.id) {
+      fetch(`http://localhost:8000/notifications/user/${currentUser.id}/unread-count`)
+        .then(res => res.json())
+        .then(count => setUnreadCount(count))
+        .catch(() => setUnreadCount(0));
+    }
+  }, [currentUser, showNotiDropdown, notifications]);
+
+  // Khi đánh dấu đã đọc, cập nhật lại số lượng chưa đọc
+  const handleReadNotification = async (noti) => {
+    if (!noti.is_read) {
+      await fetch(`http://localhost:8000/notifications/read/${noti.notification_id}`, { method: "PUT" });
+      setNotifications(nots => nots.map(n => n.notification_id === noti.notification_id ? { ...n, is_read: true } : n));
+      // Gọi lại API để cập nhật số lượng chưa đọc
+      if (currentUser?.id) {
+        fetch(`http://localhost:8000/notifications/user/${currentUser.id}/unread-count`)
+          .then(res => res.json())
+          .then(count => setUnreadCount(count))
+          .catch(() => setUnreadCount(0));
+      }
+    }
+    // Có thể chuyển hướng hoặc hiển thị chi tiết tại đây nếu muốn
+  };
 
   const handleNavigate = (path) => {
     navigate(path);
@@ -135,25 +175,43 @@ export default function Header() {
               <Nav.Link as={Link} to="/support" style={{ color: "#ffffff" }}>Hỗ trợ</Nav.Link>
             </Nav>
 
-            <Form className="d-flex me-3">
-              <FormControl
-                type="search"
-                placeholder="Tìm kiếm"
-                className="me-2"
-                style={{
-                  backgroundColor: "#abd1c6",
-                  border: "none",
-                  color: "#001e1d",
-                  fontWeight: "500",
-                }}
-              />
-              <Button
-                variant="light"
-                style={{ backgroundColor: "#f9bc60", color: "#001e1d", border: "none" }}
+            {/* Badge thông báo nằm bên trái AnimatePresence */}
+            <div className="dropdown d-inline-block position-relative me-3">
+              <button
+                type="button"
+                className="btn btn-warning position-relative"
+                style={{ fontWeight: "bold" }}
+                onClick={() => setShowNotiDropdown(open => !open)}
               >
-                Tìm
-              </Button>
-            </Form>
+                <FaBell className="me-1" />
+                {unreadCount > 0 && (
+                  <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                    {unreadCount}
+                    <span className="visually-hidden">unread messages</span>
+                  </span>
+                )}
+              </button>
+              <ul
+                className={`dropdown-menu${showNotiDropdown ? " show" : ""}`}
+                style={{ position: "absolute", top: "100%", right: 0, zIndex: 1000, minWidth: "320px", maxHeight: "400px", overflowY: "auto" }}
+              >
+                {notifications.length === 0 ? (
+                  <li className="dropdown-item text-muted">Không có thông báo nào.</li>
+                ) : (
+                  notifications.map(noti => (
+                    <li
+                      key={noti.notification_id}
+                      className={`dropdown-item${noti.is_read ? "" : " fw-bold text-dark"}`}
+                      style={{ cursor: "pointer", background: noti.is_read ? "#fff" : "#ffeeba" }}
+                      onClick={() => handleReadNotification(noti)}
+                    >
+                      <div>{noti.title}</div>
+                      <div className="small text-secondary">{noti.message}</div>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
 
             <AnimatePresence mode="wait">
               {!currentUser ? (

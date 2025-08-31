@@ -57,7 +57,7 @@ export default function Reservations() {
       }
       let res, data;
       if (filters.length > 0) {
-        res = await fetch(url.replace(RESERVATION_URL, RESERVATION_URL + "/filter"), {
+        res = await fetch(url.replace(RESERVATION_URL, RESERVATION_URL + "filter"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ filters, sort_field: field, sort_order: order }),
@@ -136,7 +136,7 @@ export default function Reservations() {
         room_id: form.room_id ? parseInt(form.room_id) : null,
         user_id: form.user_id ? parseInt(form.user_id) : null,
       };
-      const res = await fetch(`${RESERVATION_URL}/${editingReservation.reservation_id}`, {
+      const res = await fetch(`${RESERVATION_URL}${editingReservation.reservation_id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -153,7 +153,7 @@ export default function Reservations() {
   // Xóa đặt phòng
   const deleteReservation = async () => {
     try {
-      const res = await fetch(`${RESERVATION_URL}/${reservationToDelete}`, {
+      const res = await fetch(`${RESERVATION_URL}${reservationToDelete}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error(await res.text());

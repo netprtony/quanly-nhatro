@@ -132,6 +132,7 @@ def filter_invoices(
         "total_amount": (models.Invoice.total_amount, float),
         "is_paid": (models.Invoice.is_paid, bool),
         "created_at": (models.Invoice.created_at, datetime),
+        "room_number": (models.Room.room_number, str)
     }
 
     for f in request.filters:

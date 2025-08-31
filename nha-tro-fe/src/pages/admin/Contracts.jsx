@@ -150,7 +150,7 @@ export default function Contracts() {
       if (order) url += `&sort_order=${order}`;
       let res, data;
       if (filters.length > 0) {
-        res = await fetch(url.replace(CONTRACT_URL, CONTRACT_URL + "/filter"), {
+        res = await fetch(url.replace(CONTRACT_URL, CONTRACT_URL + "filter"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ filters, sort_field: field, sort_order: order }),
@@ -277,7 +277,7 @@ export default function Contracts() {
         num_people: form.num_people ? parseInt(form.num_people) : 1,         // Truyền số người
         num_vehicles: form.num_vehicles ? parseInt(form.num_vehicles) : 0,   // Truyền số xe
       };
-      const res = await fetch(`${CONTRACT_URL}/${editingContract.contract_id}`, {
+      const res = await fetch(`${CONTRACT_URL}${editingContract.contract_id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -293,7 +293,7 @@ export default function Contracts() {
 
   const deleteContract = async () => {
     try {
-      const res = await fetch(`${CONTRACT_URL}/${contractToDelete}`, {
+      const res = await fetch(`${CONTRACT_URL}${contractToDelete}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error(await res.text());

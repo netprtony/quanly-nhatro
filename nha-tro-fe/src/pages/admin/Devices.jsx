@@ -57,7 +57,7 @@ export default function Devices() {
       accessor: "is_active",
       render: (is_active) => {
         let badgeClass = is_active ? "bg-success" : "bg-secondary";
-        return <span className={`badge ${badgeClass}`}>{is_active ? "Đang hoạt động" : "Không hoạt động"}</span>;
+        return <span className={`badge ${badgeClass}`}>{is_active ? "Đang hoạt động (1)" : "Hư hỏng (0)"}</span>;
       }
     },
     { label: "Mô tả", accessor: "description" },
@@ -75,29 +75,29 @@ export default function Devices() {
 
   const fetchDevices = async (field = sortField, order = sortOrder) => {
     try {
-          let url = `${DEVICES_API}?page=${page}&page_size=${pageSize}`;
-          if (search) url += `&search=${encodeURIComponent(search)}`;
-          if (field) url += `&sort_field=${field}`;
-          if (order) url += `&sort_order=${order}`;
-          let res, data;
-          if (filters.length > 0) {
-            res = await fetch(url.replace(DEVICES_API, DEVICES_API + "/filter"), {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ filters, sort_field: field, sort_order: order }),
-            });
-          } else {
-            res = await fetch(url);
-          }
-          data = await res.json();
-          setDevices(Array.isArray(data.items) ? data.items : []);
-          setTotalRecords(data.total || 0);
-        } catch (err) {
-          toast.error("Không thể tải danh sách thiết bị!");
-          setDevices([]);
-          setTotalRecords(0);
-        }
-      };
+      let url = `${DEVICES_API}?page=${page}&page_size=${pageSize}`;
+      if (search) url += `&search=${encodeURIComponent(search)}`;
+      if (field) url += `&sort_field=${field}`;
+      if (order) url += `&sort_order=${order}`;
+      let res, data;
+      if (filters.length > 0) {
+        res = await fetch(url.replace(DEVICES_API, DEVICES_API + "filter"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filters, sort_field: field, sort_order: order }),
+        });
+      } else {
+        res = await fetch(url);
+      }
+      data = await res.json();
+      setDevices(Array.isArray(data.items) ? data.items : []);
+      setTotalRecords(data.total || 0);
+    } catch (err) {
+      toast.error("Không thể tải danh sách thiết bị!");
+      setDevices([]);
+      setTotalRecords(0);
+    }
+  };
 
   const fetchRooms = async () => {
       try {
@@ -114,6 +114,7 @@ export default function Devices() {
   useEffect(() => {
     fetchDevices();
     fetchRooms();
+    // eslint-disable-next-line
   }, [filters, page, pageSize, search, sortField, sortOrder]);
   const exportCSV = () => {
     if (contracts.length === 0) return;
@@ -175,7 +176,7 @@ export default function Devices() {
 
   const confirmDelete = async () => {
     try {
-      await axios.delete(`${DEVICES_API}/${deviceToDelete}`);
+      await axios.delete(`${DEVICES_API}${deviceToDelete}`);
       toast.success("🗑️ Xóa thiết bị thành công!");
       fetchDevices();
     } catch (err) {
@@ -194,7 +195,7 @@ export default function Devices() {
         is_active: form.is_active,
       };
       if (editingDevice) {
-        await axios.put(`${DEVICES_API}/${editingDevice.device_id}`, payload);
+        await axios.put(`${DEVICES_API}${editingDevice.device_id}`, payload);
         toast.success("✏️ Cập nhật thiết bị thành công!");
       } else {
         await axios.post(DEVICES_API, payload);
@@ -244,32 +245,31 @@ export default function Devices() {
             onRemoveFilter={(i) => setFilters((prev) => prev.filter((_, idx) => idx !== i))}
             compact
             onLoad={fetchDevices}
-            onSearch={setSearch}exportCSV
+            onSearch={setSearch}
             onExportCSV={exportCSV}
             onExportJSON={exportJSON}
           />
         </div>
 
         <Table
-            columns={columns}
-            data={devices}
-            page={page}
-            pageSize={pageSize}
-            totalRecords={totalRecords}
-            onPageChange={(newPage) => setPage(newPage)}
-            onPageSizeChange={(size) => {
-              setPageSize(size);
-              setPage(1);
-              fetchRooms();
-              }}
-              onSort={(field, order) => {
+          columns={columns}
+          data={devices}
+          page={page}
+          pageSize={pageSize}
+          totalRecords={totalRecords}
+          onPageChange={(newPage) => setPage(newPage)}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+          onSort={(field, order) => {
             setSortField(field);
             setSortOrder(order);
-            fetchContracts(field, order);
+            fetchDevices(field, order);
           }}
           sortField={sortField}
           sortOrder={sortOrder}
-            />
+        />
 
         {/* Modal Thêm / Sửa */}
         <Modal
@@ -316,7 +316,7 @@ export default function Devices() {
                   required
                 >
                   <option value="true">Đang hoạt động</option>
-                  <option value="false">Không hoạt động</option>
+                  <option value="false">Hư hỏng</option>
                 </select>
               </div>
               <div className="col-12">

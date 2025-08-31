@@ -29,12 +29,14 @@ from .reservation import (
 from .contract import (
     ContractCreate,
     ContractUpdate,
-    ContractOut
+    ContractOut,
+    
 )
 from .device import (
     DeviceCreate,
     DeviceUpdate,
-    DeviceOut
+    DeviceOut,
+    PaginatedDevicesOut
 )
 from .electricity import (
     ElectricityMeterCreate,

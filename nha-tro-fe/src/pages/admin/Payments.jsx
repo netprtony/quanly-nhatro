@@ -125,7 +125,7 @@ export default function Payment() {
       if (order) url += `&sort_order=${order}`;
       let res, data;
       if (filters.length > 0) {
-        res = await fetch(url.replace(PAYMENT_API, PAYMENT_API + "/filter"), {
+        res = await fetch(url.replace(PAYMENT_API, PAYMENT_API + "filter"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ filters, sort_field: field, sort_order: order }),
@@ -211,7 +211,7 @@ export default function Payment() {
 
   const confirmDelete = async () => {
     try {
-      const res = await fetch(`${PAYMENT_API}/${paymentToDelete}`, {
+      const res = await fetch(`${PAYMENT_API}${paymentToDelete}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error(await res.text());
@@ -235,7 +235,7 @@ export default function Payment() {
     };
     try {
       if (editingPayment) {
-        const res = await fetch(`${PAYMENT_API}/${editingPayment.payment_id}`, {
+        const res = await fetch(`${PAYMENT_API}${editingPayment.payment_id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -284,7 +284,7 @@ export default function Payment() {
       return;
     }
     try {
-      const res = await fetch(`${PAYMENT_API}/payos`, {
+      const res = await fetch(`${PAYMENT_API}payos`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

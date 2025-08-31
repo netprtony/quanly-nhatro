@@ -85,7 +85,7 @@ export default function TypeRooms() {
       if (order) url += `&sort_order=${order}`;
       let res, data;
       if (filters.length > 0) {
-        res = await fetch(url.replace(API_URL, API_URL + "/filter"), {
+        res = await fetch(url.replace(API_URL, API_URL + "filter"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ filters, sort_field: field, sort_order: order }),
@@ -156,7 +156,7 @@ export default function TypeRooms() {
 
   const updateTypeRoom = async () => {
     try {
-      const res = await fetch(`${API_URL}/${editingType.room_type_id}`, {
+      const res = await fetch(`${API_URL}${editingType.room_type_id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -172,7 +172,7 @@ export default function TypeRooms() {
 
   const deleteTypeRoom = async () => {
     try {
-      const res = await fetch(`${API_URL}/${typeToDelete}`, {
+      const res = await fetch(`${API_URL}${typeToDelete}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error(await res.text());

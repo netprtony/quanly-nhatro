@@ -23,7 +23,7 @@ class DeviceOut(DeviceBase):
 
     class Config:
         orm_mode = True
-class PaginatedDevices(BaseModel):
+class PaginatedDevicesOut(BaseModel):
     items: List[DeviceOut]
     total: int
 

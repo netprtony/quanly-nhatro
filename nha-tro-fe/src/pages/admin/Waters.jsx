@@ -15,7 +15,7 @@ const WATER_API = "http://localhost:8000/water/";
 export default function Waters() {
   const [waters, setWaters] = useState([]);
   const [roomsAll, setRoomsAll] = useState([]);
-  const [roomsAvailable, setRoomsAvailable] = useState([]);
+  const [RoomsHasTenant, setRoomsHasTenant] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingWater, setEditingWater] = useState(null);
   const [form, setForm] = useState({
@@ -125,14 +125,14 @@ export default function Waters() {
   };
 
   // Lấy danh sách phòng còn trống
-  const fetchRoomsAvailable = async () => {
+  const fetchRoomsHasTenant = async () => {
     try {
-      const res = await axios.get(`${ROOMS_API}all?filter_is_available=true`);
+      const res = await axios.get(`${ROOMS_API}all?filter_is_available=false`);
       const data = res.data;
-      setRoomsAvailable(Array.isArray(data) ? data : []);
+      setRoomsHasTenant(Array.isArray(data) ? data : []);
     } catch (err) {
       toast.error("Không thể tải danh sách phòng!");
-      setRoomsAvailable([]);
+      setRoomsHasTenant([]);
     }
   };
 
@@ -145,7 +145,7 @@ export default function Waters() {
       let data;
       if (filters.length > 0) {
         const res = await axios.post(
-          `${WATER_API}/filter?page=${page}&page_size=${pageSize}${sortParams}`,
+          `${WATER_API}filter?page=${page}&page_size=${pageSize}${sortParams}`,
           { filters }
         );
         data = res.data;
@@ -165,13 +165,13 @@ export default function Waters() {
 
   useEffect(() => {
     fetchRoomsAll();
-    // Nếu cần dùng phòng trống, gọi fetchRoomsAvailable();
+    // Nếu cần dùng phòng trống, gọi fetchRoomsHasTenant();
     fetchWaters();
     // eslint-disable-next-line
   }, [filters, page, pageSize, sortField, sortOrder]);
 
   const handleAdd = async () => {
-    await fetchRoomsAvailable();
+    await fetchRoomsHasTenant();
     setForm({
       room_id: "",
       month: "",
@@ -212,7 +212,7 @@ export default function Waters() {
 
   const confirmDelete = async () => {
     try {
-      await axios.delete(`${WATER_API}/${waterToDelete}`);
+      await axios.delete(`${WATER_API}${waterToDelete}`);
       toast.success("🗑️ Xóa hóa đơn nước thành công!");
       fetchWaters();
     } catch {
@@ -238,7 +238,7 @@ export default function Waters() {
     };
     try {
       if (editingWater) {
-        await axios.put(`${WATER_API}/${editingWater.meter_id}`, payload);
+        await axios.put(`${WATER_API}${editingWater.meter_id}`, payload);
         toast.success("✏️ Cập nhật hóa đơn nước thành công!");
       } else {
         await axios.post(WATER_API, payload);
@@ -268,7 +268,7 @@ export default function Waters() {
   const handleExportExcel = async () => {
     try {
       // Lấy danh sách phòng đang có người ở
-      const resRooms = await axios.get(`${ROOMS_API}?filter_is_available=False`);
+      const resRooms = await axios.get(`${ROOMS_API}all`);
       const roomsData = Array.isArray(resRooms.data) ? resRooms.data : [];
 
       // Lấy tháng hiện tại
@@ -490,7 +490,7 @@ export default function Waters() {
                   required
                 >
                   <option value="">-- Chọn phòng --</option>
-                  {roomsAvailable.map((room) => (
+                  {RoomsHasTenant.map((room) => (
                     <option key={room.room_id} value={room.room_id}>
                       {room.room_number}
                     </option>

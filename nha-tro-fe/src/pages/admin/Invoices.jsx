@@ -33,7 +33,6 @@ export default function Invoices() {
   const [electricityMeters, setElectricityMeters] = useState([]);
   const [waterMeters, setWaterMeters] = useState([]);
   const [invoices, setInvoices] = useState([]);
-  const [rooms, setRooms] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState(null);
   const [form, setForm] = useState({
@@ -64,7 +63,8 @@ export default function Invoices() {
   const [pageDetail, setPageDetail] = useState(1);
   const [pageSizeDetail, setPageSizeDetail] = useState(20);
   const [totalRecordsDetail, setTotalRecordsDetail] = useState(0);
-
+  const [roomsHasTenant, setroomsHasTenant] = useState([]);
+  const [roomsAll, setRoomsAll] = useState([]);
   // --- CRUD chi tiết hóa đơn ---
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
@@ -100,9 +100,9 @@ export default function Invoices() {
       label: "Phòng",
       accessor: "room_id",
       render: (room_id) => {
-        const room = rooms.find((r) => r.room_id === room_id);
+        const room = roomsAll.find(r => r.room_id === room_id);
         return room ? room.room_number : room_id;
-      },
+      }
     },
     { label: "Tháng", accessor: "month" },
     {
@@ -253,20 +253,30 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
   }
 };
 
-
-  // Lấy danh sách phòng
-  const fetchRooms = async () => {
+    // Lấy danh sách phòng tất cả
+  const fetchRoomsAll = async () => {
     try {
-      // có phân trang, mặc định lấy 1 trang lớn để đủ dữ liệu
-      const res = await fetch(`${ROOMS_API}?page=1&page_size=200`);
-      const data = await res.json();
-      setRooms(Array.isArray(data.items) ? data.items : []);
+      const res = await axios.get(`${ROOMS_API}?page=1&page_size=200`);
+      const data = res.data;
+      setRoomsAll(Array.isArray(data.items) ? data.items : []);
     } catch (err) {
       toast.error("Không thể tải danh sách phòng!");
-      setRooms([]);
+      setRoomsAll([]);
     }
   };
-
+  // Lấy danh sách phòng
+  const fetchRoomAvailable = async () => {
+    try {
+      // có phân trang, mặc định lấy 1 trang lớn để đủ dữ liệu
+      const res = await fetch(`${ROOMS_API}all?filter_is_available=false`);
+      const data = await res.json();
+      setroomsHasTenant(Array.isArray(data) ? data : []);
+    } catch (err) {
+      toast.error("Không thể tải danh sách phòng!");
+      setroomsHasTenant([]);
+    }
+  };
+  
   // Lấy chi tiết hóa đơn theo invoice_id
   const fetchInvoiceDetails = async (invoice_id, filter = detailSortField, sort = detailSortOrder) => {
     try {
@@ -280,67 +290,15 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
   };
 
   useEffect(() => {
+    fetchRoomsAll();
     fetchInvoices();
-    fetchRooms();
     // eslint-disable-next-line
   }, [filters, page, pageSize, search,  sortField, sortOrder]);
 
-  // --- Advanced filter logic giống Rooms.jsx ---
-  const getValueByPath = (obj, path) => {
-    return path.split('.').reduce((o, p) => (o ? o[p] : undefined), obj);
-  };
 
-  const evaluateFilter = (f, invoice) => {
-    const raw = getValueByPath(invoice, f.field);
-    if (raw === undefined || raw === null) return false;
 
-    // normalize boolean field input
-    if (f.field === 'is_paid') {
-      const target = f.value === 'true' || f.value === true || f.value === '1';
-      if (f.operator === '=') return raw === target;
-      if (f.operator === '!=') return raw !== target;
-      return false;
-    }
-
-    // numeric comparison when possible
-    const maybeNum = Number(raw);
-    const targetNum = Number(f.value);
-    const isNumeric = !isNaN(maybeNum) && !isNaN(targetNum);
-
-    if (isNumeric) {
-      switch (f.operator) {
-        case '>': return maybeNum > targetNum;
-        case '<': return maybeNum < targetNum;
-        case '>=': return maybeNum >= targetNum;
-        case '<=': return maybeNum <= targetNum;
-        case '=': return maybeNum === targetNum;
-        case '~':
-          const diff = Math.abs(maybeNum - targetNum);
-          const tol = Math.max(1, Math.abs(targetNum) * 0.1);
-          return diff <= tol;
-        default: return false;
-      }
-    }
-
-    // string operations
-    const rawStr = String(raw).toLowerCase();
-    const valStr = String(f.value).toLowerCase();
-    if (f.operator === '=') return rawStr === valStr;
-    if (f.operator === '~') return rawStr.includes(valStr);
-    return false;
-  };
-
-  const applyFilters = (list) => {
-    if (!filters || filters.length === 0) return list;
-    return list.filter((item) => filters.every((f) => evaluateFilter(f, item)));
-  };
-
-  // Không lọc lại ở frontend, chỉ hiển thị dữ liệu đã phân trang từ backend
-  // const filteredInvoices = applyFilters(invoices);
-
-  // --- End advanced filter logic ---
-
-  const handleAdd = () => {
+  const handleAdd = async() => {
+    await fetchRoomAvailable();
     setForm({
       room_id: "",
       month: "",
@@ -371,7 +329,7 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
 
   const confirmDelete = async () => {
     try {
-      const res = await fetch(`${INVOICE_API}/${invoiceToDelete}`, {
+      const res = await fetch(`${INVOICE_API}${invoiceToDelete}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error(await res.text());
@@ -404,7 +362,7 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
       let invoiceId;
       if (editingInvoice) {
         // Sửa hóa đơn
-        const res = await fetch(`${INVOICE_API}/${editingInvoice.invoice_id}`, {
+        const res = await fetch(`${INVOICE_API}${editingInvoice.invoice_id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -427,7 +385,7 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
 
         // --- Tự động thêm chi tiết hóa đơn điện ---
         try {
-          const elecRes = await fetch(`${ELECTRICITY_API}/latest?room_id=${form.room_id}`);
+          const elecRes = await fetch(`${ELECTRICITY_API}latest?room_id=${form.room_id}`);
           if (elecRes.ok) {
             const elecData = await elecRes.json();
             if (elecData && elecData.meter_id && elecData.month?.slice(0, 7) <= form.month) {
@@ -448,7 +406,7 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
 
         // --- Tự động thêm chi tiết hóa đơn nước ---
         try {
-          const waterRes = await fetch(`${WATER_API}/latest?room_id=${form.room_id}`);
+          const waterRes = await fetch(`${WATER_API}latest?room_id=${form.room_id}`);
           if (waterRes.ok) {
             const waterData = await waterRes.json();
             if (waterData && waterData.meter_id && waterData.month?.slice(0, 7) <= form.month) {
@@ -663,7 +621,7 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
 
   const handleExportInvoice = (invoice) => {
     setExportingInvoice(invoice);
-    const room = rooms.find(r => r.room_id === invoice.room_id);
+    const room = roomsAll.find(r => r.room_id === invoice.room_id);
     // Remove Vietnamese diacritics and unsafe chars
     const removeDiacritics = (str) =>
       str
@@ -739,17 +697,16 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
           onPageSizeChange={(size) => {
             setPageSize(size);
             setPage(1);
-            fetchRooms();
             }}
+            sortField={sortField}
+            sortOrder={sortOrder}
             onSort={(field, order) => {
-              
               setSortField(field);
               setSortOrder(order);
-              // Gọi lại fetchInvoices với sort
               fetchInvoices(field, order);
+              fetchRoomsAll(field, order);
             }}
-          sortField={sortField}
-          sortOrder={sortOrder}
+          
           />
 
           <Modal
@@ -770,7 +727,7 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
                   required
                 >
                   <option value="">-- Chọn phòng --</option>
-                  {rooms.map(room => (
+                  {roomsHasTenant.map(room => (
                   <option key={room.room_id} value={room.room_id}>
                     {room.room_number}
                   </option>

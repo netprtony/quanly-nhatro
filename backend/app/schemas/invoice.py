@@ -25,6 +25,7 @@ class InvoiceUpdate(BaseModel):
 # Schema trả về
 class InvoiceOut(InvoiceBase):
     invoice_id: int
+    room_id: int
     created_at: datetime
 
     class Config:

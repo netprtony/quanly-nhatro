@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { FaAngleDown } from 'react-icons/fa';
+import { FaAngleDown, FaBell } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { useUser } from "../contexts/UserContext";
 import Modal from "./Modal.jsx";
@@ -19,6 +19,11 @@ const AdminHeader = () => {
     confirmPassword: ""
   });
   const [loading, setLoading] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotiDropdown, setShowNotiDropdown] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const NOTIFICATION_API = "http://localhost:8000/notifications/admin/reservation";
 
   // Lấy token từ localStorage mỗi lần đổi mật khẩu
   const getToken = () => localStorage.getItem("token");
@@ -30,6 +35,30 @@ const AdminHeader = () => {
     if (dropdownOpen) document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [dropdownOpen]);
+
+  React.useEffect(() => {
+    if (showNotiDropdown) {
+      fetch(NOTIFICATION_API)
+        .then(res => res.json())
+        .then(data => setNotifications(Array.isArray(data) ? data : []))
+        .catch(() => setNotifications([]));
+    }
+  }, [showNotiDropdown]);
+
+  React.useEffect(() => {
+    setUnreadCount(notifications.filter(n => !n.is_read).length);
+  }, [notifications]);
+
+  React.useEffect(() => {
+    // Gọi API lấy số lượng thông báo chưa đọc khi load trang
+    fetch("http://localhost:8000/notifications/admin/reservation")
+      .then(res => res.json())
+      .then(data => {
+        const count = Array.isArray(data) ? data.filter(n => !n.is_read).length : 0;
+        setUnreadCount(count);
+      })
+      .catch(() => setUnreadCount(0));
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -82,6 +111,13 @@ const AdminHeader = () => {
       toast.error(err.message || "Đổi mật khẩu thất bại!");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReadNotification = async (noti) => {
+    if (!noti.is_read) {
+      await fetch(`http://localhost:8000/notifications/read/${noti.notification_id}`, { method: "PUT" });
+      setNotifications(nots => nots.map(n => n.notification_id === noti.notification_id ? { ...n, is_read: true } : n));
     }
   };
 
@@ -164,6 +200,52 @@ const AdminHeader = () => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Nút chuông thông báo cho admin */}
+      <div className="dropdown d-inline-block position-relative me-3">
+        <button
+          type="button"
+          className="btn btn-warning position-relative"
+          style={{ fontWeight: "bold" }}
+          onClick={() => setShowNotiDropdown(open => !open)}
+        >
+          <FaBell className="me-1" />
+          {unreadCount > 0 && (
+            <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+              {unreadCount}
+              <span className="visually-hidden">unread messages</span>
+            </span>
+          )}
+        </button>
+        <ul
+          className={`dropdown-menu${showNotiDropdown ? " show" : ""}`}
+          style={{
+            position: "absolute",
+            top: "100%",
+            right: 0,
+            zIndex: 1000,
+            minWidth: "320px",
+            maxHeight: "400px",
+            overflowY: "auto"
+          }}
+        >
+          {notifications.length === 0 ? (
+            <li className="dropdown-item text-muted">Không có thông báo nào.</li>
+          ) : (
+            notifications.map(noti => (
+              <li
+                key={noti.notification_id}
+                className={`dropdown-item${noti.is_read ? "" : " fw-bold text-dark"}`}
+                style={{ cursor: "pointer", background: noti.is_read ? "#fff" : "#ffeeba" }}
+                onClick={() => handleReadNotification(noti)}
+              >
+                <div>{noti.title}</div>
+                <div className="small text-secondary">{noti.message}</div>
+              </li>
+            ))
+          )}
+        </ul>
       </div>
 
       {/* Modal Thông tin cá nhân */}

@@ -136,7 +136,7 @@ export default function Tenants() {
         url += `&search=${encodeURIComponent(search)}`;
       }
       if (filters.length > 0) {
-        res = await fetch(url.replace(TENANT_URL, TENANT_URL + "/filter"), {
+        res = await fetch(url.replace(TENANT_URL, TENANT_URL + "filter"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ filters, sort_field: field, sort_order: order }),
@@ -238,7 +238,7 @@ export default function Tenants() {
       if (frontFile) frontPath = await uploadCCCD(frontFile, tenantId, "front");
       if (backFile) backPath = await uploadCCCD(backFile, tenantId, "back");
 
-      const res = await fetch(`${TENANT_URL}/${editingTenant.tenant_id}`, {
+      const res = await fetch(`${TENANT_URL}${editingTenant.tenant_id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, id_card_front_path: frontPath, id_card_back_path: backPath }),
@@ -256,7 +256,7 @@ export default function Tenants() {
 
   const deleteTenant = async () => {
     try {
-      const res = await fetch(`${TENANT_URL}/${tenantToDelete}`, {
+      const res = await fetch(`${TENANT_URL}${tenantToDelete}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error(await res.text());

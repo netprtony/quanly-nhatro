@@ -120,7 +120,7 @@ export default function Rooms() {
       if (order) url += `&sort_order=${order}`;
       let res, data;
       if (filters.length > 0) {
-        res = await fetch(url.replace(ROOM_URL, ROOM_URL + "/filter"), {
+        res = await fetch(url.replace(ROOM_URL, ROOM_URL + "filter"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ filters, sort_field: field, sort_order: order }),
@@ -190,7 +190,7 @@ export default function Rooms() {
 
   const confirmDeleteImage = async () => {
     try {
-      await fetch(`${ROOM_IMAGE_URL}/${imageToDelete}`, { method: "DELETE" });
+      await fetch(`${ROOM_IMAGE_URL}${imageToDelete}`, { method: "DELETE" });
       fetchRoomImages(selectedRoom.room_id);
       await fetchRooms(); // cập nhật số hình
       toast.success("🗑️ Xóa ảnh thành công!");
@@ -204,7 +204,7 @@ export default function Rooms() {
   const handleSubmitImage = async () => {
     try {
       if (editingImage) {
-        await fetch(`${ROOM_IMAGE_URL}/${editingImage.image_id}`, {
+        await fetch(`${ROOM_IMAGE_URL}${editingImage.image_id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(imageForm),
@@ -304,7 +304,7 @@ export default function Rooms() {
 
   const updateRoom = async () => {
     try {
-      const res = await fetch(`${ROOM_URL}/${editingRoom.room_id}`, {
+      const res = await fetch(`${ROOM_URL}${editingRoom.room_id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -328,7 +328,7 @@ export default function Rooms() {
 
   const deleteRoom = async () => {
     try {
-      const res = await fetch(`${ROOM_URL}/${roomToDelete}`, {
+      const res = await fetch(`${ROOM_URL}${roomToDelete}`, {
         method: "DELETE",
       });
       if (!res.ok) {

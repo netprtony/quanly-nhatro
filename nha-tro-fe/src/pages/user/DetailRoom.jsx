@@ -40,14 +40,20 @@ export default function DetailRoom() {
     setError("");
     setSuccess("");
     try {
+      // Lấy user_id từ localStorage nếu có
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      const payload = {
+        room_id: room.room_id,
+        contact_phone: phone,
+        status: "pending",
+      };
+      if (user?.id) {
+        payload.user_id = user.id;
+      }
       const res = await fetch("http://localhost:8000/reservations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          room_id: room.room_id,
-          contact_phone: phone,
-          status: "pending",
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Đặt phòng thất bại!");
       setSuccess("Đặt phòng thành công! Quản lý sẽ liên hệ bạn sớm.");

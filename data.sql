@@ -153,7 +153,7 @@ CREATE TABLE Reservations (
 );
 CREATE TABLE Notifications (
     notification_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
+    user_id INT NULL, -- phải là NULL
     title VARCHAR(255) NOT NULL,
     message TEXT NOT NULL,
     is_read BOOLEAN DEFAULT FALSE,
@@ -277,7 +277,108 @@ BEGIN
 END$$
 
 DELIMITER ;
+DELIMITER $$
 
+-- Khi thêm thanh toán, cập nhật hóa đơn thành đã thanh toán
+CREATE TRIGGER trg_after_insert_payment
+AFTER INSERT ON Payments
+FOR EACH ROW
+BEGIN
+    UPDATE Invoices
+    SET is_paid = TRUE
+    WHERE invoice_id = NEW.invoice_id;
+END$$
+
+-- Khi xóa thanh toán, cập nhật hóa đơn thành chưa thanh toán
+CREATE TRIGGER trg_after_delete_payment
+AFTER DELETE ON Payments
+FOR EACH ROW
+BEGIN
+    UPDATE Invoices
+    SET is_paid = FALSE
+    WHERE invoice_id = OLD.invoice_id;
+END$$
+
+DELIMITER ;
+DELIMITER $$
+
+CREATE TRIGGER trg_after_insert_invoice_notify
+AFTER INSERT ON Invoices
+FOR EACH ROW
+BEGIN
+    DECLARE v_tenant_id VARCHAR(15);
+    DECLARE v_user_id INT;
+    DECLARE v_room_number VARCHAR(50);
+
+    -- Lấy tenant_id từ hợp đồng của phòng
+    SELECT tenant_id INTO v_tenant_id
+    FROM Contracts
+    WHERE room_id = NEW.room_id
+      AND contract_status = 'Active'
+      AND (end_date IS NULL OR end_date >= CURDATE())
+    LIMIT 1;
+
+    -- Lấy user_id từ bảng Users
+    SELECT id INTO v_user_id
+    FROM Users
+    WHERE tenant_id = v_tenant_id
+    LIMIT 1;
+
+    -- Lấy số phòng
+    SELECT room_number INTO v_room_number
+    FROM Rooms
+    WHERE room_id = NEW.room_id
+    LIMIT 1;
+
+    -- Nếu tìm được user_id thì thêm thông báo
+    IF v_user_id IS NOT NULL THEN
+        INSERT INTO Notifications (user_id, title, message, is_read)
+        VALUES (
+            v_user_id,
+            CONCAT('Hóa đơn mới phòng ', v_room_number),
+            CONCAT('Hóa đơn tháng ', DATE_FORMAT(NEW.month, '%Y-%m'), ' đã được tạo. Vui lòng kiểm tra và thanh toán trước hạn!'),
+            FALSE
+        );
+    END IF;
+END$$
+
+DELIMITER ;
+DELIMITER $$
+
+CREATE TRIGGER trg_after_insert_reservation_notify
+AFTER INSERT ON Reservations
+FOR EACH ROW
+BEGIN
+    DECLARE v_tenant_name VARCHAR(100);
+    DECLARE v_room_number VARCHAR(50);
+
+    -- Lấy số phòng
+    SELECT room_number INTO v_room_number
+    FROM Rooms
+    WHERE room_id = NEW.room_id
+    LIMIT 1;
+
+    -- Nếu có user_id thì lấy tên từ Users, nếu không thì lấy số điện thoại
+    IF NEW.user_id IS NOT NULL THEN
+        SELECT username INTO v_tenant_name
+        FROM Users
+        WHERE id = NEW.user_id
+        LIMIT 1;
+    ELSE
+        SET v_tenant_name = NEW.contact_phone;
+    END IF;
+
+    -- Thêm thông báo cho admin (user_id = NULL)
+    INSERT INTO Notifications (user_id, title, message, is_read)
+    VALUES (
+        NULL,
+        CONCAT('Đặt phòng mới: ', v_room_number),
+        CONCAT('Khách thuê ', v_tenant_name, ' vừa đặt phòng ', v_room_number, '. Vui lòng kiểm tra và xác nhận!'),
+        FALSE
+    );
+END$$
+
+DELIMITER ;
 INSERT INTO RoomTypes (type_name, description, price_per_month) VALUES
 ('Standard', 'Phòng cơ bản, không điều hòa', 3000000.00),
 ('Deluxe', 'Phòng có điều hòa, ban công', 5000000.00),
@@ -412,7 +513,6 @@ VALUES
 LOCK TABLES `tenants` WRITE;
 /*!40000 ALTER TABLE `tenants` DISABLE KEYS */;
 INSERT INTO `tenants` VALUES ('079203029607','Nguyen Van An','Male','1990-05-15','0905123456','an.nguyen@example.com','/cccd/079203029607_front_download (1).jpg','/cccd/079203029607_back_download (2).jpg',1,'123 Le Loi, Q1, HCMC','2025-08-28 05:53:51'),('079203029608','Tran Thi Bich','Female','1995-08-22','0912345678','bich.tran@example.com','/cccd/079203029608_front_download.jpg','/cccd/079203029608_back_download (2).jpg',1,'456 Nguyen Hue, Q1, HCMC','2025-08-28 05:53:51'),('079203029609','Le Van Cuong','Male','1988-03-10','0923456789','cuong.le@example.com','/cccd/079203029609_front_download.jpg','/cccd/079203029609_back_download (2).jpg',1,'789 Tran Hung Dao, Q5, HCMC','2025-08-28 05:53:51'),('079203029610','Pham Thi Dung','Female','1993-11-30','0934567890','dung.pham@example.com','/cccd/079203029610_front_download (1).jpg','/cccd/079203029610_back_download (2).jpg',1,'101 Vo Van Tan, Q3, HCMC','2025-08-28 05:53:51'),('079203029611','Hoang Van Em','Male','1992-07-25','0945678901','em.hoang@example.com','/cccd/079203029611_front_download.jpg','/cccd/079203029611_back_download (2).jpg',1,'202 Ly Tu Trong, Q1, HCMC','2025-08-28 05:53:51'),('079203029612','Vo Thi Phuong','Female','1996-02-14','0956789012','phuong.vo@example.com','/cccd/079203029612_front_download (1).jpg','/cccd/079203029612_back_download (2).jpg',1,'303 Hai Ba Trung, Q3, HCMC','2025-08-28 05:53:51'),('079203029613','Nguyen Van Hung','Male','1985-09-05','0967890123','hung.nguyen@example.com','/cccd/079203029613_front_download.jpg','/cccd/079203029613_back_download (2).jpg',1,'404 Nguyen Trai, Q5, HCMC','2025-08-28 05:53:51'),('079203029614','Tran Van Khanh','Male','1991-12-20','0978901234','khanh.tran@example.com','/cccd/079203029614_front_download.jpg','/cccd/079203029614_back_download (2).jpg',1,'505 Le Van Sy, Q3, HCMC','2025-08-28 05:53:51'),('079203029615','Le Thi Lan','Female','1994-04-18','0989012345','lan.le@example.com','/cccd/079203029615_front_download.jpg','/cccd/079203029615_back_download (2).jpg',1,'606 Cach Mang Thang 8, Q3, HCMC','2025-08-28 05:53:51'),('079203029616','Pham Van Minh','Male','1989-06-12','0990123456','minh.pham@example.com','/cccd/079203029616_front_download.jpg','/cccd/079203029616_back_download (2).jpg',1,'707 Nguyen Dinh Chieu, Q3, HCMC','2025-08-28 05:53:51');
-/*!40000 ALTER TABLE `tenants` ENABLE KEYS */;
 UNLOCK TABLES;
 INSERT INTO Users (username, email, password, tenant_id, role, is_active) VALUES
 ('an.nguyen', 'an.nguyen@example.com', '$2a$12$YbgMrDVLpsncrlxrjam0EO4yosTojsqK5nqs1sIhgW/aGz5QsHO0e', '079203029607', 'USER', TRUE),
@@ -467,20 +567,8 @@ INSERT WaterMeters (room_id, month, old_reading, new_reading, water_rate) VALUES
 (10, '2025-07-01', 11, 23, 15000.00);
 
 
--
 
 
--- Thêm thông báo
-INSERT INTO Notifications (user_id, title, message, is_read) VALUES
-(1, 'Hóa đơn tháng 1', 'Hóa đơn tháng 1 đã được tạo, vui lòng thanh toán trước ngày 10', FALSE),
-(2, 'Hóa đơn tháng 1', 'Hóa đơn tháng 1 đã được thanh toán', TRUE),
-(3, 'Hóa đơn tháng 1', 'Hóa đơn tháng 1 đã được tạo, vui lòng thanh toán trước ngày 10', FALSE),
-(4, 'Hóa đơn tháng 1', 'Hóa đơn tháng 1 đã được thanh toán', TRUE),
-(5, 'Hóa đơn tháng 1', 'Hóa đơn tháng 1 đã được tạo, vui lòng thanh toán trước ngày 10', FALSE),
-(6, 'Hóa đơn tháng 1', 'Hóa đơn tháng 1 đã được thanh toán', TRUE),
-(7, 'Hóa đơn tháng 1', 'Hóa đơn tháng 1 đã được tạo, vui lòng thanh toán trước ngày 10', FALSE),
-(8, 'Hóa đơn tháng 1', 'Hóa đơn tháng 1 đã được thanh toán', TRUE),
-(9, 'Hóa đơn tháng 1', 'Hóa đơn tháng 1 đã được tạo, vui lòng thanh toán trước ngày 10', FALSE),
-(10, 'Hóa đơn tháng 1', 'Hóa đơn tháng 1 đã được thanh toán', TRUE);
+
 
 

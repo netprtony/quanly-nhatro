@@ -15,7 +15,7 @@ const ELECTRICITY_API = "http://localhost:8000/electricity/";
 export default function Electricity() {
   const [electricities, setElectricities] = useState([]);
   const [roomsAll, setRoomsAll] = useState([]);
-  const [roomsAvailable, setRoomsAvailable] = useState([]);
+  const [roomHasTenat, setroomHasTenat] = useState([]);
   const [editingElectricity, setEditingElectricity] = useState(null);
   const [electricityRateInput, setElectricityRateInput] = useState(3500);
   const [form, setForm] = useState({
@@ -35,7 +35,6 @@ export default function Electricity() {
 
   // Advanced filters state
   const [filters, setFilters] = useState([]);
-  const [newFilter, setNewFilter] = useState({ field: "room_id", operator: "=", value: "" });
 
   // Phân trang
   const [page, setPage] = useState(1);
@@ -119,14 +118,14 @@ export default function Electricity() {
   };
 
   // Lấy danh sách phòng còn trống
-  const fetchRoomsAvailable = async () => {
+  const fetchRoomsHasTenant = async () => {
     try {
-      const res = await axios.get(`${ROOMS_API}all?filter_is_available=true`);
+      const res = await axios.get(`${ROOMS_API}all?filter_is_available=false`);
       const data = res.data;
-      setRoomsAvailable(Array.isArray(data) ? data : []);
+      setroomHasTenat(Array.isArray(data) ? data : []);
     } catch (err) {
       toast.error("Không thể tải danh sách phòng!");
-      setRoomsAvailable([]);
+      setroomHasTenat([]);
     }
   };
 
@@ -140,7 +139,7 @@ export default function Electricity() {
       if (filters.length > 0) {
         // Gọi API filter nâng cao
         const res = await axios.post(
-          `${ELECTRICITY_API}/filter?page=${page}&page_size=${pageSize}${sortParams}`,
+          `${ELECTRICITY_API}filter?page=${page}&page_size=${pageSize}${sortParams}`,
           { filters }
         );
         data = res.data;
@@ -167,7 +166,7 @@ export default function Electricity() {
   }, [filters, page, pageSize, sortField, sortOrder]);
 
   const handleAdd = async () => {
-    await fetchRoomsAvailable();
+    await fetchRoomsHasTenant();
     setForm({
       room_id: "",
       month: "",
@@ -206,7 +205,7 @@ export default function Electricity() {
 
   const confirmDelete = async () => {
     try {
-      await axios.delete(`${ELECTRICITY_API}/${electricityToDelete}`);
+      await axios.delete(`${ELECTRICITY_API}${electricityToDelete}`);
       toast.success("🗑️ Xóa hóa đơn điện thành công!");
       fetchElectricities();
     } catch (err) {
@@ -232,7 +231,7 @@ export default function Electricity() {
     };
     try {
       if (editingElectricity) {
-        await axios.put(`${ELECTRICITY_API}/${editingElectricity.meter_id}`, payload);
+        await axios.put(`${ELECTRICITY_API}${editingElectricity.meter_id}`, payload);
         toast.success("✏️ Cập nhật hóa đơn điện thành công!");
       } else {
         await axios.post(ELECTRICITY_API, payload);
@@ -344,7 +343,7 @@ export default function Electricity() {
   const handleExportExcel = async () => {
     try {
       // Lấy danh sách phòng đang có người ở
-      const resRooms = await axios.get(`${ROOMS_API}?filter_is_available=False`);
+      const resRooms = await axios.get(`${ROOMS_API}all`);
       const roomsData = Array.isArray(resRooms.data) ? resRooms.data : [];
 
       // Lấy tháng hiện tại
@@ -545,7 +544,7 @@ export default function Electricity() {
           onSort={(field, order) => {
             setSortField(field);
             setSortOrder(order);
-            fetchRoomsAll();
+            fetchRoomsAll(field, order);
           }}
         />
 
@@ -567,7 +566,7 @@ export default function Electricity() {
                   required
                 >
                   <option value="">-- Chọn phòng --</option>
-                  {roomsAvailable.map(room => (
+                  {roomHasTenat.map(room => (
                     <option key={room.room_id} value={room.room_id}>
                       {room.room_number}
                     </option>

@@ -150,7 +150,7 @@ export default function Accounts() {
 
   const updateAccount = async () => {
     try {
-      const res = await fetch(`${ACCOUNT_URL}/${editingAccount.id}`, {
+      const res = await fetch(`${ACCOUNT_URL}${editingAccount.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -166,7 +166,7 @@ export default function Accounts() {
 
   const deleteAccount = async () => {
     try {
-      const res = await fetch(`${ACCOUNT_URL}/${accountToDelete}`, {
+      const res = await fetch(`${ACCOUNT_URL}${accountToDelete}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error(await res.text());
