@@ -67,3 +67,7 @@ class Filter(BaseModel):
 
 class FilterRequest(BaseModel):
     filters: List[Filter] = [] 
+
+class RoomRequestSchema(BaseModel):
+    room_id: int
+    room_number: str

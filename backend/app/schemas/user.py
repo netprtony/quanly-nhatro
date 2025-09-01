@@ -26,14 +26,13 @@ class UserLogin(BaseModel):
 
 class UserOut(BaseModel):
     id: int
+    tenant_id: Optional[str]  # <-- sửa lại thành Optional[str]
     username: str
     email: str
     role: str
     is_active: bool
-
     class Config:
         from_attributes = True
-
 
 class UserInfo(BaseModel):
     id: int

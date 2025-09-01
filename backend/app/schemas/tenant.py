@@ -3,11 +3,11 @@ from typing import Optional, List
 from datetime import date, datetime
 
 class TenantBase(BaseModel):
+    tenant_id: Optional[str]
     full_name: str
     gender: Optional[str] = "Other"
     date_of_birth: Optional[date]
     phone_number: Optional[str]
-    email: Optional[str]
     id_card_front_path: Optional[str]
     id_card_back_path: Optional[str]
     is_rent: Optional[bool] = True
@@ -48,7 +48,6 @@ class TenantResponse(BaseModel):
     gender: Optional[str]
     date_of_birth: Optional[date]
     phone_number: Optional[str]
-    email: Optional[str]
     id_card_front_path: Optional[str]
     id_card_back_path: Optional[str]
     is_rent: Optional[bool]
@@ -57,3 +56,9 @@ class TenantResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+class TenantResponseRent(BaseModel):
+    tenant_id: str
+    full_name: str
+    class Config:
+        from_attributes = True

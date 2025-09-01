@@ -8,6 +8,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 const TENANT_URL = "http://localhost:8000/tenants/";
 const CCCD_UPLOAD_API = "http://localhost:8000/tenants/upload-cccd";
+const USER_API = "http://localhost:8000/accounts/";
 
 export default function Tenants() {
   const [tenants, setTenants] = useState([]);
@@ -38,11 +39,11 @@ export default function Tenants() {
   const [filters, setFilters] = useState([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(200);
   const [totalRecords, setTotalRecords] = useState(0);
   const [sortField, setSortField] = useState();
   const [sortOrder, setSortOrder] = useState();
-
+  const [userAll, setUserAll] = useState([]);
   // Cấu hình bộ lọc nâng cao
   const fieldOptions = [
     { value: "tenant_id", label: "Mã khách thuê", type: "string" },
@@ -59,7 +60,6 @@ export default function Tenants() {
     { label: "ID", accessor: "tenant_id" },
     { label: "Họ tên", accessor: "full_name" },
     { label: "Số điện thoại", accessor: "phone_number" },
-    { label: "Email", accessor: "email" },
     { label: "Địa chỉ", accessor: "address" },
     {
       label: "Ảnh CCCD",
@@ -154,6 +154,7 @@ export default function Tenants() {
       setTotalRecords(0);
     }
   };
+  
 
   useEffect(() => {
     fetchTenants();

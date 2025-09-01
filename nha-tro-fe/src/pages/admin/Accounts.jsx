@@ -5,17 +5,21 @@ import ModalConfirm from "/src/components/ModalConfirm.jsx";
 import AdvancedFilters from "/src/components/AdvancedFilters.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-
+import axios from "axios";
 const ACCOUNT_URL = "http://localhost:8000/accounts/";
+const TENANT_API = "http://localhost:8000/tenants/";
 
 export default function Accounts() {
   const [accounts, setAccounts] = useState([]);
+  const [tenantMap, setTenantMap] = useState({});
+  const [tenantsWithoutRent, setTenantsWithoutRent] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
   const [form, setForm] = useState({
     id: "",
     username: "",
     email: "",
+    tenant_id: "", // Thêm trường này
     role: "USER",
     is_active: true,
     password: "",
@@ -25,7 +29,7 @@ export default function Accounts() {
   const [showConfirmExit, setShowConfirmExit] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [accountToDelete, setAccountToDelete] = useState(null);
-
+  
   // Bộ lọc nâng cao, tìm kiếm, phân trang, sort
   const [filters, setFilters] = useState([]);
   const [search, setSearch] = useState("");
@@ -48,13 +52,20 @@ export default function Accounts() {
     { label: "ID", accessor: "id" },
     { label: "Tên đăng nhập", accessor: "username" },
     { label: "Email", accessor: "email" },
+    {
+      label: "Tên khách thuê",
+      accessor: "tenant_id",
+      render: (tenant_id) => tenantMap[tenant_id] || tenant_id || ""
+    },
     { label: "Quyền", accessor: "role" },
     {
       label: "Trạng thái",
       accessor: "is_active",
-      render: (value) => (value ? 
-        <span className="badge bg-success">Kích hoạt</span> :
-        <span className="badge bg-danger">Khóa</span>),
+      render: (value) => (
+        value
+          ? <span className="badge bg-success">Kích hoạt</span>
+          : <span className="badge bg-danger">Khóa</span>
+      ),
     },
     {
       label: "Thao tác",
@@ -68,36 +79,76 @@ export default function Accounts() {
     },
   ];
 
-  // Lấy danh sách accounts từ API (phân trang, lọc, sort)
-  const fetchAccounts = async (field = sortField, order = sortOrder) => {
+const fetchTenantNames = async () => {
+  try {
+    const res = await axios.get(`${TENANT_API}?page=1&page_size=200&sort_order=asc`);
+    const data = res.data;
+
+    if (Array.isArray(data.items)) {
+      const map = {};
+      data.items.forEach(item => {
+        map[item.tenant_id] = item.full_name;
+      });
+      setTenantMap(map);
+      console.log("Tenant map:", map);
+    } else {
+      setTenantMap({});
+    }
+  } catch (err) {
+    toast.error("Không thể tải danh sách tên khách thuê!");
+    setTenantMap({});
+  }
+};
+
+const fetchAccounts = async (field = sortField, order = sortOrder) => {
+  try {
+    let url = `${ACCOUNT_URL}?page=${page}&page_size=${pageSize}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (field) url += `&sort_field=${field}`;
+    if (order) url += `&sort_order=${order}`;
+
+    let res, data;
+    if (filters.length > 0) {
+      res = await fetch(url.replace(ACCOUNT_URL, ACCOUNT_URL + "/filter"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filters, sort_field: field, sort_order: order }),
+      });
+    } else {
+      res = await fetch(url);
+    }
+    data = await res.json();
+
+    // Không cần map tenant_name, chỉ set trực tiếp
+    setAccounts(Array.isArray(data.items) ? data.items : []);
+    console.log(data.items)
+    setTotalRecords(data.total || 0);
+  } catch (err) {
+    toast.error("Không thể tải danh sách tài khoản!");
+    setAccounts([]);
+    setTotalRecords(0);
+  }
+};
+  // Fetch tenants chưa thuê
+  const fetchTenantsWithoutRent = async () => {
     try {
-      let url = `${ACCOUNT_URL}?page=${page}&page_size=${pageSize}`;
-      if (search) url += `&search=${encodeURIComponent(search)}`;
-      if (field) url += `&sort_field=${field}`;
-      if (order) url += `&sort_order=${order}`;
-      let res, data;
-      if (filters.length > 0) {
-        res = await fetch(url.replace(ACCOUNT_URL, ACCOUNT_URL + "/filter"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filters, sort_field: field, sort_order: order }),
-        });
-      } else {
-        res = await fetch(url);
-      }
-      data = await res.json();
-      setAccounts(Array.isArray(data.items) ? data.items : []);
-      setTotalRecords(data.total || 0);
+      // Lấy danh sách khách thuê chưa có thuê phòng (is_rent=false)
+      const res = await axios.get(`${TENANT_API}all?filter_is_rent=false`);
+      const data = res.data;
+      setTenantsWithoutRent(Array.isArray(data) ? data : []);
     } catch (err) {
-      toast.error("Không thể tải danh sách tài khoản!");
-      setAccounts([]);
-      setTotalRecords(0);
+      toast.error("Không thể tải danh sách khách thuê chưa thuê phòng!");
+      setTenantsWithoutRent([]);
     }
   };
 
   useEffect(() => {
-    fetchAccounts();
-    // eslint-disable-next-line
+    // Đảm bảo fetchTenantNames xong mới fetchAccounts
+    const init = async () => {
+      await fetchTenantNames();
+      await fetchAccounts();
+    };
+    init();
   }, [filters, page, pageSize, search, sortField, sortOrder]);
 
   // Export CSV
@@ -179,12 +230,13 @@ export default function Accounts() {
     }
   };
 
-  const handleAdd = () => {
+  const handleAdd = async() => {
+    await fetchTenantsWithoutRent();
     setForm({
       id: "",
       username: "",
-      full_name: "",
       email: "",
+      tenant_id: "", // Luôn có trường này
       role: "USER",
       is_active: true,
       password: "",
@@ -198,8 +250,8 @@ export default function Accounts() {
     setForm({
       id: account.id,
       username: account.username,
-      full_name: account.full_name || "",
       email: account.email || "",
+      tenant_id: account.tenant_id || "", // Luôn có trường này
       role: account.role || "USER",
       is_active: account.is_active,
       password: "",
@@ -274,13 +326,14 @@ export default function Accounts() {
             setPageSize(size);
             setPage(1);
           }}
+          sortField={sortField}
+          sortOrder={sortOrder}
           onSort={(field, order) => {
             setSortField(field);
             setSortOrder(order);
-            fetchAccounts(field, order);
+            fetchTenantNames(field, order);
           }}
-          sortField={sortField}
-          sortOrder={sortOrder}
+         
         />
 
         {/* Modal Thêm / Sửa */}
@@ -326,6 +379,22 @@ export default function Accounts() {
                   <option value="USER">USER</option>
                   <option value="ADMIN">ADMIN</option>
                 </select>
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Khách thuê</label>
+                <select
+                  className="form-select"
+                  value={form.tenant_id}
+                  onChange={e => handleFormChange("tenant_id", e.target.value)}
+                >
+                  <option value="">-- Chọn khách thuê --</option>
+                  {tenantsWithoutRent.map(tenant => (
+                    <option key={tenant.tenant_id} value={tenant.tenant_id}>
+                      {tenant.full_name}
+                    </option>
+                  ))}
+                </select>
+
               </div>
               <div className="col-12">
                 <div className="form-check">

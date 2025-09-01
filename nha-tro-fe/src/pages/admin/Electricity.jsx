@@ -60,7 +60,7 @@ export default function Electricity() {
       accessor: "room_id",
       render: (room_id) => {
         const room = roomsAll.find(r => r.room_id === room_id);
-        return room ? room.room_number : room_id;
+        return room ? room.room_number : "Lỗi hiển thị";
       }
     },
     { label: "Tháng", accessor: "month" },

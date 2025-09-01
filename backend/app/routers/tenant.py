@@ -1,9 +1,9 @@
 from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from app import models, database
-from app.schemas import TenantCreate, TenantUpdate, TenantOut, PaginatedTenantOut, FilterRequest, TenantResponse
+from app.schemas import TenantCreate, TenantUpdate, TenantOut, PaginatedTenantOut, FilterRequest, TenantResponse, TenantResponseRent
 from app import models, utils, database
 import os
 
@@ -15,7 +15,18 @@ def get_db():
         yield db
     finally:
         db.close()
-
+@router.get("/all", response_model=List[TenantResponseRent])
+def get_all_tenants(
+    filter_is_rent: Optional[str] = None,
+    db: Session = Depends(database.get_db)
+):
+    query = db.query(models.Tenant)
+    if filter_is_rent is not None:
+        if filter_is_rent.lower() == "true":
+            query = query.filter(models.Tenant.is_rent == True)
+        elif filter_is_rent.lower() == "false":
+            query = query.filter(models.Tenant.is_rent == False)
+    return query.all()
 # Lấy danh sách tenant (có phân trang, tìm kiếm)
 @router.get("/", response_model=PaginatedTenantOut)
 def get_tenants(
@@ -31,15 +42,14 @@ def get_tenants(
         query = query.filter(
             (models.Tenant.full_name.ilike(f"%{search}%")) |
             (models.Tenant.phone_number.ilike(f"%{search}%")) |
-            (models.Tenant.email.ilike(f"%{search}%")) |
-            (models.Tenant.address.ilike(f"%{search}%"))
+            (models.Tenant.address.ilike(f"%{search}%")) |
+            (models.User.email.ilike(f"%{search}%"))
         )
     # thêm xử lý sort
     valid_sort_fields = {
         "tenant_id": models.Tenant.tenant_id,
         "full_name": models.Tenant.full_name,
         "phone_number": models.Tenant.phone_number,
-        "email": models.Tenant.email,
         "address": models.Tenant.address,
         "created_at": models.Tenant.created_at,
     }
@@ -111,7 +121,6 @@ def filter_tenants(
         "gender": (models.Tenant.gender, str),
         "date_of_birth": (models.Tenant.date_of_birth, date),
         "is_rent": (models.Tenant.is_rent, bool),
-        "email": (models.Tenant.email, str),
         "phone_number": (models.Tenant.phone_number, str),
         "created_at": (models.Tenant.created_at, datetime),
     }
@@ -195,3 +204,5 @@ async def upload_cccd(
         buffer.write(await file.read())
 
     return {"image_path": f"/cccd/{filename}"}
+
+

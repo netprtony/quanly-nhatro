@@ -19,7 +19,12 @@ from .room import (
 from .tenant import (
     TenantCreate,
     TenantUpdate,
-    TenantOut,PaginatedTenantOut, FilterRequest, TenantResponse
+    TenantOut,
+    PaginatedTenantOut,
+    FilterRequest,
+    TenantResponse,
+    TenantBase,
+    TenantResponseRent
 )
 from .reservation import (
     ReservationCreate,

@@ -7,7 +7,7 @@ from app import models, utils, database
 from app.schemas import room as room_schema
 router = APIRouter(prefix="/rooms", tags=["Rooms"])
 
-@router.get("/all", response_model=List[room_schema.RoomSchema])
+@router.get("/all", response_model=List[room_schema.RoomRequestSchema])
 def get_all_rooms(
     filter_is_available: Optional[str] = None,
     db: Session = Depends(database.get_db)

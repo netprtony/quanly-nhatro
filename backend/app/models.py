@@ -50,7 +50,6 @@ class Tenant(Base):
     gender = Column(Enum(GenderEnum), default=GenderEnum.Other)
     date_of_birth = Column(Date)
     phone_number = Column(String(20))
-    email = Column(String(100))
     id_card_front_path = Column(String(255))
     id_card_back_path = Column(String(255))
     is_rent = Column(Boolean, default=True)
