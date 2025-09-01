@@ -178,11 +178,11 @@ export default function Contracts() {
       toast.error("Không thể tải danh sách phòng!");
       setRoomsAll([]);
     }
-  };
+  };  
   // Lấy danh sách phòng còn trống
   const fetchRoomsAvailable = async () => {
     try {
-      const res = await fetch(`${ROOMS_API}all?filter_is_available=false`);
+      const res = await fetch(`${ROOMS_API}all?filter_is_available=true`);
       const data = await res.json();
       setRoomsAvailable(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -191,11 +191,11 @@ export default function Contracts() {
     }
   };
   // Lấy danh sách khách thuê cho combobox
-  const fetchTenants = async () => {
+  const fetchPendingTenants = async () => {
     try {
-      const res = await fetch(`${TENANTS_API}?page=1&page_size=200`);
+      const res = await fetch(`${TENANTS_API}all?tenant_status=Pending`);
       const data = await res.json();
-      setTenants(Array.isArray(data.items) ? data.items : []);
+      setTenants(Array.isArray(data) ? data : []);
     } catch (err) {
       toast.error("Không thể tải danh sách khách thuê!");
       setTenants([]);
@@ -203,9 +203,10 @@ export default function Contracts() {
   };
 
   useEffect(() => {
-    fetchContracts();
     fetchRoomsAll();
-    fetchTenants();
+    fetchPendingTenants();
+    fetchContracts();
+    
     // eslint-disable-next-line
   }, [filters, page, pageSize, search, sortField, sortOrder]);
 

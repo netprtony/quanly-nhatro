@@ -39,7 +39,7 @@ export default function AdvancedFilters({
 
   return (
     <div className="mb-4">
-      <h5 className="mb-3 text-warning  ">🔍 Bộ lọc nâng cao</h5>
+      <h5 className="mb-3 badge bg-success ">🔍 Bộ lọc nâng cao</h5>
 
       {/* Thanh tìm kiếm */}
       <div className="row g-3 mb-3">
@@ -72,7 +72,7 @@ export default function AdvancedFilters({
       {/* Bộ lọc nâng cao */}
       <div className="row g-3 align-items-end">
         <div className="col-md-3">
-          <label className="form-label text-warning">Trường</label>
+          <label className="form-label badge bg-success">Trường</label>
           <select
             className="form-select"
             value={newFilter.field}
@@ -90,7 +90,7 @@ export default function AdvancedFilters({
         </div>
 
         <div className="col-md-3">
-          <label className="form-label text-warning">Toán tử</label>
+          <label className="form-label badge bg-success">Toán tử</label>
           <select
             className="form-select"
             value={newFilter.operator}
@@ -110,7 +110,7 @@ export default function AdvancedFilters({
         </div>
 
         <div className="col-md-3">
-          <label className="form-label text-warning">Giá trị</label>
+          <label className="form-label badge bg-success">Giá trị</label>
           <input
             type="text"
             className="form-control"
