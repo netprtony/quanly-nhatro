@@ -38,14 +38,14 @@ class ElectricityMeterOut(BaseModel):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class PaginatedElectricityMeterOut(BaseModel):
     total: int
     items: List[ElectricityMeterOut]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class Filter(BaseModel):
     field: str

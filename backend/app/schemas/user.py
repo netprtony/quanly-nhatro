@@ -17,6 +17,7 @@ class UserCreate(BaseModel):
     username: str
     email: EmailStr
     password: str
+    tenant_id: str
 
 
 class UserLogin(BaseModel):
@@ -48,6 +49,7 @@ class UserUpdate(BaseModel):
     username: Optional[str]
     email: Optional[EmailStr]
     role: Optional[RoleEnum]
+    tenant_id : Optional[str]
     is_active: Optional[bool]
     password: Optional[str]
     class Config:
@@ -57,7 +59,7 @@ class PaginatedUserOut(BaseModel):
     items: List[UserOut]
     total: int
     class Config:
-        orm_mode = True
+        from_attributes  = True
 
 class Filter(BaseModel):
     field: str

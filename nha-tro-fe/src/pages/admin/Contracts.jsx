@@ -15,7 +15,8 @@ export default function Contracts() {
   const [contracts, setContracts] = useState([]);
   const [roomsAll, setRoomsAll] = useState([]);
   const [roomsAvailable, setRoomsAvailable] = useState([]);
-  const [tenants, setTenants] = useState([]);
+  const [tenantsPending, setTenantsPending] = useState([]);
+  const [tenantsAll, setTenantsAll] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingContract, setEditingContract] = useState(null);
   const [form, setForm] = useState({
@@ -54,7 +55,7 @@ export default function Contracts() {
   const fieldOptions = [
     { value: "contract_id", label: "Mã hợp đồng", type: "number" },
     { value: "room_id", label: "Phòng", type: "number" },
-    { value: "tenant_id", label: "Khách thuê", type: "number" },
+    { value: "tenant_id", label: "Khách thuê", type: "string" },
     { value: "start_date", label: "Ngày bắt đầu", type: "string" },
     { value: "end_date", label: "Ngày kết thúc", type: "string" },
     { value: "deposit_amount", label: "Tiền cọc", type: "number" },
@@ -78,7 +79,7 @@ export default function Contracts() {
       label: "Khách thuê",
       accessor: "tenant_id",
       render: (tenant_id) => {
-        const tenant = tenants.find((t) => t.tenant_id === tenant_id);
+        const tenant = tenantsAll.find((t) => t.tenant_id === tenant_id);
         return tenant ? tenant.full_name : tenant_id;
       },
     },
@@ -195,15 +196,26 @@ export default function Contracts() {
     try {
       const res = await fetch(`${TENANTS_API}all?tenant_status=Pending`);
       const data = await res.json();
-      setTenants(Array.isArray(data) ? data : []);
+      setTenantsPending(Array.isArray(data) ? data : []);
     } catch (err) {
       toast.error("Không thể tải danh sách khách thuê!");
-      setTenants([]);
+      setTenantsPending([]);
+    }
+  };
+  const fetchTenantsAll = async () => {
+    try{
+      const res = await fetch(`${TENANTS_API}?page=1&page_size=200`);
+      const data = await res.json();
+      setTenantsAll(Array.isArray(data.items) ? data.items : []);
+    } catch (err) {
+      toast.error("Không thể tải danh sách khách thuê!");
+      setTenantsAll([]);
     }
   };
 
   useEffect(() => {
     fetchRoomsAll();
+    fetchTenantsAll();
     fetchPendingTenants();
     fetchContracts();
     
@@ -474,13 +486,22 @@ export default function Contracts() {
                 <select
                   className="form-select"
                   value={form.room_id}
-                  onChange={(e) => handleFormChange("room_id", e.target.value)}
+                  onChange={(e) => {
+                    const selectedRoomId = e.target.value;
+                    handleFormChange("room_id", selectedRoomId);
+                    // Tìm phòng vừa chọn
+                    const selectedRoom = roomsAvailable.find(r => String(r.room_id) === String(selectedRoomId));
+                    // Nếu có phòng, tự động đổ giá thuê xuống textbox Tiền thuê
+                    if (selectedRoom) {
+                      handleFormChange("monthly_rent", selectedRoom.price_per_month);
+                    }
+                  }}
                   required
                 >
                   <option value="">-- Chọn phòng --</option>
                   {roomsAvailable.map((room) => (
                     <option key={room.room_id} value={room.room_id}>
-                      {room.room_number}
+                      {room.room_number} - {room.type_name} - {room.price_per_month.toLocaleString("vi-VN")}đ
                     </option>
                   ))}
                 </select>
@@ -494,7 +515,7 @@ export default function Contracts() {
                   required
                 >
                   <option value="">-- Chọn khách thuê --</option>
-                  {tenants.map((tenant) => (
+                  {tenantsPending.map((tenant) => (
                     <option key={tenant.tenant_id} value={tenant.tenant_id}>
                       {tenant.full_name}
                     </option>

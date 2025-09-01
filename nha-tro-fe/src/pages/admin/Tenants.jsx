@@ -18,7 +18,6 @@ export default function Tenants() {
     tenant_id: "",
     full_name: "",
     phone_number: "",
-    email: "",
     address: "",
     gender: "Other",
     date_of_birth: "",
@@ -49,7 +48,6 @@ export default function Tenants() {
     { value: "tenant_id", label: "Mã khách thuê", type: "string" },
     { value: "full_name", label: "Họ tên", type: "string" },
     { value: "phone_number", label: "Số điện thoại", type: "string" },
-    { value: "email", label: "Email", type: "string" },
     { value: "address", label: "Địa chỉ", type: "string" },
     { value: "gender", label: "Giới tính", type: "string" },
     { value: "date_of_birth", label: "Ngày sinh", type: "string" },
@@ -60,7 +58,13 @@ export default function Tenants() {
     { label: "ID", accessor: "tenant_id" },
     { label: "Họ tên", accessor: "full_name" },
     { label: "Số điện thoại", accessor: "phone_number" },
-    { label: "Giới tính", accessor: "gender" },
+    { label: "Giới tính", accessor: "gender",
+      render: (value) => {
+        if (value === "Male") return "Nam";
+        if (value === "Female") return "Nữ";
+        return "Khác";
+      },
+    },
     { label: "Ngày sinh", accessor: "date_of_birth", render: (value) => value ? new Date(value).toLocaleDateString("vi-VN") : "" },
     { label: "Địa chỉ", accessor: "address" },
     {
@@ -235,7 +239,6 @@ export default function Tenants() {
       tenant_id: "",
       full_name: "",
       phone_number: "",
-      email: "",
       address: "",
       gender: "Other",
       date_of_birth: "",
@@ -253,7 +256,6 @@ export default function Tenants() {
       tenant_id: tenant.tenant_id,
       full_name: tenant.full_name,
       phone_number: tenant.phone_number || "",
-      email: tenant.email || "",
       address: tenant.address || "",
       gender: tenant.gender || "Other",
       date_of_birth: tenant.date_of_birth || "",
@@ -468,15 +470,6 @@ export default function Tenants() {
                   value={form.phone_number}
                   onChange={(e) => handleFormChange("phone_number", e.target.value)}
                   required
-                />
-              </div>
-              <div className="col-md-6">
-                <label className="form-label">Email</label>
-                <input
-                  type="email"
-                  className="form-control"
-                  value={form.email}
-                  onChange={(e) => handleFormChange("email", e.target.value)}
                 />
               </div>
               <div className="col-md-6">

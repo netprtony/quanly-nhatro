@@ -72,3 +72,5 @@ class FilterRequest(BaseModel):
 class RoomRequestSchema(BaseModel):
     room_id: int
     room_number: str
+    type_name: str                # Thêm dòng này
+    price_per_month: float        # Thêm dòng này

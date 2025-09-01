@@ -418,6 +418,33 @@ BEGIN
 END$$
 
 DELIMITER ;
+
+DELIMITER $$
+
+CREATE TRIGGER trg_after_update_reservation_status
+AFTER UPDATE ON Reservations
+FOR EACH ROW
+BEGIN
+    IF NEW.status = 'Confirmed' THEN
+        INSERT INTO Notifications (user_id, title, message, is_read)
+        VALUES (
+            NEW.user_id,
+            'Đặt phòng đã được xác nhận',
+            CONCAT('Đặt phòng ', NEW.reservation_id, ' đã được xác nhận. Vui lòng đến nhận phòng đúng thời gian quy định.'),
+            FALSE
+        );
+    ELSEIF NEW.status = 'Cancelled' THEN
+        INSERT INTO Notifications (user_id, title, message, is_read)
+        VALUES (
+            NEW.user_id,
+            'Đặt phòng đã bị hủy',
+            CONCAT('Đặt phòng ', NEW.reservation_id, ' đã bị hủy. Vui lòng liên hệ quản lý nếu cần hỗ trợ.'),
+            FALSE
+        );
+    END IF;
+END$$
+
+DELIMITER ;
 INSERT INTO RoomTypes (type_name, description, price_per_month) VALUES
 ('Standard', 'Phòng cơ bản, không điều hòa', 3000000.00),
 ('Deluxe', 'Phòng có điều hòa, ban công', 5000000.00),

@@ -30,7 +30,7 @@ class PaymentOut(PaymentBase):
 
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 class PaymentWithRelationsOut(BaseModel):
     payment_id: int
     invoice_id: int
@@ -45,14 +45,14 @@ class PaymentWithRelationsOut(BaseModel):
     room_number: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class PaginatedPaymentOut(BaseModel):
     items: List[PaymentWithRelationsOut]
     total: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 # Schema cho filter nâng cao
 class Filter(BaseModel):
     field: str

@@ -29,7 +29,7 @@ class InvoiceOut(InvoiceBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # Schema phân trang
@@ -38,7 +38,7 @@ class PaginatedInvoiceOut(BaseModel):
     total: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # Schema cho filter nâng cao
@@ -59,4 +59,4 @@ class UnpaidInvoiceOut(BaseModel):
     total_amount: float
 
     class Config:
-        orm_mode = True
+        from_attributes = True

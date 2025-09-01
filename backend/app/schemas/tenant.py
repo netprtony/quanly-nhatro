@@ -24,14 +24,14 @@ class TenantOut(TenantBase):
     created_at: Optional[datetime]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 # Schema phân trang
 class PaginatedTenantOut(BaseModel):
     items: List[TenantOut]
     total: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 # Schema cho filter nâng cao
 class Filter(BaseModel):
     field: str
@@ -55,7 +55,7 @@ class TenantResponse(BaseModel):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class TenantResponseRent(BaseModel):
     tenant_id: str

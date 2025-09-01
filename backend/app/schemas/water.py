@@ -38,14 +38,14 @@ class WaterMeterOut(BaseModel):
 	created_at: datetime
 
 	class Config:
-		orm_mode = True
+		from_attributes = True
 
 class PaginatedWaterMeterOut(BaseModel):
 	total: int
 	items: List[WaterMeterOut]
 
 	class Config:
-		orm_mode = True
+		from_attributes = True
 
 class Filter(BaseModel):
 	field: str

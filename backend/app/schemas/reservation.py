@@ -30,13 +30,13 @@ class ReservationOut(BaseModel):
     created_at: Optional[datetime]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class PaginatedReservationOut(BaseModel):
     items: List[ReservationOut]
     total: int
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class Filter(BaseModel):

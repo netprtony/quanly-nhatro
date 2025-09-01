@@ -34,13 +34,13 @@ class ContractOut(ContractBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 class PaginatedContract(BaseModel):
     items: List[ContractOut]
     total: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class Filter(BaseModel):
     field: str

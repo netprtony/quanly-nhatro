@@ -62,23 +62,24 @@ def get_account(user_id: int, db: Session = Depends(get_db)):
 # Tạo tài khoản mới
 @router.post("/", response_model=UserOut, status_code=201)
 def create_account(user: UserCreate, db: Session = Depends(get_db)):
-    if db.query(User).filter(User.username == user.username).first():
-        raise HTTPException(status_code=400, detail="Username already exists")
+    # Kiểm tra email đã tồn tại
     if db.query(User).filter(User.email == user.email).first():
         raise HTTPException(status_code=400, detail="Email already exists")
-
-    hashed_pw = utils.hash_password(user.password)
-    new_user = User(
+    # Kiểm tra username đã tồn tại
+    if db.query(User).filter(User.username == user.username).first():
+        raise HTTPException(status_code=400, detail="Username already exists")
+    db_user = User(
         username=user.username,
         email=user.email,
-        password=hashed_pw,
-        role=user.role if hasattr(user, "role") else "user",
-        is_active=True
+        password=utils.hash_password(user.password),
+        tenant_id=user.tenant_id,
+        role=user.role if hasattr(user, "role") else "USER",
+        is_active=True,
     )
-    db.add(new_user)
+    db.add(db_user)
     db.commit()
-    db.refresh(new_user)
-    return new_user
+    db.refresh(db_user)
+    return db_user
 
 # Cập nhật tài khoản
 @router.put("/{user_id}", response_model=UserOut)
@@ -86,6 +87,8 @@ def update_account(user_id: int, user: UserUpdate, db: Session = Depends(get_db)
     db_user = db.query(User).filter(User.id == user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
+    if user.tenant_id is not None:
+        db_user.tenant_id = user.tenant_id  # Phải có dòng này!
 
     if user.username and user.username != db_user.username:
         if db.query(User).filter(User.username == user.username).first():

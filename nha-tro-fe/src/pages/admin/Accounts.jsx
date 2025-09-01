@@ -187,10 +187,16 @@ const fetchAccounts = async (field = sortField, order = sortOrder) => {
   // CRUD
   const createAccount = async () => {
     try {
+      // Đảm bảo tenant_id được gửi lên khi tạo tài khoản mới
+      const payload = { ...form };
+      if (!payload.tenant_id) {
+        toast.error("Vui lòng chọn khách thuê để liên kết tài khoản!");
+        return;
+      }
       const res = await fetch(ACCOUNT_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(await res.text());
       await fetchAccounts();
@@ -238,7 +244,7 @@ const fetchAccounts = async (field = sortField, order = sortOrder) => {
       id: "",
       username: "",
       email: "",
-      tenant_id: "", // Luôn có trường này
+      tenant_id: tenantsWithoutRent.length > 0 ? tenantsWithoutRent[0].tenant_id : "", // Mặc định chọn khách thuê đầu tiên nếu có
       role: "USER",
       is_active: true,
       password: "",

@@ -12,13 +12,24 @@ def get_all_rooms(
     filter_is_available: Optional[str] = None,
     db: Session = Depends(database.get_db)
 ):
-    query = db.query(models.Room)
+    query = db.query(models.Room).join(models.RoomType)
     if filter_is_available is not None:
         if filter_is_available.lower() == "true":
             query = query.filter(models.Room.is_available == True)
         elif filter_is_available.lower() == "false":
             query = query.filter(models.Room.is_available == False)
-    return query.all()
+    rooms = query.all()
+    result = []
+    for room in rooms:
+        room_type = db.query(models.RoomType).filter(models.RoomType.room_type_id == room.room_type_id).first()
+        room_dict = {
+            "room_id": room.room_id,
+            "room_number": room.room_number,
+            "type_name": room_type.type_name if room_type else "",
+            "price_per_month": room_type.price_per_month if room_type else 0.0,
+        }
+        result.append(room_dict)
+    return result
 # ✅ Get single room
 @router.get("/{room_id}", response_model=room_schema.RoomSchema)
 def get_room(room_id: int, db: Session = Depends(database.get_db)):

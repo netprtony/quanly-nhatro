@@ -29,11 +29,11 @@ class InvoiceDetailOut(InvoiceDetailBase):
     note: Optional[str] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class PaginatedInvoiceDetail(BaseModel):
     items: List[InvoiceDetailOut]
     total: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True

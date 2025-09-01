@@ -22,13 +22,13 @@ class DeviceOut(DeviceBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 class PaginatedDevicesOut(BaseModel):
     items: List[DeviceOut]
     total: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
         
 class Filter(BaseModel):
     field: str
