@@ -24,7 +24,6 @@ from .tenant import (
     FilterRequest,
     TenantResponse,
     TenantBase,
-    TenantResponseRent
 )
 from .reservation import (
     ReservationCreate,

@@ -57,8 +57,3 @@ class TenantResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class TenantResponseRent(BaseModel):
-    tenant_id: str
-    full_name: str
-    class Config:
-        from_attributes = True

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app import models, database
-from app.schemas import TenantCreate, TenantUpdate, TenantOut, PaginatedTenantOut, FilterRequest, TenantResponse, TenantResponseRent
+from app.schemas import TenantCreate, TenantUpdate, TenantOut, PaginatedTenantOut, FilterRequest, TenantResponse
 from app import models, utils, database
 import os
 
@@ -15,7 +15,7 @@ def get_db():
         yield db
     finally:
         db.close()
-@router.get("/all", response_model=List[TenantResponseRent])
+@router.get("/all", response_model=List[TenantResponse])
 def get_all_tenants(
     tenant_status: Optional[str] = Query(None, description="Lọc theo trạng thái thuê"),
     db: Session = Depends(database.get_db)
@@ -23,7 +23,22 @@ def get_all_tenants(
     query = db.query(models.Tenant)
     if tenant_status:
         query = query.filter(models.Tenant.tenant_status == tenant_status)
-    return query.all()
+    tenants = query.all()
+    result = []
+    for tenant in tenants:
+        result.append({
+            "tenant_id": tenant.tenant_id,
+            "full_name": tenant.full_name,
+            "gender": tenant.gender.value if tenant.gender else None,
+            "date_of_birth": tenant.date_of_birth,
+            "phone_number": tenant.phone_number,
+            "id_card_front_path": tenant.id_card_front_path,
+            "id_card_back_path": tenant.id_card_back_path,
+            "tenant_status": tenant.tenant_status.value if tenant.tenant_status else None,
+            "address": tenant.address,
+            "created_at": tenant.created_at,
+        })
+    return result
 # Lấy danh sách tenant (có phân trang, tìm kiếm)
 @router.get("/", response_model=PaginatedTenantOut)
 def get_tenants(
