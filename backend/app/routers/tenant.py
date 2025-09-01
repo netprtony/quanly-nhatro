@@ -17,15 +17,12 @@ def get_db():
         db.close()
 @router.get("/all", response_model=List[TenantResponseRent])
 def get_all_tenants(
-    filter_is_rent: Optional[str] = None,
+    tenant_status: Optional[str] = Query(None, description="Lọc theo trạng thái thuê"),
     db: Session = Depends(database.get_db)
 ):
     query = db.query(models.Tenant)
-    if filter_is_rent is not None:
-        if filter_is_rent.lower() == "true":
-            query = query.filter(models.Tenant.is_rent == True)
-        elif filter_is_rent.lower() == "false":
-            query = query.filter(models.Tenant.is_rent == False)
+    if tenant_status:
+        query = query.filter(models.Tenant.tenant_status == tenant_status)
     return query.all()
 # Lấy danh sách tenant (có phân trang, tìm kiếm)
 @router.get("/", response_model=PaginatedTenantOut)
@@ -168,9 +165,21 @@ def get_tenant_from_user(user_id: int, db: Session = Depends(database.get_db)):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    if not user.tenant:
+    tenant = user.tenant
+    if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found for this user")
-    return user.tenant
+    return {
+        "tenant_id": tenant.tenant_id,
+        "full_name": tenant.full_name,
+        "gender": tenant.gender.value if tenant.gender else None,
+        "date_of_birth": tenant.date_of_birth,
+        "phone_number": tenant.phone_number,
+        "id_card_front_path": tenant.id_card_front_path,
+        "id_card_back_path": tenant.id_card_back_path,
+        "tenant_status": tenant.tenant_status.value if tenant.tenant_status else None,
+        "address": tenant.address,
+        "created_at": tenant.created_at,
+    }
 
 # ✅ Lấy thư mục gốc project (d:\NhaTroBaoBao)
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))

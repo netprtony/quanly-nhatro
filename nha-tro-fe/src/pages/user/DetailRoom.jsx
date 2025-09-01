@@ -25,7 +25,7 @@ export default function DetailRoom() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
+  const [fullName, setFullName] = useState("");
   useEffect(() => {
     fetch(`${ROOM_API}/${roomId}`)
       .then((res) => res.json())
@@ -40,11 +40,11 @@ export default function DetailRoom() {
     setError("");
     setSuccess("");
     try {
-      // Lấy user_id từ localStorage nếu có
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const payload = {
         room_id: room.room_id,
         contact_phone: phone,
+        full_name: fullName, // Trường này đã được gửi lên API
         status: "pending",
       };
       if (user?.id) {
@@ -58,6 +58,7 @@ export default function DetailRoom() {
       if (!res.ok) throw new Error("Đặt phòng thất bại!");
       setSuccess("Đặt phòng thành công! Quản lý sẽ liên hệ bạn sớm.");
       setPhone("");
+      setFullName(""); // Reset họ tên sau khi đặt
     } catch (e) {
       setError(e.message || "Có lỗi xảy ra!");
     }
@@ -304,6 +305,16 @@ export default function DetailRoom() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="Nhập số điện thoại"
+                  disabled={loading}
+                />
+              </Form.Group>
+              <Form.Group className="mt-3">
+                <Form.Label>Họ tên khách thuê</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Nhập họ tên"
                   disabled={loading}
                 />
               </Form.Group>

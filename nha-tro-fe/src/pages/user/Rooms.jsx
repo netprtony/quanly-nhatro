@@ -2,50 +2,12 @@ import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { FaBed, FaRulerCombined, FaMoneyBillWave, FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import AdvancedFilters from "/src/components/AdvancedFilters"; // Import component lọc nâng cao
 
 const ROOM_API = "http://localhost:8000/rooms";
-const ROOMTYPE_API = "http://localhost:8000/roomtypes";
-const ROOM_IMAGE_API = "http://localhost:8000/room-images";
+const ROOMTYPE_API = "http://localhost:8000/roomtypes/";
 
 const ROOMS_PER_PAGE = 6;
-
-// Gộp component hiển thị ảnh phòng vào file này
-function RoomImage({ roomId }) {
-  const [images, setImages] = useState([]);
-  useEffect(() => {
-    fetch(`${ROOM_IMAGE_API}/?room_id=${roomId}`)
-      .then(res => res.json())
-      .then(data => setImages(data));
-  }, [roomId]);
-  const imageSrc =
-    images.length === 0
-      ? "nha-tro-fe/public/roomImage/Data Not Available.png"
-      : images[0].image_url || images[0].image_path;
-  return (
-    <div
-      style={{
-        borderRadius: "18px",
-        overflow: "hidden",
-        marginBottom: 16,
-        border: "3px solid #f9bc60",
-        boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
-        background: "#fff",
-      }}
-    >
-      <img
-        src={imageSrc}
-        alt="Phòng"
-        style={{
-          width: "100%",
-          height: "300px",
-          objectFit: "cover",
-          borderRadius: "18px",
-          transition: "0.3s",
-        }}
-      />
-    </div>
-  );
-}
 
 export default function Rooms() {
   const [rooms, setRooms] = useState([]);
@@ -53,6 +15,8 @@ export default function Rooms() {
   const [selectedType, setSelectedType] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRooms, setTotalRooms] = useState(0);
+  const [filters, setFilters] = useState([]);
+  const [search, setSearch] = useState("");
   const topRef = useRef(null);
   const navigate = useNavigate();
 
@@ -66,14 +30,29 @@ export default function Rooms() {
   // Lấy danh sách phòng có phân trang và lọc theo loại phòng
   useEffect(() => {
     let url = `${ROOM_API}/?page=${currentPage}&page_size=${ROOMS_PER_PAGE}`;
-    if (selectedType) url += `&sort_field=type_name&search=${selectedType}`;
-    fetch(url)
-      .then(res => res.json())
-      .then(data => {
-        setRooms(data.items || []);
-        setTotalRooms(data.total || 0);
-      });
-  }, [currentPage, selectedType]);
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (filters.length > 0) {
+      // Gọi API lọc nâng cao (POST)
+      fetch(`${ROOM_API}/filter?page=${currentPage}&page_size=${ROOMS_PER_PAGE}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filters }),
+      })
+        .then(res => res.json())
+        .then(data => {
+          setRooms(data.items || []);
+          setTotalRooms(data.total || 0);
+        });
+    } else {
+      // Gọi API thường (GET)
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          setRooms(data.items || []);
+          setTotalRooms(data.total || 0);
+        });
+    }
+  }, [currentPage, selectedType, filters, search]);
 
   const totalPages = Math.ceil(totalRooms / ROOMS_PER_PAGE);
 
@@ -85,6 +64,15 @@ export default function Rooms() {
       }
     }
   };
+
+  const fieldOptions = [
+    { value: "room_number", label: "Số phòng" },
+    { value: "max_occupancy", label: "Số người tối đa" },
+    { value: "price_per_month", label: "Giá thuê/tháng" },
+    { value: "type_name", label: "Loại phòng" },
+    { value: "floor_number", label: "Tầng" },
+    { value: "is_available", label: "Trạng thái phòng"}
+  ];
 
   return (
     <div
@@ -108,27 +96,27 @@ export default function Rooms() {
         >
           Danh sách phòng trọ
         </h2>
-        {/* Combobox lọc loại phòng */}
-        <div className="mb-4 d-flex justify-content-center">
-          <select
-            className="form-select w-auto"
-            value={selectedType}
-            onChange={e => {
-              setSelectedType(e.target.value);
-              setCurrentPage(1);
-              if (topRef.current) {
-                topRef.current.scrollIntoView({ behavior: "smooth" });
-              }
-            }}
-          >
-            <option value="">-- Tất cả loại phòng --</option>
-            {roomTypes.map(rt => (
-              <option key={rt.room_type_id} value={rt.type_name}>
-                {rt.type_name}
-              </option>
-            ))}
-          </select>
-        </div>
+        
+        {/* Thêm component lọc nâng cao */}
+        <AdvancedFilters
+          fieldOptions={fieldOptions}
+          filters={filters}
+          onAddFilter={f => {
+            setFilters(prev => [...prev, f]);
+            setCurrentPage(1);
+          }}
+          onRemoveFilter={i => {
+            setFilters(prev => prev.filter((_, idx) => idx !== i));
+            setCurrentPage(1);
+          }}
+          onSearch={term => {
+            setSearch(term);
+            setCurrentPage(1);
+          }}
+          onLoad={() => {}}
+          onExportCSV={() => {}}
+          onExportJSON={() => {}}
+        />
         <div className="row g-4">
           {rooms.map((room) => (
             <motion.div
@@ -155,7 +143,32 @@ export default function Rooms() {
                 }}
               >
                 {/* Load ảnh phòng từ API room-images */}
-                <RoomImage roomId={room.room_id} />
+                <div
+                  style={{
+                    borderRadius: "18px",
+                    overflow: "hidden",
+                    marginBottom: 16,
+                    border: "3px solid #f9bc60",
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+                    background: "#fff",
+                  }}
+                >
+                  <img
+                    src={
+                      room.roomImage && room.roomImage.length > 0
+                        ? room.roomImage[0]
+                        : "/roomImage/Data Not Available.png"
+                    }
+                    alt="Phòng"
+                    style={{
+                      width: "100%",
+                      height: "300px",
+                      objectFit: "cover",
+                      borderRadius: "18px",
+                      transition: "0.3s",
+                    }}
+                  />
+                </div>
                 <div className="d-flex align-items-center mb-2">
                   <FaBed size={22} style={{ color: "#f9bc60", marginRight: 8 }} />
                   <span className="fs-6 fw-bold" style={{ color: "#f9bc60" }}>
@@ -194,10 +207,7 @@ export default function Rooms() {
                     {room.room_type.price_per_month?.toLocaleString("vi-VN") || "N/A"} đ/tháng
                   </span>
                 </div>
-                <div className="mb-3" style={{ color: "#ffffffff" }}>
-                  <span style={{ fontWeight: 600, color: "#f9bc60" }}>Mô tả phòng: </span>
-                  {room.description || <span className="text-muted" style={{ color: "#ffffffff" }}>Chưa có mô tả</span>}
-                </div>
+                
                 <div className="d-flex justify-content-end mt-auto">
                   {room.is_available ? (
                     <button

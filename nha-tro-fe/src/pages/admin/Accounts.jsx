@@ -129,23 +129,25 @@ const fetchAccounts = async (field = sortField, order = sortOrder) => {
     setTotalRecords(0);
   }
 };
-  // Fetch tenants chưa thuê
-  const fetchTenantsWithoutRent = async () => {
+
+
+  // Fetch tenants đã có tài khoản
+  const fetchTenantsWithoutAccount = async () => {
     try {
-      // Lấy danh sách khách thuê chưa có thuê phòng (is_rent=false)
-      const res = await axios.get(`${TENANT_API}all?filter_is_rent=false`);
+      // Lấy danh sách khách thuê đã có tài khoản (có liên kết với user/account)
+      const res = await axios.get(`${TENANT_API}all?tenant_status=Pending`);
       const data = res.data;
       setTenantsWithoutRent(Array.isArray(data) ? data : []);
     } catch (err) {
-      toast.error("Không thể tải danh sách khách thuê chưa thuê phòng!");
+      toast.error("Không thể tải danh sách khách thuê đã có tài khoản!");
       setTenantsWithoutRent([]);
     }
   };
 
   useEffect(() => {
-    // Đảm bảo fetchTenantNames xong mới fetchAccounts
+    // Đảm bảo fetchTenantsWithoutAccount xong mới fetchAccounts
     const init = async () => {
-      await fetchTenantNames();
+      await fetchTenantsWithoutAccount();
       await fetchAccounts();
     };
     init();
@@ -231,7 +233,7 @@ const fetchAccounts = async (field = sortField, order = sortOrder) => {
   };
 
   const handleAdd = async() => {
-    await fetchTenantsWithoutRent();
+    await fetchTenantsWithoutAccount();
     setForm({
       id: "",
       username: "",

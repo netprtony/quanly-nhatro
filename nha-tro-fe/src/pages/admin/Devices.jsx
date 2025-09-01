@@ -57,7 +57,7 @@ export default function Devices() {
       accessor: "is_active",
       render: (is_active) => {
         let badgeClass = is_active ? "bg-success" : "bg-secondary";
-        return <span className={`badge ${badgeClass}`}>{is_active ? "Đang hoạt động (1)" : "Hư hỏng (0)"}</span>;
+        return <span className={`badge ${badgeClass}`}>{is_active ? "Đang hoạt động" : "Hư hỏng"}</span>;
       }
     },
     { label: "Mô tả", accessor: "description" },

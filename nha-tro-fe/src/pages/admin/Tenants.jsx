@@ -60,57 +60,17 @@ export default function Tenants() {
     { label: "ID", accessor: "tenant_id" },
     { label: "Họ tên", accessor: "full_name" },
     { label: "Số điện thoại", accessor: "phone_number" },
+    { label: "Giới tính", accessor: "gender" },
+    { label: "Ngày sinh", accessor: "date_of_birth", render: (value) => value ? new Date(value).toLocaleDateString("vi-VN") : "" },
     { label: "Địa chỉ", accessor: "address" },
     {
-      label: "Ảnh CCCD",
-      accessor: "id_card_front_path",
-      render: (front, tenant) => (
-        <div className="d-flex gap-2 align-items-center">
-          {front && (
-            <img
-              src={front.startsWith("/") ? front : `/cccd/${front}`}
-              alt="CCCD trước"
-              style={{ width: 40, height: 28, objectFit: "cover", borderRadius: 4, border: "1px solid #eee", cursor: "pointer" }}
-              onClick={() =>
-                setViewCCCD({
-                  src: front.startsWith("/") ? front : `/cccd/${front}`,
-                  alt: "CCCD mặt trước",
-                })
-              }
-            />
-          )}
-          {tenant.id_card_back_path && (
-            <img
-              src={tenant.id_card_back_path.startsWith("/") ? tenant.id_card_back_path : `/cccd/${tenant.id_card_back_path}`}
-              alt="CCCD sau"
-              style={{ width: 40, height: 28, objectFit: "cover", borderRadius: 4, border: "1px solid #eee", cursor: "pointer" }}
-              onClick={() =>
-                setViewCCCD({
-                  src: tenant.id_card_back_path.startsWith("/") ? tenant.id_card_back_path : `/cccd/${tenant.id_card_back_path}`,
-                  alt: "CCCD mặt sau",
-                })
-              }
-            />
-          )}
-        </div>
-      ),
-    },
-    {
-      label: "Ngày tạo",
-      accessor: "created_at",
+      label: "Trạng thái thuê",
+      accessor: "tenant_status",
       render: (value) => {
-        if (!value) return "";
-        const date = new Date(value);
-        const pad = (n) => n.toString().padStart(2, "0");
-        return `${pad(date.getHours())}:${pad(date.getMinutes())} ${pad(date.getDate())}-${pad(date.getMonth() + 1)}-${date.getFullYear()}`;
+        if (value === "Active") return <span className="badge bg-success">Đang thuê</span>;
+        if (value === "Terminated") return <span className="badge bg-danger">Đã kết thúc</span>;
+        return <span className="badge bg-secondary">Chờ duyệt</span>;
       },
-    },
-    {
-      label: "Trạng thái",
-      accessor: "is_rent",
-      render: (value) => (value ? 
-        <span className="badge bg-success">Đang thuê</span> :
-        <span className="badge bg-danger">Đã rời</span>),
     },
     {
       label: "Thao tác",
@@ -299,7 +259,7 @@ export default function Tenants() {
       date_of_birth: tenant.date_of_birth || "",
       id_card_front_path: tenant.id_card_front_path || "",
       id_card_back_path: tenant.id_card_back_path || "",
-      is_rent: tenant.is_rent,
+      tenant_status: tenant.tenant_status || "Pending", // Sửa lại dòng này
     });
     setEditingTenant(tenant);
     setUnsavedChanges(false);
@@ -585,21 +545,20 @@ export default function Tenants() {
                   onChange={e => setBackFile(e.target.files[0])}
                 />
               </div>
-              <div className="col-12">
-                <div className="form-check">
-                  <input
-                    type="checkbox"
-                    className="form-check-input"
-                    id="isActive"
-                    checked={form.is_rent}
-                    onChange={(e) => handleFormChange("is_rent", e.target.checked)}
-                  />
-                  <label className="form-check-label" htmlFor="isActive">
-                    Đang thuê
-                  </label>
-                </div>
+              <div className="col-md-6">
+                <label className="form-label">Trạng thái thuê</label>
+                <select
+                  className="form-select"
+                  value={form.tenant_status ?? "Pending"}
+                  onChange={(e) => handleFormChange("tenant_status", e.target.value)}
+                  required
+                >
+                  <option value="Active">Đang thuê</option>
+                  <option value="Terminated">Đã kết thúc</option>
+                  <option value="Pending">Chờ duyệt</option>
+                </select>
               </div>
-            </div>
+            </div>  
           </form>
         </Modal>
 

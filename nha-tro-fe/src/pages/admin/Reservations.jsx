@@ -113,6 +113,7 @@ export default function Reservations() {
         ...form,
         room_id: form.room_id ? parseInt(form.room_id) : null,
         user_id: form.user_id ? parseInt(form.user_id) : null,
+        full_name: form.full_name || "",
       };
       const res = await fetch(RESERVATION_URL, {
         method: "POST",
@@ -135,6 +136,7 @@ export default function Reservations() {
         ...form,
         room_id: form.room_id ? parseInt(form.room_id) : null,
         user_id: form.user_id ? parseInt(form.user_id) : null,
+        full_name: form.full_name || "",
       };
       const res = await fetch(`${RESERVATION_URL}${editingReservation.reservation_id}`, {
         method: "PUT",
@@ -203,7 +205,7 @@ export default function Reservations() {
     {
       label: "Tên người thuê",
       accessor: "full_name",
-      render: (full_name, row) => full_name || row.full_name || ""
+      render: (value) => value ? value : <span className="text-muted">Khách lạ</span>
     },
     {
       label: "Phòng",
@@ -260,6 +262,7 @@ export default function Reservations() {
       contact_phone: "",
       room_id: "",
       user_id: "",
+      full_name: "",
       status: "Pending",
     });
     setEditingReservation(null);
@@ -272,6 +275,7 @@ export default function Reservations() {
       contact_phone: reservation.contact_phone || "",
       room_id: reservation.room_id ? String(reservation.room_id) : "",
       user_id: reservation.user_id ? String(reservation.user_id) : "",
+      full_name: reservation.full_name, // Đúng trường
       status: reservation.status || "Pending",
     });
     setEditingReservation(reservation);
@@ -417,6 +421,16 @@ export default function Reservations() {
                   <option value="Cancelled">Đã hủy</option>
                   <option value="Signed">Đã ký</option>
                 </select>
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Tên khách thuê</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={form.full_name || ""}
+                  onChange={(e) => handleFormChange("full_name", e.target.value)}
+                  required
+                />
               </div>
             </div>
           </form>

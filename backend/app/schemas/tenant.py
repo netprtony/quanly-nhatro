@@ -10,7 +10,7 @@ class TenantBase(BaseModel):
     phone_number: Optional[str]
     id_card_front_path: Optional[str]
     id_card_back_path: Optional[str]
-    is_rent: Optional[bool] = True
+    tenant_status: Optional[str] = "Pending"   # Thêm dòng này
     address: Optional[str]
 
 class TenantCreate(TenantBase):
@@ -50,7 +50,7 @@ class TenantResponse(BaseModel):
     phone_number: Optional[str]
     id_card_front_path: Optional[str]
     id_card_back_path: Optional[str]
-    is_rent: Optional[bool]
+    tenant_status: Optional[str]   # Đã đổi sang tenant_status
     address: Optional[str]
     created_at: datetime
 

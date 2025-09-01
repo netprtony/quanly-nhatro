@@ -42,6 +42,11 @@ class ReservationStatusEnum(str, enum.Enum):
     Cancelled = "Cancelled"
     Signed = "Signed"
 
+class TenantStatusEnum(str, enum.Enum):
+    Active = 'Active'
+    Terminated = 'Terminated'
+    Pending = 'Pending'
+
 # --- MODEL DEFINITIONS ---
 class Tenant(Base):
     __tablename__ = "Tenants"
@@ -52,7 +57,7 @@ class Tenant(Base):
     phone_number = Column(String(20))
     id_card_front_path = Column(String(255))
     id_card_back_path = Column(String(255))
-    is_rent = Column(Boolean, default=True)
+    tenant_status = Column(Enum(TenantStatusEnum), default=TenantStatusEnum.Pending)
     address = Column(Text)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
@@ -208,6 +213,7 @@ class Reservation(Base):
     contact_phone = Column(String(15), nullable=False)
     room_id = Column(Integer, ForeignKey("Rooms.room_id", ondelete="CASCADE"), nullable=False)
     user_id = Column(Integer, ForeignKey("Users.id", ondelete="CASCADE"), nullable=True)
+    full_name = Column(String(100), nullable=True, default="Khách lạ")
     status = Column(Enum(ReservationStatusEnum), default=ReservationStatusEnum.Pending, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 

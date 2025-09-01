@@ -12,7 +12,7 @@ CREATE TABLE Tenants (
     phone_number VARCHAR(20),
     id_card_front_path VARCHAR(255),  -- ảnh CCCD mặt trước
     id_card_back_path VARCHAR(255),   -- ảnh CCCD mặt sau
-    is_rent BOOLEAN DEFAULT TRUE,
+    tenant_status ENUM('Active', 'Terminated', 'Pending') DEFAULT 'Pending',
     address TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -144,6 +144,7 @@ CREATE TABLE Reservations (
     contact_phone VARCHAR(15) NOT NULL, 
     room_id INT NOT NULL,
     user_id INT NULL,
+    full_name VARCHAR(100) NULL DEFAULT 'Khách lạ',
     status ENUM('Pending', 'Confirmed', 'Cancelled', 'Signed' ) DEFAULT 'Pending',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE,
@@ -375,6 +376,45 @@ BEGIN
         CONCAT('Khách thuê ', v_tenant_name, ' vừa đặt phòng ', v_room_number, '. Vui lòng kiểm tra và xác nhận!'),
         FALSE
     );
+END$$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE TRIGGER trg_update_status_on_contract_update
+AFTER UPDATE ON Contracts
+FOR EACH ROW
+BEGIN
+    IF NEW.contract_status = "Terminated" THEN
+        -- Cập nhật trạng thái khách thuê
+        UPDATE Tenants
+        SET tenant_status = "Terminated"
+        WHERE tenant_id = NEW.tenant_id;
+
+        -- Cập nhật trạng thái phòng
+        UPDATE Rooms
+        SET is_available = TRUE
+        WHERE room_id = NEW.room_id;
+    END IF;
+END$$
+
+DELIMITER ;
+DELIMITER $$
+
+CREATE TRIGGER trg_update_status_on_contract_delete
+AFTER DELETE ON Contracts
+FOR EACH ROW
+BEGIN
+    -- Cập nhật trạng thái khách thuê
+    UPDATE Tenants
+    SET tenant_status = "Terminated"
+    WHERE tenant_id = OLD.tenant_id;
+
+    -- Cập nhật trạng thái phòng
+    UPDATE Rooms
+    SET is_available = TRUE
+    WHERE room_id = OLD.room_id;
 END$$
 
 DELIMITER ;

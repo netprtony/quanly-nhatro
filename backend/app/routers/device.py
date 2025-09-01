@@ -25,11 +25,13 @@ def get_devices(
 ):
     query = db.query(models.Device)
     if search:
-        search_lower = search.lower()
-        # Tìm kiếm trạng thái hoạt động
-        if search_lower in ["đang hoạt động", "hoạt động"]:
+        search_lower = search.strip().lower()
+        # Nhận diện trạng thái hoạt động giống như phòng
+        active_keywords = ["đang hoạt động"]
+        inactive_keywords = ["hư hỏng"]
+        if any(kw in search_lower for kw in active_keywords):
             query = query.filter(models.Device.is_active == True)
-        elif search_lower in ["không hoạt động", "ngừng hoạt động"]:
+        elif any(kw in search_lower for kw in inactive_keywords):
             query = query.filter(models.Device.is_active == False)
         else:
             query = query.filter(
@@ -65,6 +67,7 @@ def filter_devices(
     page_size: int = Query(20, ge=1, le=200),
 ):
     query = db.query(models.Device)
+
     valid_fields = {
         "device_name": (models.Device.device_name, str),
         "room_id": (models.Device.room_id, int),
@@ -72,20 +75,19 @@ def filter_devices(
         "description": (models.Device.description, str),
         "created_at": (models.Device.created_at, str),
     }
-    # Truy vấn 1: filter nâng cao cho trường is_active với giá trị đặc biệt
-    if hasattr(request, "is_active") and request.is_active is not None:
-        if isinstance(request.is_active, str):
-            is_active_str = request.is_active.strip().lower()
-            if is_active_str in ["không", "ngừng", "hư", "hư hỏng", "hỏng", "false", "0", "no"]:
-                query = query.filter(models.Device.is_active == False)
-            elif is_active_str in ["đang", "hoạt động", "bình thường", "true", "1", "yes"]:
+
+    for f in getattr(request, "filters", []):
+        # Xử lý đặc biệt cho trường is_active với từ khóa tiếng Việt
+        if f.field == "is_active":
+            val = f.value.strip().lower()
+            active_keywords = ["hoạt động"]
+            inactive_keywords = ["hư hỏng"]
+            if any(kw in val for kw in active_keywords):
                 query = query.filter(models.Device.is_active == True)
-            # else: không lọc
-        else:
-            query = query.filter(models.Device.is_active == request.is_active)
-
-    # Truy vấn 2: filter theo các trường còn lại
-    for f in getattr(request, "filters", []):
+                continue
+            elif any(kw in val for kw in inactive_keywords):
+                query = query.filter(models.Device.is_active == False)
+                continue
         col_type = valid_fields.get(f.field)
         if not col_type:
             continue
@@ -93,69 +95,26 @@ def filter_devices(
         try:
             if py_type == bool:
                 val = f.value.lower() in ("true", "1", "yes")
-                if f.operator == "=":
-                    query = query.filter(col == val)
-                elif f.operator == "!=":
-                    query = query.filter(col != val)
-                else:
-                    continue
             else:
                 val = py_type(f.value)
-                if f.operator == "=":
-                    query = query.filter(col == val)
-                elif f.operator == "!=":
-                    query = query.filter(col != val)
-                elif f.operator == ">":
-                    query = query.filter(col > val)
-                elif f.operator == "<":
-                    query = query.filter(col < val)
-                elif f.operator == ">=":
-                    query = query.filter(col >= val)
-                elif f.operator == "<=":
-                    query = query.filter(col <= val)
-                elif f.operator == "~":
-                    if py_type == str:
-                        query = query.filter(col.ilike(f"%{val}%"))
         except Exception:
             continue
+        if f.operator == "=":
+            query = query.filter(col == val)
+        elif f.operator == "!=":
+            query = query.filter(col != val)
+        elif f.operator == ">":
+            query = query.filter(col > val)
+        elif f.operator == "<":
+            query = query.filter(col < val)
+        elif f.operator == ">=":
+            query = query.filter(col >= val)
+        elif f.operator == "<=":
+            query = query.filter(col <= val)
+        elif f.operator == "~":
+            if py_type == str:
+                query = query.filter(col.ilike(f"%{val}%"))
 
-    # Nếu có truy vấn đặc biệt cho is_active thì dùng truy vấn đó, ngược lại dùng truy vấn thông thường
-    if special_is_active_query is not None:
-        query = special_is_active_query
-    for f in getattr(request, "filters", []):
-        col_type = valid_fields.get(f.field)
-        if not col_type:
-            continue
-        col, py_type = col_type
-        try:
-            if py_type == bool:
-                val = f.value.lower() in ("true", "1", "yes")
-                # Chỉ cho phép = hoặc != với boolean
-                if f.operator == "=":
-                    query = query.filter(col == val)
-                elif f.operator == "!=":
-                    query = query.filter(col != val)
-                else:
-                    continue  # Bỏ qua các toán tử không hợp lệ với boolean
-            else:
-                val = py_type(f.value)
-                if f.operator == "=":
-                    query = query.filter(col == val)
-                elif f.operator == "!=":
-                    query = query.filter(col != val)
-                elif f.operator == ">":
-                    query = query.filter(col > val)
-                elif f.operator == "<":
-                    query = query.filter(col < val)
-                elif f.operator == ">=":
-                    query = query.filter(col >= val)
-                elif f.operator == "<=":
-                    query = query.filter(col <= val)
-                elif f.operator == "~":
-                    if py_type == str:
-                        query = query.filter(col.ilike(f"%{val}%"))
-        except Exception:
-            continue
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
     return {"items": items, "total": total}

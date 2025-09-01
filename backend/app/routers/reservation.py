@@ -64,8 +64,10 @@ def update_reservation(reservation_id: int, reservation: ReservationUpdate, db: 
     db_reservation = db.query(models.Reservation).filter(models.Reservation.reservation_id == reservation_id).first()
     if not db_reservation:
         raise HTTPException(status_code=404, detail="Reservation not found")
-    for key, value in reservation.dict(exclude_unset=True).items():
-        setattr(db_reservation, key, value)
+    update_data = reservation.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        if value is not None:
+            setattr(db_reservation, key, value)
     db.commit()
     db.refresh(db_reservation)
     return db_reservation

@@ -36,36 +36,47 @@ def get_rooms(
     sort_field: str = Query(None, description="Trường sắp xếp"),
     sort_order: str = Query("asc", description="Thứ tự sắp xếp"),
 ):
-    # Truy vấn chính có group_by để lấy số hình
-    query = db.query(
-        models.Room,
-        func.count(models.RoomImage.image_id).label("image_count")
-    ).outerjoin(models.RoomImage, models.Room.room_id == models.RoomImage.room_id)\
-     .join(models.RoomType)\
-     .group_by(models.Room.room_id, models.RoomType.room_type_id)
+    # Truy vấn chính, join RoomType để lấy thông tin loại phòng
+    query = db.query(models.Room).join(models.RoomType)
 
-    # Truy vấn đếm tổng số phòng (không group_by)
+    # Truy vấn đếm tổng số phòng
     count_query = db.query(models.Room).join(models.RoomType)
-    if search:
-        query = query.filter(
-            (models.Room.room_number.ilike(f"%{search}%")) |
-            (models.Room.floor_number.ilike(f"%{search}%")) |
-            (models.RoomType.type_name.ilike(f"%{search}%")) |
-            (models.RoomType.price_per_month.ilike(f"%{search}%"))
-        )
-        count_query = count_query.filter(
-            (models.Room.room_number.ilike(f"%{search}%")) |
-            (models.Room.floor_number.ilike(f"%{search}%")) |
-            (models.RoomType.type_name.ilike(f"%{search}%")) |
-            (models.RoomType.price_per_month.ilike(f"%{search}%"))
-        )
 
+    # Tìm kiếm
+    if search:
+        search_lower = search.strip().lower()
+        if search_lower in ["trống", "có sẵn", "còn trống"]:
+            query = query.filter(models.Room.is_available == True)
+            count_query = count_query.filter(models.Room.is_available == True)
+        elif search_lower in ["đã thuê", "có người"]:
+            query = query.filter(models.Room.is_available == False)
+            count_query = count_query.filter(models.Room.is_available == False)
+        elif any(kw in search_lower for kw in ["trống", "có sẵn", "còn trống"]):
+            query = query.filter(models.Room.is_available == True)
+            count_query = count_query.filter(models.Room.is_available == True)
+        elif any(kw in search_lower for kw in ["đã thuê", "có người"]):
+            query = query.filter(models.Room.is_available == False)
+            count_query = count_query.filter(models.Room.is_available == False)
+        else:
+            query = query.filter(
+                (models.Room.room_number.ilike(f"%{search}%")) |
+                (models.Room.floor_number.ilike(f"%{search}%")) |
+                (models.RoomType.type_name.ilike(f"%{search}%")) |
+                (models.RoomType.price_per_month.ilike(f"%{search}%"))
+            )
+            count_query = count_query.filter(
+                (models.Room.room_number.ilike(f"%{search}%")) |
+                (models.Room.floor_number.ilike(f"%{search}%")) |
+                (models.RoomType.type_name.ilike(f"%{search}%")) |
+                (models.RoomType.price_per_month.ilike(f"%{search}%"))
+            )
+
+    # Sắp xếp
     valid_sort_fields = {
         "room_number": models.Room.room_number,
         "floor_number": models.Room.floor_number,
         "type_name": models.RoomType.type_name,
         "price_per_month": models.RoomType.price_per_month,
-        "image_count": func.count(models.RoomImage.image_id),
     }
     if sort_field in valid_sort_fields:
         col = valid_sort_fields[sort_field]
@@ -74,14 +85,19 @@ def get_rooms(
         else:
             query = query.order_by(col.asc())
 
-    # Đếm tổng số phòng đúng (không bị ảnh hưởng bởi group_by)
+    # Đếm tổng số
     total = count_query.count()
 
-    items = query.offset((page - 1) * page_size).limit(page_size).all()
+    # Phân trang
+    rooms = query.offset((page - 1) * page_size).limit(page_size).all()
+
+    # Trả về list image_paths cho từng phòng
     result = []
-    for room, image_count in items:
-        room_dict = room_schema.RoomSchema.from_orm(room).dict()
-        room_dict["image_count"] = image_count
+    for room in rooms:
+        room_dict = room_schema.RoomSchema.model_validate(room, from_attributes=True).model_dump()
+        # Lấy ảnh trực tiếp từ bảng RoomImage
+        images = db.query(models.RoomImage).filter(models.RoomImage.room_id == room.room_id).all()
+        room_dict["roomImage"] = [img.image_path for img in images]
         result.append(room_dict)
     return {"items": result, "total": total}
 # ✅ Create a new room
@@ -154,38 +170,37 @@ def filter_rooms(
 ):
     query = db.query(models.Room).join(models.RoomType)
 
-    if request.room_number:
-        query = query.filter(models.Room.room_number == request.room_number)
-    if request.floor_number:
-        query = query.filter(models.Room.floor_number == request.floor_number)
-    if request.type_name:
-        query = query.filter(models.RoomType.type_name == request.type_name)
-    if request.price_per_month:
-        query = query.filter(models.RoomType.price_per_month == request.price_per_month)
-
     valid_sort_fields = {
-        "room_number": models.Room.room_number,
-        "floor_number": models.Room.floor_number,
-        "type_name": models.RoomType.type_name,
-        "price_per_month": models.RoomType.price_per_month,
+        "room_number": (models.Room.room_number, str),
+        "floor_number": (models.Room.floor_number, str),
+        "type_name": (models.RoomType.type_name, str),
+        "price_per_month": (models.RoomType.price_per_month, float),
+        "is_available": (models.Room.is_available, bool),
     }
+
     for f in request.filters:
+        # Xử lý đặc biệt cho trường is_available với từ khóa tiếng Việt
+        if f.field == "is_available":
+            val = f.value.strip().lower()
+            empty_keywords = [ "còn trống"]
+            rented_keywords = ["đã thuê",]
+            if any(kw in val for kw in empty_keywords):
+                query = query.filter(models.Room.is_available == True)
+                continue
+            elif any(kw in val for kw in rented_keywords):
+                query = query.filter(models.Room.is_available == False)
+                continue
         col_type = valid_sort_fields.get(f.field)
         if not col_type:
             continue
-
         col, py_type = col_type
-
-        # ép kiểu value
         try:
             if py_type == bool:
                 val = f.value.lower() in ("true", "1", "yes")
             else:
                 val = py_type(f.value)
         except Exception:
-            # nếu không ép được thì bỏ qua filter này
             continue
-
         if f.operator == "=":
             query = query.filter(col == val)
         elif f.operator == "!=":
@@ -199,11 +214,17 @@ def filter_rooms(
         elif f.operator == "<=":
             query = query.filter(col <= val)
         elif f.operator == "~":
-            # chỉ apply LIKE cho chuỗi
             if py_type == str:
                 query = query.filter(col.ilike(f"%{val}%"))
 
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
-    return {"items": items, "total": total}
+    # Trả về list image cho từng phòng
+    result = []
+    for room in items:
+        room_dict = room_schema.RoomSchema.model_validate(room, from_attributes=True).model_dump()
+        images = db.query(models.RoomImage).filter(models.RoomImage.room_id == room.room_id).all()
+        room_dict["roomImage"] = [img.image_path for img in images]
+        result.append(room_dict)
+    return {"items": result, "total": total}
 

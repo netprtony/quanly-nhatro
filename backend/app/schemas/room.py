@@ -30,6 +30,7 @@ class RoomSchema(BaseModel):
     floor_number: Optional[int]
     description: Optional[str]
     room_type: RoomTypeSchema
+    roomImage: List[str] = []   # Thêm dòng này
 
     class Config:
         from_attributes = True
