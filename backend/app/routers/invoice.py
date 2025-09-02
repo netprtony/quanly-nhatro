@@ -293,8 +293,8 @@ def export_invoice(
         "deposit_amount": format_currency(deposit_amount),
         "electricity_rate": format_currency(electricity_rate),
         "water_rate": format_currency(water_rate),
-        "usage_kwh": int(usage_kwh) if usage_kwh is not None else "Chưa có",
-        "usage_m3": int(usage_m3) if usage_m3 is not None else "Chưa có",
+        "usage_kwh": int(usage_kwh) if usage_kwh is not None else None,
+        "usage_m3": int(usage_m3) if usage_m3 is not None else None,
         "total_amount": format_currency(total_amount)
     }
     doc = DocxTemplate(TEMPLATE_PATH)
