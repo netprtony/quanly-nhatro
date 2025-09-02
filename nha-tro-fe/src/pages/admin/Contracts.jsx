@@ -322,7 +322,7 @@ export default function Contracts() {
   // Hàm mở modal xuất hợp đồng
   const handleExportContract = (contract) => {
     setExportingContract(contract);
-    const tenant = tenants.find(t => t.tenant_id === contract.tenant_id);
+    const tenant = tenantsAll.find(t => t.tenant_id === contract.tenant_id); // ✅
     const safeTenantName = tenant
       ? tenant.full_name.replace(/[^a-zA-Z0-9]/g, "_")
       : "contract";
