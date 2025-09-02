@@ -31,3 +31,5 @@ __pycache__/
 backend/app/__pycache__/main*.pyc
 backend/backups/*.sql
 backend/backups/*.txt
+backend/app/routers/__pycache__/*.pyc
+backend/app/schemas/__pycache__/*.pyc

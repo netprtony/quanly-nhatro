@@ -53,7 +53,7 @@ export default function Accounts() {
     { label: "Tên đăng nhập", accessor: "username" },
     { label: "Email", accessor: "email" },
     {
-      label: "Tên khách thuê",
+      label: "Mã khách thuê",
       accessor: "tenant_id",
       render: (tenant_id) => tenantMap[tenant_id] || tenant_id || ""
     },
