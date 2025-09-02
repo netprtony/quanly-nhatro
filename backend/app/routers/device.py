@@ -23,10 +23,9 @@ def get_devices(
     sort_field: str = Query(None, description="Trường sắp xếp"),
     sort_order: str = Query("asc", description="Thứ tự sắp xếp"),
 ):
-    query = db.query(models.Device)
+    query = db.query(models.Device).join(models.Room, models.Device.room_id == models.Room.room_id)
     if search:
         search_lower = search.strip().lower()
-        # Nhận diện trạng thái hoạt động giống như phòng
         active_keywords = ["đang hoạt động"]
         inactive_keywords = ["hư hỏng"]
         if any(kw in search_lower for kw in active_keywords):
@@ -36,13 +35,15 @@ def get_devices(
         else:
             query = query.filter(
                 (models.Device.device_name.ilike(f"%{search}%")) |
-                (models.Device.description.ilike(f"%{search}%"))
+                (models.Device.description.ilike(f"%{search}%")) |
+                (models.Room.room_number.ilike(f"%{search}%"))
             )
     # Xử lý sort
     valid_sort_fields = {
         "device_id": models.Device.device_id,
         "device_name": models.Device.device_name,
         "room_id": models.Device.room_id,
+        "room_number": models.Room.room_number,
         "is_active": models.Device.is_active,
         "created_at": models.Device.created_at,
         "description": models.Device.description,

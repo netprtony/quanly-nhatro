@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status
 from sqlalchemy.orm import Session
 from sqlalchemy import asc, desc, cast, String
@@ -29,7 +28,7 @@ def get_meters(
     db: Session = Depends(database.get_db),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=200),
-    search: str = Query(None, description="Tìm theo phòng hoặc tháng"),
+    search: str = Query(None, description="Tìm theo phòng, tháng hoặc tổng tiền"),
     room_id: int = Query(None, description="Lọc theo room_id"),
     sort_field: str = Query(None, description="Trường sắp xếp"),
     sort_order: str = Query("asc", description="Thứ tự sắp xếp: asc/desc"),
@@ -40,7 +39,8 @@ def get_meters(
     if search:
         query = query.filter(
             (models.Room.room_number.ilike(f"%{search}%")) |
-            (cast(models.ElectricityMeter.month, String).ilike(f"%{search}%"))
+            (cast(models.ElectricityMeter.month, String).ilike(f"%{search}%")) |
+            (cast(models.ElectricityMeter.total_amount, String).ilike(f"%{search}%"))
         )
 
     # Lọc theo room_id
@@ -120,16 +120,14 @@ def filter_electricity_meters(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=200),
 ):
-    query = db.query(models.ElectricityMeter)
+    query = db.query(models.ElectricityMeter).join(models.Room)
     valid_filters = {
-        "month": (models.ElectricityMeter.month, date),
+        "month": (models.ElectricityMeter.month, str),
         "room_id": (models.ElectricityMeter.room_id, int),
+        "room_number": (models.Room.room_number, str),
         "old_reading": (models.ElectricityMeter.old_reading, int),
         "new_reading": (models.ElectricityMeter.new_reading, int),
-        "electricity_rate": (models.ElectricityMeter.electricity_rate, float),
-        "usage_kwh": (models.ElectricityMeter.usage_kwh, int),
         "total_amount": (models.ElectricityMeter.total_amount, float),
-        "room_number": (models.Room.room_number, str)
     }
     for f in request.filters:
         col_type = valid_filters.get(f.field)
@@ -138,14 +136,12 @@ def filter_electricity_meters(
 
         col, py_type = col_type
 
-        # ép kiểu value
         try:
             if py_type == bool:
                 val = f.value.lower() in ("true", "1", "yes")
             else:
                 val = py_type(f.value)
         except Exception:
-            # nếu không ép được thì bỏ qua filter này
             continue
 
         if f.operator == "=":
@@ -161,7 +157,6 @@ def filter_electricity_meters(
         elif f.operator == "<=":
             query = query.filter(col <= val)
         elif f.operator == "~":
-            # chỉ apply LIKE cho chuỗi
             if py_type == str:
                 query = query.filter(col.ilike(f"%{val}%"))
 

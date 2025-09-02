@@ -507,24 +507,24 @@ INSERT INTO RoomTypes (type_name, description, price_per_month) VALUES
 -- Thêm phòng
 INSERT INTO Rooms (room_number, room_type_id, max_occupants, floor_number, is_available)
 VALUES 
-('Phòng 1A', 1, 4, 0, 0),
-('Phòng 2A', 2, 4, 0, 0),
-('Phòng 3A', 3, 2, 0, 0),
-('Phòng 4A', 4, 4, 0, 0),
-('Phòng 5A', 5, 3, 0, 0),
-('Phòng 6A', 6, 4, 0, 0),
+('Phòng 1A', 1, 3, 0, 0),
+('Phòng 2A', 2, 2, 0, 0),
+('Phòng 3A', 3, 4, 0, 0),
+('Phòng 4A', 4, 1, 0, 0),
+('Phòng 5A', 5, 2, 0, 0),
+('Phòng 6A', 6, 2, 0, 0),
 ('Phòng 7A', 7, 1, 0, 0),
 ('Phòng 8A', 8, 4, 0, 0),
 
-('Phòng 1B', 9, 4, 0, 0),
-('Phòng 2B', 10, 4, 0, 0),
-('Phòng 3B', 1, 4, 0, 1),
-('Phòng 4B', 1, 4, 0, 1),
-('Phòng 5B', 1, 4, 0, 1),
-('Phòng 6B', 1, 4, 0, 1),
-('Phòng 7B', 1, 4, 0, 1),
-('Phòng 8B', 1, 4, 0, 1),
-('Phòng 9B', 1, 4, 0, 1);
+('Phòng 1B', 9, 3, 1, 0),
+('Phòng 2B', 10, 2, 1, 0),
+('Phòng 3B', 1, 2, 1, 1),
+('Phòng 4B', 2, 3, 1, 1),
+('Phòng 5B', 4, 2, 1, 1),
+('Phòng 6B', 5, 1, 1, 1),
+('Phòng 7B', 7, 4, 1, 1),
+('Phòng 8B', 6, 2, 1, 1),
+('Phòng 9B', 3, 1, 1, 1);
 INSERT INTO `roomimages` VALUES (7,1,'/roomImage/1c801685-26f7-4949-b6b1-ce324e673d44_1755743014.jpg'),(8,2,'/roomImage/nha-tro-homestay 1.png'),(9,3,'/roomImage/z6940363114799-140893ff0d098a87f063ed43ca5eb211_1756109071.jpg'),(10,4,'/roomImage/images (7).jpg'),(11,5,'/roomImage/images (13).jpg'),(12,6,'/roomImage/uecuhb.jpg'),(13,7,'/roomImage/images4.jpg'),(14,8,'/roomImage/img-9698_1756086720.jpg'),(15,9,'/roomImage/gen-h-1_1756183493 (1).jpg'),(16,10,'/roomImage/img-6931_1756092450.jpg'),(17,11,'/roomImage/images6.jpg'),(18,12,'/roomImage/img-3621_1756184053.jpg'),(19,13,'/roomImage/images2.jpg'),(20,14,'/roomImage/images (7).jpg'),(21,15,'/roomImage/images.jpg'),(22,16,'/roomImage/img-3621_1756184053 (1).jpg'),(23,17,'/roomImage/2daf357b-a8ec-4cab-9e04-f2b268631c6e_1756181830.jpg');
 -- Thêm thiết bị cho các phòng
 INSERT INTO Devices (device_name, room_id, description, is_active)
@@ -642,17 +642,17 @@ INSERT INTO Users (username, email, password, tenant_id, role, is_active) VALUES
 ('admin1', 'admin1@example.com', '$2a$12$YbgMrDVLpsncrlxrjam0EO4yosTojsqK5nqs1sIhgW/aGz5QsHO0e', NULL, 'ADMIN', TRUE);
 
 -- Thêm hợp đồng
-INSERT INTO Contracts (tenant_id, room_id, start_date, end_date, deposit_amount, monthly_rent, contract_status) VALUES
-('079203029607', 1, '2025-01-01', '2026-01-01', 300000.00, 3000000.00, 'Active'),
-('079203029608', 2, '2025-02-01', '2026-02-01', 500000.00, 5000000.00, 'Active'),
-('079203029609', 3, '2025-03-01', '2026-03-01', 700000.00, 7000000.00, 'Active'),
-('079203029610', 4, '2025-04-01', '2026-04-01', 600000.00, 6000000.00, 'Active'),
-('079203029611', 5, '2025-05-01', '2026-05-01', 250000.00, 2500000.00, 'Active'),
-('079203029612', 6, '2025-06-01', '2026-06-01', 450000.00, 4500000.00, 'Active'),
-('079203029613', 7, '2025-07-01', '2026-07-01', 800000.00, 8000000.00, 'Active'),
-('079203029614', 8, '2025-08-01', '2026-08-01', 1000000.00, 10000000.00, 'Active'),
-('079203029615', 9, '2025-09-01', '2026-09-01', 200000.00, 2000000.00, 'Active'),
-('079203029616', 10, '2025-10-01', '2026-10-01', 1200000.00, 12000000.00, 'Active');
+INSERT INTO Contracts (tenant_id, room_id, start_date, end_date, deposit_amount, monthly_rent, contract_status, num_people, num_vehicles) VALUES
+('079203029607', 1, '2025-01-01', '2026-01-01', 300000.00, 3000000.00, 'Active', 1, 2),
+('079203029608', 2, '2025-02-01', '2026-02-01', 500000.00, 5000000.00, 'Active', 2, 2),
+('079203029609', 3, '2025-03-01', '2026-03-01', 700000.00, 7000000.00, 'Active', 3, 4),
+('079203029610', 4, '2025-04-01', '2026-04-01', 600000.00, 6000000.00, 'Active', 1, 1),
+('079203029611', 5, '2025-05-01', '2026-05-01', 250000.00, 2500000.00, 'Active', 3, 1),
+('079203029612', 6, '2025-06-01', '2026-06-01', 450000.00, 4500000.00, 'Active', 4 , 3),
+('079203029613', 7, '2025-07-01', '2026-07-01', 800000.00, 8000000.00, 'Active', 2,2),
+('079203029614', 8, '2025-08-01', '2026-08-01', 1000000.00, 10000000.00, 'Active', 2, 1),
+('079203029615', 9, '2025-09-01', '2026-09-01', 200000.00, 2000000.00, 'Active', 3, 2),
+('079203029616', 10, '2025-10-01', '2026-10-01', 1200000.00, 12000000.00, 'Active', 4, 2);
 -- Thêm đặt chỗ trước
 
 

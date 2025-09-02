@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import asc, desc, cast, String
@@ -26,40 +25,41 @@ def get_latest_water_bill(
     return meter
 @router.get("/", response_model=PaginatedWaterMeterOut)
 def get_meters(
-	db: Session = Depends(database.get_db),
-	page: int = Query(1, ge=1),
-	page_size: int = Query(20, ge=1, le=200),
-	search: str = Query(None, description="Tìm theo phòng hoặc tháng"),
-	room_id: int = Query(None, description="Lọc theo room_id"),
-	sort_field: str = Query(None, description="Trường sắp xếp"),
-	sort_order: str = Query("asc", description="Thứ tự sắp xếp: asc/desc"),
+    db: Session = Depends(database.get_db),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=200),
+    search: str = Query(None, description="Tìm theo phòng, tháng hoặc tổng tiền"),
+    room_id: int = Query(None, description="Lọc theo room_id"),
+    sort_field: str = Query(None, description="Trường sắp xếp"),
+    sort_order: str = Query("asc", description="Thứ tự sắp xếp: asc/desc"),
 ):
-	query = db.query(models.WaterMeter).join(models.Room)
+    query = db.query(models.WaterMeter).join(models.Room)
 
-	# Lọc theo search
-	if search:
-		query = query.filter(
-			(models.Room.room_number.ilike(f"%{search}%")) |
-			(cast(models.WaterMeter.month, String).ilike(f"%{search}%"))
-		)
+    # Lọc theo search
+    if search:
+        query = query.filter(
+            (models.Room.room_number.ilike(f"%{search}%")) |
+            (cast(models.WaterMeter.month, String).ilike(f"%{search}%")) |
+            (cast(models.WaterMeter.total_amount, String).ilike(f"%{search}%"))
+        )
 
-	# Lọc theo room_id
-	if room_id:
-		query = query.filter(models.WaterMeter.room_id == room_id)
+    # Lọc theo room_id
+    if room_id:
+        query = query.filter(models.WaterMeter.room_id == room_id)
 
-	# Sắp xếp
-	if sort_field:
-		sort_column = getattr(models.WaterMeter, sort_field, None)
-		if sort_column is not None:
-			if sort_order.lower() == "desc":
-				query = query.order_by(desc(sort_column))
-			else:
-				query = query.order_by(asc(sort_column))
+    # Sắp xếp
+    if sort_field:
+        sort_column = getattr(models.WaterMeter, sort_field, None)
+        if sort_column is not None:
+            if sort_order.lower() == "desc":
+                query = query.order_by(desc(sort_column))
+            else:
+                query = query.order_by(asc(sort_column))
 
-	total = query.count()
-	items = query.offset((page - 1) * page_size).limit(page_size).all()
+    total = query.count()
+    items = query.offset((page - 1) * page_size).limit(page_size).all()
 
-	return {"total": total, "items": items}
+    return {"total": total, "items": items}
 
 @router.get("/{meter_id}", response_model=WaterMeterOut)
 def get_meter(meter_id: int, db: Session = Depends(database.get_db)):
@@ -119,16 +119,16 @@ def filter_water_meters(
 	page: int = Query(1, ge=1),
 	page_size: int = Query(20, ge=1, le=200),
 ):
-	query = db.query(models.WaterMeter)
+	query = db.query(models.WaterMeter).join(models.Room)
 	valid_filters = {
-		"month": (models.WaterMeter.month, date),
+		"month": (models.WaterMeter.month, str),
 		"room_id": (models.WaterMeter.room_id, int),
+		"room_number": (models.Room.room_number, str),
 		"old_reading": (models.WaterMeter.old_reading, int),
 		"new_reading": (models.WaterMeter.new_reading, int),
 		"water_rate": (models.WaterMeter.water_rate, float),
 		"usage_m3": (models.WaterMeter.usage_m3, int),
 		"total_amount": (models.WaterMeter.total_amount, float),
-		"room_number": (models.Room.room_number, str)
 	}
 	for f in request.filters:
 		col_type = valid_filters.get(f.field)
@@ -137,7 +137,6 @@ def filter_water_meters(
 
 		col, py_type = col_type
 
-		# ép kiểu value
 		try:
 			if py_type == bool:
 				val = f.value.lower() in ("true", "1", "yes")

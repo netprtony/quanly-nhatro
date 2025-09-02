@@ -340,7 +340,7 @@ export default function Devices() {
           confirmText="Xóa"
           cancelText="Hủy"
           onConfirm={confirmDelete}
-          onCancel={() => setShowConfirmDelete(false)}
+          onClose={() => setShowConfirmDelete(false)} // Đảm bảo truyền đúng hàm đóng modal
         />
          <ModalConfirm
           isOpen={showConfirmExit}

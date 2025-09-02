@@ -50,8 +50,12 @@ export default function ModalConfirm({
             <h5 className="mb-3">{title}</h5>
             <p>{message}</p>
             <div className="d-flex justify-content-end gap-2 mt-4">
-              <button className="btn btn-secondary" onClick={onClose}>
-                {cancelText}
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={onClose} // Gọi hàm đóng modal khi bấm Hủy
+              >
+                {cancelText || "Hủy"}
               </button>
               <button className="btn btn-danger" onClick={onConfirm}>
                 {confirmText}

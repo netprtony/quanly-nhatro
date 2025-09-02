@@ -40,6 +40,7 @@ export default function Waters() {
   const [totalRecords, setTotalRecords] = useState(0);
   const [sortField, setSortField] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
+  const [search, setSearch] = useState(""); // Thêm state cho tìm kiếm
 
   const fieldOptions = [
     { value: "room_id", label: "Phòng", type: "number" },
@@ -137,22 +138,21 @@ export default function Waters() {
   };
 
   // Lấy danh sách hóa đơn nước có phân trang
-  const fetchWaters = async () => {
+  const fetchWaters = async (field = sortField, order = sortOrder) => {
     try {
-      let sortParams = "";
-      if (sortField) sortParams += `&sort_field=${sortField}`;
-      if (sortOrder) sortParams += `&sort_order=${sortOrder}`;
+      let url = `${WATER_API}?page=${page}&page_size=${pageSize}`;
+      if (search) url += `&search=${encodeURIComponent(search)}`;
+      if (field) url += `&sort_field=${field}`;
+      if (order) url += `&sort_order=${order}`;
       let data;
       if (filters.length > 0) {
         const res = await axios.post(
-          `${WATER_API}filter?page=${page}&page_size=${pageSize}${sortParams}`,
-          { filters }
+          url.replace(WATER_API, WATER_API + "filter"),
+          { filters, sort_field: field, sort_order: order }
         );
         data = res.data;
       } else {
-        const res = await axios.get(
-          `${WATER_API}?page=${page}&page_size=${pageSize}${sortParams}`
-        );
+        const res = await axios.get(url);
         data = res.data;
       }
       setWaters(Array.isArray(data.items) ? data.items : []);
@@ -162,13 +162,43 @@ export default function Waters() {
       setTotalRecords(0);
     }
   };
+  // Export CSV
+  const exportCSV = () => {
+    if (waters.length === 0) return;
+    const headers = Object.keys(waters[0]);
+    const csv = [
+      headers.join(","),
+      ...waters.map((row) =>
+        headers.map((h) => JSON.stringify(row[h] ?? "")).join(",")
+      ),
+    ].join("\n");
 
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "waters.csv";
+    a.click();
+  };
+   // Export JSON
+  const exportJSON = () => {
+    const blob = new Blob([JSON.stringify(waters, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "waters.json";
+    a.click();
+  };
+
+  
   useEffect(() => {
     fetchRoomsAll();
     // Nếu cần dùng phòng trống, gọi fetchRoomsHasTenant();
     fetchWaters();
     // eslint-disable-next-line
-  }, [filters, page, pageSize, sortField, sortOrder]);
+  }, [filters, page, pageSize, search, sortField, sortOrder]);
 
   const handleAdd = async () => {
     await fetchRoomsHasTenant();
@@ -447,6 +477,10 @@ export default function Waters() {
             onAddFilter={(f) => setFilters((prev) => [...prev, f])}
             onRemoveFilter={(i) => setFilters((prev) => prev.filter((_, idx) => idx !== i))}
             compact
+            onSearch={setSearch}
+            onLoad={fetchWaters}
+            onExportCSV={exportCSV}
+            onExportJSON={exportJSON}
           />
         </div>
 

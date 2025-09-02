@@ -32,6 +32,7 @@ export default function Electricity() {
   const [showConfirmExit, setShowConfirmExit] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [electricityToDelete, setElectricityToDelete] = useState(null);
+  const [search, setSearch] = useState("");
 
   // Advanced filters state
   const [filters, setFilters] = useState([]);
@@ -46,10 +47,11 @@ export default function Electricity() {
   const [sortOrder, setSortOrder] = useState("asc");
 
   const fieldOptions = [
-    { value: "room_id", label: "Phòng", type: "number" },
-    { value: "month", label: "Tháng", type: "string" },
+    { value: "room_number", label: "Số phòng", type: "string" },
+    { value: "month", label: "Tháng", type: "month" },
     { value: "old_reading", label: "Chỉ số cũ", type: "number" },
     { value: "new_reading", label: "Chỉ số mới", type: "number" },
+    { value: "total_amount", label: "Thành tiền", type: "number" },
     { value: "electricity_rate", label: "Đơn giá", type: "number" },
   ];
 
@@ -128,28 +130,52 @@ export default function Electricity() {
       setroomHasTenat([]);
     }
   };
+  // Export CSV
+  const exportCSV = () => {
+    if (electricities.length === 0) return;
+    const headers = Object.keys(electricities[0]);
+    const csv = [
+      headers.join(","),
+      ...electricities.map((row) =>
+        headers.map((h) => JSON.stringify(row[h] ?? "")).join(",")
+      ),
+    ].join("\n");
 
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "electricities.csv";
+    a.click();
+  };
+   // Export JSON
+  const exportJSON = () => {
+    const blob = new Blob([JSON.stringify(electricities, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "electricities.json";
+    a.click();
+  };
   // Lấy danh sách hóa đơn điện có phân trang
-  const fetchElectricities = async () => {
+  const fetchElectricities = async (field = sortField, order = sortOrder) => {
     try {
-      let data;
-      let sortParams = "";
-      if (sortField) sortParams += `&sort_field=${sortField}`;
-      if (sortOrder) sortParams += `&sort_order=${sortOrder}`;
+      let url = `${ELECTRICITY_API}?page=${page}&page_size=${pageSize}`;
+      if (search) url += `&search=${encodeURIComponent(search)}`;
+      if (field) url += `&sort_field=${field}`;
+      if (order) url += `&sort_order=${order}`;
+      let res, data;
       if (filters.length > 0) {
-        // Gọi API filter nâng cao
-        const res = await axios.post(
-          `${ELECTRICITY_API}filter?page=${page}&page_size=${pageSize}${sortParams}`,
-          { filters }
+        res = await axios.post(
+          url.replace(ELECTRICITY_API, ELECTRICITY_API + "filter"),
+          { filters, sort_field: field, sort_order: order }
         );
-        data = res.data;
       } else {
-        // Gọi API thường
-        const res = await axios.get(
-          `${ELECTRICITY_API}?page=${page}&page_size=${pageSize}${sortParams}`
-        );
-        data = res.data;
+        res = await axios.get(url);
       }
+      data = res.data;
       setElectricities(Array.isArray(data.items) ? data.items : []);
       setTotalRecords(data.total || 0);
     } catch (err) {
@@ -163,7 +189,7 @@ export default function Electricity() {
     fetchRoomsAll();
     fetchElectricities();
     // eslint-disable-next-line
-  }, [filters, page, pageSize, sortField, sortOrder]);
+  }, [filters, page, pageSize, search, sortField, sortOrder]);
 
   const handleAdd = async () => {
     await fetchRoomsHasTenant();
@@ -297,48 +323,6 @@ export default function Electricity() {
     }
   };
 
-  // Advanced filter logic (same as Rooms)
-  const getValueByPath = (obj, path) => {
-    return path.split('.').reduce((o, p) => (o ? o[p] : undefined), obj);
-  };
-
-  const evaluateFilter = (f, item) => {
-    const raw = getValueByPath(item, f.field);
-    if (raw === undefined || raw === null) return false;
-
-    const maybeNum = Number(raw);
-    const targetNum = Number(f.value);
-    const isNumeric = !isNaN(maybeNum) && !isNaN(targetNum);
-
-    if (isNumeric) {
-      switch (f.operator) {
-        case '>': return maybeNum > targetNum;
-        case '<': return maybeNum < targetNum;
-        case '>=': return maybeNum >= targetNum;
-        case '<=': return maybeNum <= targetNum;
-        case '=': return maybeNum === targetNum;
-        case '~':
-          const diff = Math.abs(maybeNum - targetNum);
-          const tol = Math.max(1, Math.abs(targetNum) * 0.1);
-          return diff <= tol;
-        default: return false;
-      }
-    }
-
-    // string operations
-    const rawStr = String(raw).toLowerCase();
-    const valStr = String(f.value).toLowerCase();
-    if (f.operator === '=') return rawStr === valStr;
-    if (f.operator === '~') return rawStr.includes(valStr);
-    return false;
-  };
-
-  const applyFilters = (list) => {
-    if (!filters || filters.length === 0) return list;
-    return list.filter((item) => filters.every((f) => evaluateFilter(f, item)));
-  };
-
-  const filteredElectricities = applyFilters(electricities);
 
   const handleExportExcel = async () => {
     try {
@@ -525,6 +509,10 @@ export default function Electricity() {
             onAddFilter={(f) => setFilters((prev) => [...prev, f])}
             onRemoveFilter={(i) => setFilters((prev) => prev.filter((_, idx) => idx !== i))}
             compact
+            onSearch={setSearch}
+            onLoad={fetchElectricities}
+            onExportCSV={exportCSV}
+            onExportJSON={exportJSON}
           />
         </div>
 
@@ -544,7 +532,7 @@ export default function Electricity() {
           onSort={(field, order) => {
             setSortField(field);
             setSortOrder(order);
-            fetchRoomsAll(field, order);
+            fetchElectricities(field, order);
           }}
         />
 

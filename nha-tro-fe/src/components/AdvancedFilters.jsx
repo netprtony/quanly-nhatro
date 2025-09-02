@@ -111,14 +111,60 @@ export default function AdvancedFilters({
 
         <div className="col-md-3">
           <label className="form-label badge bg-success">Giá trị</label>
-          <input
-            type="text"
-            className="form-control"
-            value={newFilter.value}
-            onChange={(e) =>
-              setNewFilter((prev) => ({ ...prev, value: e.target.value }))
+          {(() => {
+            const selectedField = fieldOptions.find(
+              (opt) => opt.value === newFilter.field
+            );
+            if (selectedField?.type === "number") {
+              return (
+                <input
+                  type="text"
+                  className="form-control"
+                  value={newFilter.value ? Number(newFilter.value).toLocaleString("vi-VN") : ""}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/[.,\s]/g, "");
+                    if (/^\d*$/.test(raw)) {
+                      setNewFilter((prev) => ({
+                        ...prev,
+                        value: raw,
+                      }));
+                    }
+                  }}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="Nhập số..."
+                />
+              );
             }
-          />
+            if (selectedField?.type === "date" || selectedField?.type === "month") {
+              return (
+                <input
+                  type="month"
+                  className="form-control"
+                  value={newFilter.value}
+                  onChange={(e) =>
+                    setNewFilter((prev) => ({
+                      ...prev,
+                      value: e.target.value,
+                    }))
+                  }
+                  placeholder="Chọn tháng/năm"
+                />
+              );
+            }
+            // Mặc định là text
+            return (
+              <input
+                type="text"
+                className="form-control"
+                value={newFilter.value}
+                onChange={(e) =>
+                  setNewFilter((prev) => ({ ...prev, value: e.target.value }))
+                }
+                placeholder="Nhập giá trị..."
+              />
+            );
+          })()}
         </div>
 
         <div className="col-md-3 d-flex align-items-end">
@@ -134,9 +180,14 @@ export default function AdvancedFilters({
           <div className="d-flex align-items-center flex-wrap gap-2">
             <h6 className="mb-0">Các bộ lọc đang áp dụng:</h6>
             {filters.map((f, i) => (
-              <div key={i} className="badge bg-info text-dark d-flex align-items-center gap-1 px-2 py-2">
+              <div
+                key={i}
+                className="badge bg-info text-dark d-flex align-items-center gap-1 px-2 py-2"
+              >
                 <span>
-                  {fieldOptions.find((opt) => opt.value === f.field)?.label}{" "}
+                  {
+                    fieldOptions.find((opt) => opt.value === f.field)?.label
+                  }{" "}
                   {f.operator} {String(f.value)}
                 </span>
                 <button

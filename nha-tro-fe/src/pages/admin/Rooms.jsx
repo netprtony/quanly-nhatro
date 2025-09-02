@@ -55,7 +55,7 @@ export default function Rooms() {
     { value: "room_number", label: "Số phòng", type: "string" },
     { value: "floor_number", label: "Tầng", type: "number" },
     { value: "max_occupants", label: "Số người tối đa", type: "number" },
-    { value: "room_type_id", label: "Loại phòng", type: "number" },
+    { value: "room_type_id", label: "Loại phòng", type: "string" },
     { value: "is_available", label: "Còn trống", type: "boolean" },
   ];
 
