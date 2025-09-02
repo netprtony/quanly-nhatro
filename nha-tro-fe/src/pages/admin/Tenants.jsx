@@ -67,6 +67,37 @@ export default function Tenants() {
     },
     { label: "Ngày sinh", accessor: "date_of_birth", render: (value) => value ? new Date(value).toLocaleDateString("vi-VN") : "" },
     { label: "Địa chỉ", accessor: "address" },
+    // Thêm cột hình ảnh CCCD
+    {
+      label: "Ảnh CCCD",
+      accessor: "id_card_front_path",
+      render: (value, tenant) => (
+        <div className="d-flex gap-2">
+          {tenant.id_card_front_path && (
+            <img
+              src={tenant.id_card_front_path.startsWith("/") ? tenant.id_card_front_path : `/cccd/${tenant.id_card_front_path}`}
+              alt="CCCD trước"
+              style={{ width: 40, height: 28, objectFit: "cover", borderRadius: 4, cursor: "pointer", border: "1px solid #eee" }}
+              onClick={() => setViewCCCD({
+                src: tenant.id_card_front_path.startsWith("/") ? tenant.id_card_front_path : `/cccd/${tenant.id_card_front_path}`,
+                alt: `CCCD mặt trước - ${tenant.full_name}`
+              })}
+            />
+          )}
+          {tenant.id_card_back_path && (
+            <img
+              src={tenant.id_card_back_path.startsWith("/") ? tenant.id_card_back_path : `/cccd/${tenant.id_card_back_path}`}
+              alt="CCCD sau"
+              style={{ width: 40, height: 28, objectFit: "cover", borderRadius: 4, cursor: "pointer", border: "1px solid #eee" }}
+              onClick={() => setViewCCCD({
+                src: tenant.id_card_back_path.startsWith("/") ? tenant.id_card_back_path : `/cccd/${tenant.id_card_back_path}`,
+                alt: `CCCD mặt sau - ${tenant.full_name}`
+              })}
+            />
+          )}
+        </div>
+      ),
+    },
     {
       label: "Trạng thái thuê",
       accessor: "tenant_status",
