@@ -267,8 +267,8 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
   // Lấy danh sách phòng
   const fetchRoomAvailable = async () => {
     try {
-      // có phân trang, mặc định lấy 1 trang lớn để đủ dữ liệu
-      const res = await fetch(`${ROOMS_API}all?filter_is_available=false`);
+    
+      const res = await fetch(`${ROOMS_API}all?filter_is_available=true`);
       const data = await res.json();
       setroomsHasTenant(Array.isArray(data) ? data : []);
     } catch (err) {
