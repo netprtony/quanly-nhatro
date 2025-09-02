@@ -1,10 +1,12 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import ModalConfirm from "../components/ModalConfirm"; // Thêm nếu chưa import
 
 export default function Register() {
   const [form, setForm] = useState({ username: "", email: "", password: "", confirmPassword: "" });
   const [error, setError] = useState("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const navigate = useNavigate();
 
   const validateForm = () => {
@@ -43,8 +45,7 @@ export default function Register() {
         email: form.email,
         password: form.password,
       });
-      alert("Đăng ký thành công!");
-      navigate("/");
+      setShowSuccessModal(true); // Hiển thị modal xác nhận
     } catch (err) {
       if (err.response?.data?.detail) {
         setError(err.response.data.detail);
@@ -52,6 +53,11 @@ export default function Register() {
         setError("Đăng ký thất bại. Vui lòng thử lại sau.");
       }
     }
+  };
+
+  const handleSuccessConfirm = () => {
+    setShowSuccessModal(false);
+    navigate("/login");
   };
 
   return (
@@ -183,6 +189,16 @@ export default function Register() {
           </p>
         </div>
       </div>
+
+      <ModalConfirm
+        isOpen={showSuccessModal}
+        onClose={handleSuccessConfirm}
+        onConfirm={handleSuccessConfirm}
+        title="Đăng ký thành công"
+        message="Tài khoản của bạn đã được tạo. Nhấn Đồng ý để chuyển sang trang đăng nhập."
+        confirmText="Đăng nhập"
+        cancelText="Đóng"
+      />
     </div>
   );
 }

@@ -22,7 +22,7 @@ CREATE TABLE Users (
     username VARCHAR(100) NOT NULL UNIQUE,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    tenant_id VARCHAR(15),
+    tenant_id VARCHAR(15) NULL,
     token VARCHAR(512),
     otp_code VARCHAR(10),
     otp_expiry DATETIME,	

@@ -398,7 +398,9 @@ const fetchAccounts = async (field = sortField, order = sortOrder) => {
                   <option value="">-- Chọn khách thuê --</option>
                   {tenantsWithoutRent.map(tenant => (
                     <option key={tenant.tenant_id} value={tenant.tenant_id}>
-                      {tenant.full_name}
+                      {tenant.full_name} - {tenant.phone_number || "Chưa có SĐT"} - {tenant.date_of_birth 
+                        ? new Date(tenant.date_of_birth).toLocaleDateString("vi-VN") 
+                        : "Chưa có ngày sinh"}
                     </option>
                   ))}
                 </select>

@@ -25,7 +25,8 @@ def register(user: user_chema.UserCreate, db: Session = Depends(get_db)):
     new_user = models.User(
         username=user.username,
         email=user.email,
-        password=hashed_pw
+        password=hashed_pw,
+        tenant_id= None
     )
     db.add(new_user)
     db.commit()

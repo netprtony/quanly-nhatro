@@ -69,7 +69,7 @@ class User(Base):
     username = Column(String(100), unique=True, nullable=False)
     email = Column(String(255), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
-    tenant_id = Column(String(15), ForeignKey("Tenants.tenant_id", ondelete="CASCADE"), unique=True)
+    tenant_id = Column(String(15), ForeignKey("Tenants.tenant_id", ondelete="CASCADE"), unique=True, nullable=True)
     token = Column(String(512))
     otp_code = Column(String(10))
     otp_expiry = Column(DateTime)
