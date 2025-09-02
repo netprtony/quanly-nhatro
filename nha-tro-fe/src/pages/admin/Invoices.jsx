@@ -9,7 +9,7 @@ import axios from "axios";
 const INVOICE_API = "http://localhost:8000/invoices/";
 const ROOMS_API = "http://localhost:8000/rooms/";
 const INVOICE_DETAIL_API = "http://localhost:8000/invoice-details";
-const INVOICE_EXPORT_API = "http://localhost:8000/invoices/export/";
+const INVOICE_EXPORT_API = "http://localhost:8000/invoices/export";
 
 const FEE_TYPES = [
   { value: "Rent", label: "Thuê phòng" },
@@ -268,7 +268,7 @@ const fetchInvoices = async (field = sortField, order = sortOrder) => {
   const fetchRoomAvailable = async () => {
     try {
     
-      const res = await fetch(`${ROOMS_API}all?filter_is_available=true`);
+      const res = await fetch(`${ROOMS_API}all?filter_is_available=false`);
       const data = await res.json();
       setroomsHasTenant(Array.isArray(data) ? data : []);
     } catch (err) {

@@ -250,32 +250,28 @@ END$$
 
 DELIMITER ;
 DELIMITER $$
+    CREATE TRIGGER PreventUpdateRoom
+    BEFORE UPDATE ON Rooms
+    FOR EACH ROW
+    BEGIN
+        DECLARE cnt INT;
 
-CREATE TRIGGER PreventUpdateRoom
-BEFORE UPDATE ON Rooms
-FOR EACH ROW
-BEGIN
-    DECLARE cnt INT;
+        SELECT COUNT(*) INTO cnt
+        FROM Contracts
+        WHERE room_id = OLD.room_id
+        AND contract_status = 'Active'
+        AND (end_date IS NULL OR end_date >= CURDATE());
 
-    -- Nếu có hợp đồng hoạt động thì chỉ cho phép sửa room_type_id và max_occupants
-    SELECT COUNT(*) INTO cnt
-    FROM Contracts
-    WHERE room_id = OLD.room_id
-      AND contract_status = 'Active'
-      AND (end_date IS NULL OR end_date >= CURDATE());
-
-    IF cnt > 0 THEN
-        -- Nếu sửa các trường khác ngoài room_type_id và max_occupants thì chặn
-        IF (NEW.room_number <> OLD.room_number
-            OR NEW.is_available <> OLD.is_available
-            OR NEW.floor_number <> OLD.floor_number
-            OR NEW.description <> OLD.description) THEN
-            SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Chỉ được phép sửa room_type_id và max_occupants khi phòng đang có hợp đồng hoạt động';
+        IF cnt > 0 THEN
+            -- Chỉ chặn sửa room_number, floor_number, description
+            IF (NEW.room_number <> OLD.room_number
+                OR NEW.floor_number <> OLD.floor_number
+                OR NEW.description <> OLD.description) THEN
+                SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Chỉ được phép sửa room_type_id và max_occupants khi phòng đang có hợp đồng hoạt động';
+            END IF;
         END IF;
-    END IF;
-END$$
-
+    END$$
 DELIMITER ;
 DELIMITER $$
 
@@ -442,6 +438,58 @@ BEGIN
             FALSE
         );
     END IF;
+END$$
+
+DELIMITER ;
+DELIMITER $$
+
+-- Khi thêm hợp đồng: cập nhật trạng thái khách thuê và phòng
+CREATE TRIGGER trg_after_insert_contract
+AFTER INSERT ON Contracts
+FOR EACH ROW
+BEGIN
+    -- Đổi trạng thái khách thuê thành Active
+    UPDATE Tenants
+    SET tenant_status = 'Active'
+    WHERE tenant_id = NEW.tenant_id;
+
+    -- Đổi trạng thái phòng thành không còn trống
+    UPDATE Rooms
+    SET is_available = FALSE
+    WHERE room_id = NEW.room_id;
+END$$
+
+-- Khi sửa hợp đồng: nếu hợp đồng đang Active thì cập nhật trạng thái khách thuê và phòng
+CREATE TRIGGER trg_after_update_contract
+AFTER UPDATE ON Contracts
+FOR EACH ROW
+BEGIN
+    IF NEW.contract_status = 'Active' THEN
+        UPDATE Tenants
+        SET tenant_status = 'Active'
+        WHERE tenant_id = NEW.tenant_id;
+
+        UPDATE Rooms
+        SET is_available = FALSE
+        WHERE room_id = NEW.room_id;
+    END IF;
+    -- Nếu hợp đồng bị Terminated thì trạng thái sẽ được xử lý ở trigger khác (đã có)
+END$$
+
+-- Khi xóa hợp đồng: cập nhật trạng thái khách thuê và phòng ngược lại
+CREATE TRIGGER trg_after_delete_contract
+AFTER DELETE ON Contracts
+FOR EACH ROW
+BEGIN
+    -- Đổi trạng thái khách thuê thành Terminated
+    UPDATE Tenants
+    SET tenant_status = 'Terminated'
+    WHERE tenant_id = OLD.tenant_id;
+
+    -- Đổi trạng thái phòng thành trống
+    UPDATE Rooms
+    SET is_available = TRUE
+    WHERE room_id = OLD.room_id;
 END$$
 
 DELIMITER ;
