@@ -118,7 +118,47 @@ export default function Tenants() {
       ),
     },
   ];
+  const [errorPhone, setErrorPhone] = useState("");
+  const [errorCCCD, setErrorCCCD] = useState("");
+  const validatePhone = (value) => {
+    if (!/^\d+$/.test(value)) {
+      return "Số điện thoại chỉ được chứa chữ số";
+    }
+    if (value.length !== 10) {
+      return "Số điện thoại phải đủ 10 chữ số";
+    }
+    return "";
+  };
 
+  const handleChangePhone = (e) => {
+    const value = e.target.value;
+    // Ngăn nhập nhiều hơn 10 số và chỉ nhận số
+    if (value.length <= 10 && /^\d*$/.test(value)) {
+      handleFormChange("phone_number", value);
+    }
+  };
+  const handleBlurPhone = () => {
+    setErrorPhone(validatePhone(form.phone_number));
+  };
+  const validateCCCD = (value) => {
+    if (!/^\d+$/.test(value)) {
+      return "CCCD/CMND chỉ được chứa chữ số";
+    }
+    if (value.length !== 9 && value.length !== 12) {
+      return "CCCD phải có 12 số hoặc CMND phải có 9 số";
+    }
+    return "";
+  };
+  const handleChangeCCCD = (e) => {
+    const value = e.target.value;
+    // Cho nhập tối đa 12 số
+    if (value.length <= 12 && /^\d*$/.test(value)) {
+      handleFormChange("tenant_id", value);
+    }
+  };
+   const handleBlurCCCD = () => {
+    setErrorCCCD(validateCCCD(form.tenant_id));
+  };
   // Lấy danh sách tenants từ API (phân trang, lọc, sort)
   const fetchTenants = async (field = sortField, order = sortOrder) => {
     try {
@@ -473,15 +513,17 @@ export default function Tenants() {
           <form>
             <div className="row g-3">
               <div className="col-md-6">
-                <label className="form-label">Mã khách thuê</label>
-                <input
+                <label className="form-label">Mã khách thuê/CCCD</label>
+               <input
                   type="text"
-                  className="form-control"
+                  className={`form-control ${errorCCCD ? "is-invalid" : ""}`}
                   value={form.tenant_id}
-                  onChange={(e) => handleFormChange("tenant_id", e.target.value)}
+                  onChange={handleChangeCCCD}
+                  onBlur={handleBlurCCCD} // chỉ check khi rời khỏi ô
                   required
                   disabled={!!editingTenant}
                 />
+                {errorCCCD && <div className="invalid-feedback">{errorCCCD}</div>}
               </div>
               <div className="col-md-6">
                 <label className="form-label">Họ tên</label>
@@ -497,11 +539,13 @@ export default function Tenants() {
                 <label className="form-label">Số điện thoại</label>
                 <input
                   type="text"
-                  className="form-control"
+                  className={`form-control ${errorPhone ? "is-invalid" : ""}`}
                   value={form.phone_number}
-                  onChange={(e) => handleFormChange("phone_number", e.target.value)}
+                  onChange={handleChangePhone}
+                  onBlur={handleBlurPhone} // chỉ kiểm tra khi rời khỏi input
                   required
                 />
+                {errorPhone && <div className="invalid-feedback">{errorPhone}</div>}
               </div>
               <div className="col-md-6">
                 <label className="form-label">Địa chỉ</label>
