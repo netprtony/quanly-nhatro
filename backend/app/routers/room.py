@@ -238,4 +238,3 @@ def filter_rooms(
         room_dict["roomImage"] = [img.image_path for img in images]
         result.append(room_dict)
     return {"items": result, "total": total}
-

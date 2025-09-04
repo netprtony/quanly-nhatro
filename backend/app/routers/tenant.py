@@ -1,12 +1,11 @@
 from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from app import models, database
 from app.schemas import TenantCreate, TenantUpdate, TenantOut, PaginatedTenantOut, FilterRequest, TenantResponse
 from app import models, utils, database
 import os
-
 router = APIRouter(prefix="/tenants", tags=["Tenants"])
 
 def get_db():
@@ -228,5 +227,4 @@ async def upload_cccd(
         buffer.write(await file.read())
 
     return {"image_path": f"/cccd/{filename}"}
-
 
