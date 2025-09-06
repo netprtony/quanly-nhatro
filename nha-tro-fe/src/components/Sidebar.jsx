@@ -3,8 +3,16 @@ import SidebarItem from "./SidebarItem.jsx";
 export default function Sidebar() {
   return (
     <div className="sidebar bg-white border-end p-3" style={{ width: "220px", height: "100vh" }}>
-      <SidebarItem icon="dashboard.svg" label="Dashboard" path="/admin/dashboard" />
+      <SidebarItem icon="dashboard.svg" label="Dashboard" dropdown children={[
+        { label: "Tổng quan", path: "/admin/dashboard" },
+        { label: "Báo cáo về khách thuê", path: "/admin/tenants_report" },
+        { label: "Báo cáo về phòng", path: "/admin/rooms_report" },
+        { label: "Báo cáo về hợp đồng", path: "/admin/contracts_report" },
+        { label: "Báo cáo điện nước", path: "/admin/utility_report" },
+        { label: "Hóa đơn & thanh toán", path: "/admin/revenues_report" },
+        { label: "Báo cáo hệ thống", path: "/admin/system_report" },
 
+      ]} />
       <SidebarItem icon="building.svg" label="Phòng" dropdown children={[
         { label: "Phòng trọ", path: "/admin/rooms" },
         { label: "Loại Phòng", path: "/admin/type-rooms" }

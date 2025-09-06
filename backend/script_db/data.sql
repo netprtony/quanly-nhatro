@@ -493,6 +493,528 @@ BEGIN
 END$$
 
 DELIMITER ;
+
+
+SET GLOBAL event_scheduler = ON;
+DELIMITER $$
+
+CREATE EVENT notify_contract_expiry
+ON SCHEDULE EVERY 1 DAY
+STARTS CURRENT_DATE + INTERVAL 1 DAY
+DO
+BEGIN
+    INSERT INTO Notifications (user_id, title, message, is_read, created_at)
+    SELECT u.id,
+           'Hợp đồng sắp hết hạn',
+           CONCAT('Hợp đồng phòng ', r.room_number, ' sẽ hết hạn vào ngày ', DATE_FORMAT(c.end_date, '%d-%m-%Y'), '. Vui lòng liên hệ gia hạn.'),
+           FALSE,
+           NOW()
+    FROM Contracts c
+    JOIN Tenants t ON c.tenant_id = t.tenant_id
+    JOIN Users u ON t.tenant_id = u.tenant_id
+    JOIN Rooms r ON c.room_id = r.room_id
+    WHERE c.contract_status = 'Active'
+      AND c.end_date IS NOT NULL
+      AND c.end_date = DATE_ADD(CURDATE(), INTERVAL 1 MONTH);
+END$$
+
+DELIMITER ;
+-- =====================================================
+-- DATABASE: NhaTroBaoBao
+-- File: stored_procedures.sql
+-- Nội dung: Tổng hợp Stored Procedures cho báo cáo/thống kê
+-- =====================================================
+
+USE nhatrobaobao;
+DELIMITER //
+
+-- =====================================================
+-- ROOMS / ROOMTYPES
+-- =====================================================
+
+-- 1. Tỷ lệ phòng trống vs phòng đang thuê
+CREATE PROCEDURE sp_RoomAvailabilityStats()
+BEGIN
+    SELECT 
+        is_available,
+        COUNT(*) AS total_rooms
+    FROM Rooms
+    GROUP BY is_available;
+END //
+
+-- 2. Doanh thu trung bình theo loại phòng
+CREATE PROCEDURE sp_AvgRevenueByRoomType()
+BEGIN
+    SELECT rt.type_name AS room_type,
+           AVG(i.total_amount) AS avg_revenue
+    FROM Invoices i
+    JOIN Rooms r ON i.room_id = r.room_id
+    JOIN RoomTypes rt ON r.room_type_id = rt.room_type_id
+    GROUP BY rt.type_name;
+END //
+
+-- 3. Tình trạng phòng theo tầng
+CREATE PROCEDURE sp_RoomStatusByFloor()
+BEGIN
+    SELECT 
+        r.floor_number,
+        SUM(CASE WHEN r.is_available = 1 THEN 1 ELSE 0 END) AS available_rooms,
+        SUM(CASE WHEN r.is_available = 0 THEN 1 ELSE 0 END) AS occupied_rooms
+    FROM Rooms r
+    GROUP BY r.floor_number;
+END //
+
+-- 4. Top loại phòng được thuê nhiều nhất
+CREATE PROCEDURE sp_TopRoomTypes()
+BEGIN
+    SELECT 
+        rt.type_name,
+        COUNT(c.contract_id) AS total_contracts
+    FROM RoomTypes rt
+    JOIN Rooms r ON r.room_type_id = rt.room_type_id
+    JOIN Contracts c ON c.room_id = r.room_id
+    GROUP BY rt.type_name
+    ORDER BY total_contracts DESC
+    LIMIT 5;
+END //
+
+-- 5. Danh sách phòng cần bảo trì thiết bị
+CREATE PROCEDURE sp_RoomsNeedMaintenance()
+BEGIN
+    SELECT 
+        r.room_id,
+        r.room_number,
+        d.device_name
+    FROM Devices d
+    JOIN Rooms r ON r.room_id = d.room_id
+    WHERE d.is_active = 0;
+END //
+
+-- =====================================================
+-- TENANTS / USERS
+-- =====================================================
+
+-- 1. Thống kê số lượng khách thuê theo trạng thái
+CREATE PROCEDURE sp_TenantCountByStatus()
+BEGIN
+    SELECT tenant_status, COUNT(*) AS total
+    FROM Tenants
+    GROUP BY tenant_status;
+END //
+
+-- 2. Thống kê giới tính, độ tuổi
+CREATE PROCEDURE sp_TenantGenderAgeStats()
+BEGIN
+    SELECT 
+        gender,
+        COUNT(*) AS total,
+        AVG(TIMESTAMPDIFF(YEAR, date_of_birth, CURDATE())) AS avg_age,
+        MIN(TIMESTAMPDIFF(YEAR, date_of_birth, CURDATE())) AS min_age,
+        MAX(TIMESTAMPDIFF(YEAR, date_of_birth, CURDATE())) AS max_age
+    FROM Tenants
+    GROUP BY gender;
+END //
+
+-- 3. Danh sách khách thuê mới theo kỳ
+CREATE PROCEDURE sp_NewTenantsByPeriod(IN p_type VARCHAR(10))
+BEGIN
+    IF p_type = 'MONTH' THEN
+        SELECT * FROM Tenants
+        WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE());
+    ELSEIF p_type = 'QUARTER' THEN
+        SELECT * FROM Tenants
+        WHERE QUARTER(created_at) = QUARTER(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE());
+    ELSEIF p_type = 'YEAR' THEN
+        SELECT * FROM Tenants
+        WHERE YEAR(created_at) = YEAR(CURDATE());
+    END IF;
+END //
+
+-- 4. Khách thuê sắp hết hạn hợp đồng
+CREATE PROCEDURE sp_TenantsExpiringContracts()
+BEGIN
+    SELECT 
+        t.tenant_id,
+        t.full_name,
+        c.contract_id,
+        c.end_date
+    FROM Tenants t
+    JOIN Contracts c ON c.tenant_id = t.tenant_id
+    WHERE c.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY);
+END //
+
+-- 5. Khách thuê nợ tiền
+CREATE PROCEDURE sp_TenantsWithDebt()
+BEGIN
+    SELECT 
+        t.tenant_id,
+        t.full_name,
+        r.room_number,
+        i.invoice_id,
+        i.total_amount,
+        i.is_paid
+    FROM Tenants t
+    JOIN Contracts c ON c.tenant_id = t.tenant_id
+    JOIN Rooms r ON r.room_id = c.room_id
+    JOIN Invoices i ON i.room_id = r.room_id
+    WHERE c.contract_status = 'Active'
+      AND (c.end_date IS NULL OR c.end_date >= CURDATE())
+      AND i.is_paid = 0;
+END //
+
+-- =====================================================
+-- ELECTRICITY / WATER METERS
+-- =====================================================
+
+-- Chỉ số điện theo tháng và năm
+CREATE PROCEDURE sp_ElectricityUsageByMonthYear(IN p_month INT, IN p_year INT)
+BEGIN
+    SELECT 
+        r.room_number,
+        em.month,
+        em.old_reading,
+        em.new_reading,
+        em.usage_kwh,
+        em.total_amount
+    FROM ElectricityMeters em
+    JOIN Rooms r ON r.room_id = em.room_id
+    WHERE MONTH(em.month) = p_month AND YEAR(em.month) = p_year;
+END //
+
+-- Chỉ số nước theo tháng và năm
+CREATE PROCEDURE sp_WaterUsageByMonthYear(IN p_month INT, IN p_year INT)
+BEGIN
+    SELECT 
+        r.room_number,
+        wm.month,
+        wm.old_reading,
+        wm.new_reading,
+        wm.usage_m3,
+        wm.total_amount
+    FROM WaterMeters wm
+    JOIN Rooms r ON r.room_id = wm.room_id
+    WHERE MONTH(wm.month) = p_month AND YEAR(wm.month) = p_year;
+END //
+-- 1. Chi phí điện/nước trung bình theo phòng
+CREATE PROCEDURE sp_AvgUtilityCostByRoom()
+BEGIN
+    SELECT 
+        r.room_number,
+        IFNULL(AVG(em.total_amount), 0) AS avg_electricity_cost,
+        IFNULL(AVG(wm.total_amount), 0) AS avg_water_cost
+    FROM Rooms r
+    LEFT JOIN ElectricityMeters em ON r.room_id = em.room_id
+    LEFT JOIN WaterMeters wm ON r.room_id = wm.room_id
+    GROUP BY r.room_id, r.room_number;
+END //
+
+-- 2. So sánh điện/nước tháng này so với tháng trước
+CREATE PROCEDURE sp_CompareUtilityMonth(IN p_month INT, IN p_year INT)
+BEGIN
+    SELECT 
+        r.room_number,
+        em_this.month AS current_month,
+        em_this.usage_kwh AS electricity_this_month,
+        em_prev.usage_kwh AS electricity_last_month,
+        (em_this.usage_kwh - IFNULL(em_prev.usage_kwh,0)) AS electricity_diff,
+        wm_this.usage_m3 AS water_this_month,
+        wm_prev.usage_m3 AS water_last_month,
+        (wm_this.usage_m3 - IFNULL(wm_prev.usage_m3,0)) AS water_diff
+    FROM Rooms r
+    LEFT JOIN ElectricityMeters em_this 
+        ON r.room_id = em_this.room_id 
+        AND MONTH(em_this.month) = p_month AND YEAR(em_this.month) = p_year
+    LEFT JOIN ElectricityMeters em_prev 
+        ON r.room_id = em_prev.room_id 
+        AND MONTH(em_prev.month) = IF(p_month=1,12,p_month-1) 
+        AND YEAR(em_prev.month) = IF(p_month=1,p_year-1,p_year)
+    LEFT JOIN WaterMeters wm_this 
+        ON r.room_id = wm_this.room_id 
+        AND MONTH(wm_this.month) = p_month AND YEAR(wm_this.month) = p_year
+    LEFT JOIN WaterMeters wm_prev 
+        ON r.room_id = wm_prev.room_id 
+        AND MONTH(wm_prev.month) = IF(p_month=1,12,p_month-1) 
+        AND YEAR(wm_prev.month) = IF(p_month=1,p_year-1,p_year);
+END //
+
+-- 3. Phòng có mức tiêu thụ điện/nước cao bất thường (outlier detection)
+CREATE PROCEDURE sp_UtilityOutlierRooms(IN p_month INT, IN p_year INT)
+BEGIN
+    -- Điện: Tính trung bình và độ lệch chuẩn
+    SELECT 
+        r.room_number,
+        em.usage_kwh,
+        stats.avg_kwh,
+        stats.stddev_kwh,
+        CASE 
+            WHEN em.usage_kwh > stats.avg_kwh + 2 * stats.stddev_kwh THEN 'Outlier'
+            ELSE 'Normal'
+        END AS electricity_outlier,
+        wm.usage_m3,
+        stats.avg_m3,
+        stats.stddev_m3,
+        CASE 
+            WHEN wm.usage_m3 > stats.avg_m3 + 2 * stats.stddev_m3 THEN 'Outlier'
+            ELSE 'Normal'
+        END AS water_outlier
+    FROM Rooms r
+    LEFT JOIN ElectricityMeters em 
+        ON r.room_id = em.room_id 
+        AND MONTH(em.month) = p_month AND YEAR(em.month) = p_year
+    LEFT JOIN WaterMeters wm 
+        ON r.room_id = wm.room_id 
+        AND MONTH(wm.month) = p_month AND YEAR(wm.month) = p_year
+    CROSS JOIN (
+        SELECT 
+            AVG(em2.usage_kwh) AS avg_kwh,
+            STDDEV(em2.usage_kwh) AS stddev_kwh,
+            AVG(wm2.usage_m3) AS avg_m3,
+            STDDEV(wm2.usage_m3) AS stddev_m3
+        FROM ElectricityMeters em2
+        LEFT JOIN WaterMeters wm2 
+            ON em2.room_id = wm2.room_id 
+            AND MONTH(wm2.month) = p_month AND YEAR(wm2.month) = p_year
+        WHERE MONTH(em2.month) = p_month AND YEAR(em2.month) = p_year
+    ) stats
+    WHERE 
+        (em.usage_kwh IS NOT NULL OR wm.usage_m3 IS NOT NULL);
+END //
+-- =====================================================
+-- INVOICES / PAYMENTS
+-- =====================================================
+
+-- 1. Tổng doanh thu theo tháng/quý/năm
+CREATE PROCEDURE sp_TotalRevenueByPeriod(IN p_type VARCHAR(10), IN p_month INT, IN p_quarter INT, IN p_year INT)
+BEGIN
+    IF p_type = 'MONTH' THEN
+        SELECT 
+            p_month AS month,
+            p_year AS year,
+            SUM(total_amount) AS total_revenue
+        FROM Invoices
+        WHERE MONTH(created_at) = p_month AND YEAR(created_at) = p_year;
+    ELSEIF p_type = 'QUARTER' THEN
+        SELECT 
+            p_quarter AS quarter,
+            p_year AS year,
+            SUM(total_amount) AS total_revenue
+        FROM Invoices
+        WHERE QUARTER(created_at) = p_quarter AND YEAR(created_at) = p_year;
+    ELSEIF p_type = 'YEAR' THEN
+        SELECT 
+            p_year AS year,
+            SUM(total_amount) AS total_revenue
+        FROM Invoices
+        WHERE YEAR(created_at) = p_year;
+    END IF;
+END //
+
+-- 2. Tỷ lệ hóa đơn đã thanh toán vs chưa thanh toán
+CREATE PROCEDURE sp_InvoicePaidRatio()
+BEGIN
+    SELECT 
+        is_paid,
+        COUNT(*) AS total
+    FROM Invoices
+    GROUP BY is_paid;
+END //
+
+-- 3. Thống kê doanh thu theo nguồn thu (fee_type)
+CREATE PROCEDURE sp_RevenueByFeeType(IN p_month INT, IN p_year INT)
+BEGIN
+    SELECT 
+        d.fee_type,
+        SUM(d.amount) AS total_revenue
+    FROM InvoiceDetails d
+    JOIN Invoices i ON d.invoice_id = i.invoice_id
+    WHERE MONTH(i.created_at) = p_month AND YEAR(i.created_at) = p_year
+    GROUP BY d.fee_type;
+END //
+
+-- 4. Danh sách hóa đơn quá hạn thanh toán
+CREATE PROCEDURE sp_OverdueInvoices()
+BEGIN
+    SELECT 
+        i.invoice_id,
+        r.room_number,
+        i.month,
+        i.total_amount,
+        i.is_paid,
+        i.created_at
+    FROM Invoices i
+    JOIN Rooms r ON i.room_id = r.room_id
+    WHERE i.is_paid = 0
+      AND i.month < CURDATE();
+END //
+
+-- 5. Tổng số tiền đã thanh toán theo phương thức
+CREATE PROCEDURE sp_TotalPaidByMethod(IN p_month INT, IN p_year INT)
+BEGIN
+    SELECT 
+        payment_method,
+        SUM(paid_amount) AS total_paid
+    FROM Payments
+    WHERE MONTH(payment_date) = p_month AND YEAR(payment_date) = p_year
+    GROUP BY payment_method;
+END //
+
+-- =====================================================
+-- RESERVATIONS
+-- =====================================================
+
+-- Danh sách đặt phòng đang chờ xử lý
+CREATE PROCEDURE sp_PendingReservations()
+BEGIN
+    SELECT * FROM Reservations WHERE status = 'PENDING';
+END //
+
+-- =====================================================
+-- NOTIFICATIONS
+-- =====================================================
+-- Số lượng thông báo đã gửi trong tháng/quý/năm
+CREATE PROCEDURE sp_NotificationCountByPeriod(IN p_type VARCHAR(10), IN p_month INT, IN p_quarter INT, IN p_year INT)
+BEGIN
+    IF p_type = 'MONTH' THEN
+        SELECT 
+            p_month AS month,
+            p_year AS year,
+            COUNT(*) AS total_notifications
+        FROM Notifications
+        WHERE MONTH(created_at) = p_month AND YEAR(created_at) = p_year;
+    ELSEIF p_type = 'QUARTER' THEN
+        SELECT 
+            p_quarter AS quarter,
+            p_year AS year,
+            COUNT(*) AS total_notifications
+        FROM Notifications
+        WHERE QUARTER(created_at) = p_quarter AND YEAR(created_at) = p_year;
+    ELSEIF p_type = 'YEAR' THEN
+        SELECT 
+            p_year AS year,
+            COUNT(*) AS total_notifications
+        FROM Notifications
+        WHERE YEAR(created_at) = p_year;
+    END IF;
+END //
+-- Tỷ lệ người dùng đã đọc thông báo (is_read)
+CREATE PROCEDURE sp_NotificationReadRatio()
+BEGIN
+    SELECT 
+        is_read,
+        COUNT(*) AS total
+    FROM Notifications
+    GROUP BY is_read;
+END //
+-- =====================================================
+-- DEVICES
+-- =====================================================
+
+-- Thống kê số thiết bị hỏng
+CREATE PROCEDURE sp_BrokenDevices()
+BEGIN
+    SELECT 
+        r.room_number,
+        COUNT(*) AS broken_count
+    FROM Devices d
+    JOIN Rooms r ON r.room_id = d.room_id
+    WHERE d.is_active = 0
+    GROUP BY r.room_number;
+END //
+-- Danh sách thiết bị phòng & trạng thái hoạt động
+CREATE PROCEDURE sp_DeviceListWithStatus()
+BEGIN
+    SELECT 
+        d.device_id,
+        d.device_name,
+        r.room_number,
+        d.is_active,
+        d.description,
+        d.created_at
+    FROM Devices d
+    LEFT JOIN Rooms r ON d.room_id = r.room_id
+    ORDER BY r.room_number, d.device_name;
+END //
+
+
+-- =====================================================
+-- CONTRACTS
+-- =====================================================
+
+-- Thống kê tổng số hợp đồng đã ký mới theo tháng/quý/năm
+CREATE PROCEDURE sp_NewContractsByPeriod(IN p_type VARCHAR(10), IN p_month INT, IN p_quarter INT, IN p_year INT)
+BEGIN
+    IF p_type = 'MONTH' THEN
+        SELECT 
+            p_month AS month,
+            p_year AS year,
+            COUNT(*) AS total_new_contracts
+        FROM Contracts
+        WHERE MONTH(created_at) = p_month AND YEAR(created_at) = p_year;
+    ELSEIF p_type = 'QUARTER' THEN
+        SELECT 
+            p_quarter AS quarter,
+            p_year AS year,
+            COUNT(*) AS total_new_contracts
+        FROM Contracts
+        WHERE QUARTER(created_at) = p_quarter AND YEAR(created_at) = p_year;
+    ELSEIF p_type = 'YEAR' THEN
+        SELECT 
+            p_year AS year,
+            COUNT(*) AS total_new_contracts
+        FROM Contracts
+        WHERE YEAR(created_at) = p_year;
+    END IF;
+END //
+-- Thống kê tỷ lệ hợp đồng theo trạng thái
+CREATE PROCEDURE sp_ContractStatusRatio()
+BEGIN
+    SELECT 
+        contract_status,
+        COUNT(*) AS total
+    FROM Contracts
+    GROUP BY contract_status;
+END //
+-- Thống kê thời hạn trung bình hợp đồng (số ngày giữa start_date và end_date)
+CREATE PROCEDURE sp_AvgContractDuration()
+BEGIN
+    SELECT 
+        AVG(DATEDIFF(end_date, start_date)) AS avg_duration_days
+    FROM Contracts
+    WHERE end_date IS NOT NULL;
+END //
+
+-- Danh sách hợp đồng đã hết hạn
+CREATE PROCEDURE sp_ExpiredContracts()
+BEGIN
+    SELECT 
+        c.contract_id,
+        t.full_name,
+        r.room_number,
+        c.start_date,
+        c.end_date,
+        c.contract_status
+    FROM Contracts c
+    JOIN Tenants t ON c.tenant_id = t.tenant_id
+    JOIN Rooms r ON c.room_id = r.room_id
+    WHERE c.end_date < CURDATE();
+END //
+
+-- Danh sách hợp đồng sắp hết hạn (trong 30 ngày tới)
+CREATE PROCEDURE sp_ExpiringSoonContracts()
+BEGIN
+    SELECT 
+        c.contract_id,
+        t.full_name,
+        r.room_number,
+        c.start_date,
+        c.end_date,
+        c.contract_status
+    FROM Contracts c
+    JOIN Tenants t ON c.tenant_id = t.tenant_id
+    JOIN Rooms r ON c.room_id = r.room_id
+    WHERE c.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY);
+END //
+
 INSERT INTO RoomTypes (type_name, description, price_per_month) VALUES
 ('Standard', 'Phòng cơ bản, không điều hòa', 3000000.00),
 ('Deluxe', 'Phòng có điều hòa, ban công', 5000000.00),
