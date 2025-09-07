@@ -10,7 +10,14 @@ import DetailRoom from "./pages/user/DetailRoom";
 import PaymentHistory from "./pages/user/PaymentHistory";
 import Contract from "./pages/user/Contract";
 import Invoice from "./pages/user/Invoice";
-// import Reservation from "./pages/user/Reservation";
+
+import TenantsReport from "./pages/admin/Tenants_report";
+import RoomsReport from "./pages/admin/Rooms_report";
+import ContractReport from "./pages/admin/Contracts_report";
+import UtilityReport from "./pages/admin/Utility_report";
+import SystemReport from "./pages/admin/System_report";
+import RevenuesReport from "./pages/admin/Revenues_report";
+
 
 import Dashboard from "./pages/admin/Dashboard";
 import Rooms from "./pages/admin/Rooms";
@@ -76,6 +83,14 @@ function App() {
       >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
+
+        <Route path="tenants_report" element={<TenantsReport />} />
+        <Route path="rooms_report" element={<RoomsReport />} />
+        <Route path="contracts_report" element={<ContractReport />} />
+        <Route path="utility_report" element={<UtilityReport />} />
+        <Route path="system_report" element={<SystemReport />} />
+        <Route path="revenues_report" element={<RevenuesReport />} />
+        
         <Route path="rooms" element={<Rooms />} />
         <Route path="type-rooms" element={<TypeRooms />} />
         <Route path="accounts" element={<Accounts />} />

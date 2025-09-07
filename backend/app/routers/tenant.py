@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from app import models, database
@@ -227,4 +228,8 @@ async def upload_cccd(
         buffer.write(await file.read())
 
     return {"image_path": f"/cccd/{filename}"}
+
+
+
+
 
