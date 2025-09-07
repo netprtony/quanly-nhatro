@@ -1,6 +1,6 @@
 # File Tree: NhaTroBaoBao
 
-Generated on: 8/27/2025, 12:02:45 AM
+Generated on: 9/6/2025, 12:10:14 PM
 Root path: `d:\NhaTroBaoBao`
 
 ```
@@ -21,6 +21,10 @@ Root path: `d:\NhaTroBaoBao`
 ├── .venv/ 🚫 (auto-hidden)
 ├── .vscode/ 🚫 (auto-hidden)
 ├── backend/
+│   ├── ContractFile/
+│   │   └── Mau_Hop_Dong_Cho_Thue_Tro.docx
+│   ├── InvoiceFile/
+│   │   └── invoice_template.docx
 │   ├── app/
 │   │   ├── __pycache__/ 🚫 (auto-hidden)
 │   │   ├── routers/
@@ -34,6 +38,7 @@ Root path: `d:\NhaTroBaoBao`
 │   │   │   ├── electricity.py
 │   │   │   ├── invoice.py
 │   │   │   ├── invoice_detail.py
+│   │   │   ├── notification.py
 │   │   │   ├── payment.py
 │   │   │   ├── protected.py
 │   │   │   ├── report.py
@@ -41,7 +46,8 @@ Root path: `d:\NhaTroBaoBao`
 │   │   │   ├── room.py
 │   │   │   ├── roomImage.py
 │   │   │   ├── roomtype.py
-│   │   │   └── tenant.py
+│   │   │   ├── tenant.py
+│   │   │   └── water.py
 │   │   ├── schemas/
 │   │   │   ├── __pycache__/ 🚫 (auto-hidden)
 │   │   │   ├── __init__.py
@@ -51,12 +57,14 @@ Root path: `d:\NhaTroBaoBao`
 │   │   │   ├── electricity.py
 │   │   │   ├── invoice.py
 │   │   │   ├── invoice_detail.py
+│   │   │   ├── notification.py
 │   │   │   ├── payment.py
 │   │   │   ├── reservation.py
 │   │   │   ├── room.py
 │   │   │   ├── roomImage.py
 │   │   │   ├── tenant.py
-│   │   │   └── user.py
+│   │   │   ├── user.py
+│   │   │   └── water.py
 │   │   ├── auth_dependency.py
 │   │   ├── database.py
 │   │   ├── main.py
@@ -66,19 +74,19 @@ Root path: `d:\NhaTroBaoBao`
 │   │   ├── backup_20250823_231103.sql
 │   │   ├── backup_20250823_231237.sql
 │   │   ├── backup_20250825_192510.sql
-│   │   └── binlog_20250823_231237.txt
-│   ├── nha-tro-fe/
-│   │   └── public/
-│   │       └── roomImage/
-│   │           ├── 2daf357b-a8ec-4cab-9e04-f2b268631c6e_1756181830 (1).jpg
-│   │           ├── 482069271_3907770306105611_2164367503693599648_n.jpg
-│   │           ├── front_079203029607.jpg
-│   │           ├── gen-h-1_1756183493.jpg
-│   │           ├── images (12).jpg
-│   │           └── z6529223194886_1e3723d181aab5b1f7baf3bdbb2b2b63.jpg
+│   │   ├── backup_20250831_233217.sql
+│   │   ├── backup_20250831_233225.sql
+│   │   ├── binlog_20250823_231237.txt
+│   │   └── binlog_20250831_233225.txt
+│   ├── exported_contracts/
+│   │   └── contract_1.docx
+│   ├── script_db/
+│   │   ├── backup_20250827_211101.sql
+│   │   └── data.sql
 │   ├── .env 🚫 (auto-hidden)
 │   ├── .env.docker 🚫 (auto-hidden)
 │   ├── Dockerfile
+│   ├── requirements.txt
 │   ├── runtime.txt
 │   └── start.sh
 ├── nha-tro-fe/
@@ -86,8 +94,43 @@ Root path: `d:\NhaTroBaoBao`
 │   ├── node_modules/ 🚫 (auto-hidden)
 │   ├── public/
 │   │   ├── cccd/
+│   │   │   ├── 079203029606_front_download.jpg
+│   │   │   ├── 079203029607_back_back_079203029607.jpg
+│   │   │   ├── 079203029607_back_download (2).jpg
+│   │   │   ├── 079203029607_back_download.jpg
+│   │   │   ├── 079203029607_back_image.jpg
+│   │   │   ├── 079203029607_front_download (1).jpg
+│   │   │   ├── 079203029607_front_download.jpg
+│   │   │   ├── 079203029607_front_front_079203029607.jpg
+│   │   │   ├── 079203029607_front_images.png
+│   │   │   ├── 079203029608_back_download (2).jpg
+│   │   │   ├── 079203029608_front_download.jpg
+│   │   │   ├── 079203029609_back_download (2).jpg
+│   │   │   ├── 079203029609_front_download.jpg
+│   │   │   ├── 079203029610_back_download (2).jpg
+│   │   │   ├── 079203029610_front_download (1).jpg
+│   │   │   ├── 079203029611_back_download (2).jpg
+│   │   │   ├── 079203029611_front_download.jpg
+│   │   │   ├── 079203029612_back_download (2).jpg
+│   │   │   ├── 079203029612_front_download (1).jpg
+│   │   │   ├── 079203029613_back_download (2).jpg
+│   │   │   ├── 079203029613_front_download.jpg
+│   │   │   ├── 079203029614_back_download (2).jpg
+│   │   │   ├── 079203029614_front_download.jpg
+│   │   │   ├── 079203029615_back_download (2).jpg
+│   │   │   ├── 079203029615_front_download.jpg
+│   │   │   ├── 079203029616_back_download (2).jpg
+│   │   │   ├── 079203029616_front_download.jpg
 │   │   │   ├── back_079203029607.jpg
 │   │   │   └── front_079203029607.jpg
+│   │   ├── contracts_file/
+│   │   │   ├── 123
+│   │   │   ├── Le_Van_Cuong_contract.docx
+│   │   │   ├── Nguyen_Van_An_contract.docx
+│   │   │   ├── Nguyen_Van_An_contract.pdf
+│   │   │   ├── Pham_Van_Minh_contract.docx
+│   │   │   ├── Pham_Van_Minh_contract.pdf
+│   │   │   └── Tran_Thi_Bich_contract.docx
 │   │   ├── images/
 │   │   │   ├── icons/
 │   │   │   │   ├── building.svg
@@ -131,13 +174,21 @@ Root path: `d:\NhaTroBaoBao`
 │   │   │   ├── logo.png
 │   │   │   ├── no-data.png
 │   │   │   └── no-result.png
+│   │   ├── invoices_file/
+│   │   │   ├── Ph_ng_2A_invoice.docx
+│   │   │   ├── Phong_2A_invoice.docx
+│   │   │   └── Phong_2A_invoice.pdf
 │   │   └── roomImage/
 │   │       ├── 1c801685-26f7-4949-b6b1-ce324e673d44_1755743014.jpg
 │   │       ├── 2daf357b-a8ec-4cab-9e04-f2b268631c6e_1756181830 (1).jpg
 │   │       ├── 2daf357b-a8ec-4cab-9e04-f2b268631c6e_1756181830.jpg
+│   │       ├── download (1).jpg
+│   │       ├── download (2).jpg
+│   │       ├── download.jpg
 │   │       ├── gen-h-1_1756182280.jpg
 │   │       ├── gen-h-1_1756183493 (1).jpg
 │   │       ├── gen-h-1_1756183493.jpg
+│   │       ├── image.daidoanket.vn-images-upload-vietdl-01272021-_image005-1611657096178727614385.jpg
 │   │       ├── images (10).jpg
 │   │       ├── images (11).jpg
 │   │       ├── images (12).jpg
@@ -195,6 +246,7 @@ Root path: `d:\NhaTroBaoBao`
 │   │   │   ├── SidebarItem.jsx
 │   │   │   └── Table.jsx
 │   │   ├── contexts/
+│   │   │   ├── AuthContext.jsx
 │   │   │   └── UserContext.jsx
 │   │   ├── layouts/
 │   │   │   ├── AdminLayout.jsx
@@ -204,6 +256,7 @@ Root path: `d:\NhaTroBaoBao`
 │   │   │   │   ├── Accounts.jsx
 │   │   │   │   ├── Backup.jsx
 │   │   │   │   ├── Contracts.jsx
+│   │   │   │   ├── Contracts_report.jsx
 │   │   │   │   ├── Dashboard.jsx
 │   │   │   │   ├── Devices.jsx
 │   │   │   │   ├── Electricity.jsx
@@ -211,18 +264,28 @@ Root path: `d:\NhaTroBaoBao`
 │   │   │   │   ├── Payments.jsx
 │   │   │   │   ├── Reservations.jsx
 │   │   │   │   ├── Restore.jsx
+│   │   │   │   ├── Revenues_report.jsx
 │   │   │   │   ├── Rooms.jsx
+│   │   │   │   ├── Rooms_report.jsx
 │   │   │   │   ├── Setting.jsx
+│   │   │   │   ├── System_report.jsx
 │   │   │   │   ├── Tenants.jsx
+│   │   │   │   ├── Tenants_report.jsx
 │   │   │   │   ├── TypeRooms.jsx
+│   │   │   │   ├── Utility_report.jsx
 │   │   │   │   └── Waters.jsx
 │   │   │   ├── user/
 │   │   │   │   ├── Contract.jsx
 │   │   │   │   ├── DetailRoom.jsx
 │   │   │   │   ├── Home.jsx
+│   │   │   │   ├── Invoice.jsx
 │   │   │   │   ├── PaymentHistory.jsx
+│   │   │   │   ├── Resvertion.jsx
 │   │   │   │   └── Rooms.jsx
 │   │   │   ├── Login.jsx
+│   │   │   ├── Payment_return.jsx
+│   │   │   ├── Payment_vnpay.jsx
+│   │   │   ├── Refund.jsx
 │   │   │   └── Register.jsx
 │   │   ├── App.css
 │   │   ├── App.jsx
@@ -239,7 +302,6 @@ Root path: `d:\NhaTroBaoBao`
 │   └── vite.config.js
 ├── .dockerignore
 ├── .gitignore
-├── data.sql
 ├── digram.mwb
 ├── digram.mwb.bak
 ├── docker-compose.yml
