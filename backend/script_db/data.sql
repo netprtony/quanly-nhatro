@@ -426,7 +426,7 @@ BEGIN
         VALUES (
             NEW.user_id,
             'Đặt phòng đã được xác nhận',
-            CONCAT('Đặt phòng ', NEW.reservation_id, ' đã được xác nhận. Vui lòng đến nhận phòng đúng thời gian quy định.'),
+            CONCAT('Đặt phòng của bạn đã được xác nhận. Vui lòng đến nhận phòng đúng thời gian quy định.'),
             FALSE
         );
     ELSEIF NEW.status = 'Cancelled' THEN
@@ -434,7 +434,7 @@ BEGIN
         VALUES (
             NEW.user_id,
             'Đặt phòng đã bị hủy',
-            CONCAT('Đặt phòng ', NEW.reservation_id, ' đã bị hủy. Vui lòng liên hệ quản lý nếu cần hỗ trợ.'),
+            CONCAT('Đặt phòng của bạn đã bị hủy. Vui lòng liên hệ quản lý nếu cần hỗ trợ.'),
             FALSE
         );
     END IF;

@@ -115,9 +115,14 @@ export default function Home() {
                       <div>
                         <b>Giới tính:</b> {tenantInfo.gender}
                       </div>
-                      <div>
-                        <b>Đang thuê:</b> {tenantInfo.is_rent ? "Có" : "Không"}
-                      </div>
+                       <div>
+                        <b>Trạng thái thuê:</b>{" "}
+                        {tenantInfo.tenant_status === "Active"
+                          ? "Đang thuê"
+                          : tenantInfo.tenant_status === "Terminated"
+                          ? "Đã kết thúc"
+                          : "Chờ duyệt"}
+                        </div>
                     </>
                   ) : (
                     <span className="text-muted">Chưa cập nhật thông tin</span>
