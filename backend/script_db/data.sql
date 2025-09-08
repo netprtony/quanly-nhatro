@@ -64,7 +64,7 @@ CREATE TABLE Contracts (
     room_id INT NOT NULL,
     start_date DATE NOT NULL,
     end_date DATE,
-    deposit_amount DECIMAL(10, 2),
+    deposit_amount DECIMAL(10, 2) DEFAULT 0,
     monthly_rent DECIMAL(10, 2),
     num_people INT DEFAULT 1,         -- số lượng người ở
     num_vehicles INT DEFAULT 0,       -- số lượng xe
@@ -1164,17 +1164,17 @@ INSERT INTO Users (username, email, password, tenant_id, role, is_active) VALUES
 ('admin1', 'admin1@example.com', '$2a$12$YbgMrDVLpsncrlxrjam0EO4yosTojsqK5nqs1sIhgW/aGz5QsHO0e', NULL, 'ADMIN', TRUE);
 
 -- Thêm hợp đồng
-INSERT INTO Contracts (tenant_id, room_id, start_date, end_date, deposit_amount, monthly_rent, contract_status, num_people, num_vehicles) VALUES
-('079203029607', 1, '2025-01-01', '2026-01-01', 300000.00, 3000000.00, 'Active', 1, 2),
-('079203029608', 2, '2025-02-01', '2026-02-01', 500000.00, 5000000.00, 'Active', 2, 2),
-('079203029609', 3, '2025-03-01', '2026-03-01', 700000.00, 7000000.00, 'Active', 3, 4),
-('079203029610', 4, '2025-04-01', '2026-04-01', 600000.00, 6000000.00, 'Active', 1, 1),
-('079203029611', 5, '2025-05-01', '2026-05-01', 250000.00, 2500000.00, 'Active', 3, 1),
-('079203029612', 6, '2025-06-01', '2026-06-01', 450000.00, 4500000.00, 'Active', 4 , 3),
-('079203029613', 7, '2025-07-01', '2026-07-01', 800000.00, 8000000.00, 'Active', 2,2),
-('079203029614', 8, '2025-08-01', '2026-08-01', 1000000.00, 10000000.00, 'Active', 2, 1),
-('079203029615', 9, '2025-09-01', '2026-09-01', 200000.00, 2000000.00, 'Active', 3, 2),
-('079203029616', 10, '2025-10-01', '2026-10-01', 1200000.00, 12000000.00, 'Active', 4, 2);
+INSERT INTO Contracts (tenant_id, room_id, start_date, end_date, monthly_rent, contract_status, num_people, num_vehicles) VALUES
+('079203029607', 1, '2025-01-01', '2026-01-01',  3000000.00, 'Active', 1, 2),
+('079203029608', 2, '2025-02-01', '2026-02-01', 5000000.00, 'Active', 2, 2),
+('079203029609', 3, '2025-03-01', '2026-03-01',  7000000.00, 'Active', 3, 4),
+('079203029610', 4, '2025-04-01', '2026-04-01',  6000000.00, 'Active', 1, 1),
+('079203029611', 5, '2025-05-01', '2026-05-01',  2500000.00, 'Active', 3, 1),
+('079203029612', 6, '2025-06-01', '2026-06-01',  4500000.00, 'Active', 4 , 3),
+('079203029613', 7, '2025-07-01', '2026-07-01', 8000000.00, 'Active', 2,2),
+('079203029614', 8, '2025-08-01', '2026-08-01',  10000000.00, 'Active', 2, 1),
+('079203029615', 9, '2025-09-01', '2026-09-01',  2000000.00, 'Active', 3, 2),
+('079203029616', 10, '2025-10-01', '2026-10-01', 12000000.00, 'Active', 4, 2);
 -- Thêm đặt chỗ trước
 
 

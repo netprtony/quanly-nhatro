@@ -124,7 +124,7 @@ class Contract(Base):
     room_id = Column(Integer, ForeignKey("Rooms.room_id", ondelete="CASCADE"), nullable=False)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date)
-    deposit_amount = Column(DECIMAL(10, 2))
+    deposit_amount = Column(DECIMAL(10, 2),nullable=True )
     monthly_rent = Column(DECIMAL(10, 2))
     path_contract = Column(String(255), nullable=False)
 
