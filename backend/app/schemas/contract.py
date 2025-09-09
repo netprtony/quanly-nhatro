@@ -52,14 +52,4 @@ class FilterRequest(BaseModel):
     filters: List[Filter] = [] 
 
 class ContractDetailOut(BaseModel):
-    contract_id: int
-    full_name: str
-    room_number: str
-    start_date: date
-    end_date: date
-    deposit_amount: float
-    monthly_rent: float
-    num_people: int
-    num_vehicles: int
-    contract_status: str
-    path_contract: str
+    path_contract: Optional[str] = None

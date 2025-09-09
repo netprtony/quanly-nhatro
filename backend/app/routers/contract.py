@@ -167,19 +167,9 @@ def get_contract_by_tenant(tenant_id: str, db: Session = Depends(database.get_db
     )
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found for tenant")
-    contract_obj, full_name, room_number = contract
+    contract_obj = contract[0]
     return {
-        "contract_id": contract_obj.contract_id,
-        "full_name": full_name,
-        "room_number": room_number,
-        "start_date": contract_obj.start_date,
-        "end_date": contract_obj.end_date,
-        "deposit_amount": contract_obj.deposit_amount,
-        "monthly_rent": contract_obj.monthly_rent,
-        "num_people": contract_obj.num_people,
-        "num_vehicles": contract_obj.num_vehicles,
-        "contract_status": contract_obj.contract_status,
-        "path_contract": getattr(contract_obj, "path_contract", None)  # Luôn trả về trường này
+        "path_contract": getattr(contract_obj, "path_contract", "") or ""  # Luôn trả về trường này
     }
 
 import os
