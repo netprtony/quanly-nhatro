@@ -197,7 +197,7 @@ export default function Rooms() {
                 </div>
                 <div className="mb-2" style={{ color: "#ffffffff", fontWeight: 600 }}>
                   <FaRulerCombined className="me-2" style={{ color: "#ffffffff" }} />
-                  Số người tối đa: <span style={{ color: "#ffffffff" }}>{room.max_occupancy} người</span>
+                  Số người tối đa: <span style={{ color: "#ffffffff" }}>{room.max_occupants} người</span>
                 </div>
                 
                 <div className="mb-2" style={{ color: "#ffffffff", fontWeight: 600 }}>
