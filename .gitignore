@@ -23,13 +23,13 @@ dist-ssr
 *.sln
 *.sw?
 backend/.env
-__pycache__/
+__pycache__
 *.pyc
 *.pyo
 *.pyd
 
-backend/app/__pycache__/main*.pyc
+backend/app/__pycache__
 backend/backups/*.sql
 backend/backups/*.txt
-backend/app/routers/__pycache__/*.pyc
-backend/app/schemas/__pycache__/*.pyc
+backend/app/routers/__pycache__/
+backend/app/schemas/__pycache__/

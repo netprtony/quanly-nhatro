@@ -1,5 +1,5 @@
 # models.py
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, Enum, DECIMAL, Date, func, Computed, TIMESTAMP
+from sqlalchemy import Column, Integer, LargeBinary, String, DateTime, ForeignKey, Boolean, Text, Enum, DECIMAL, Date, func, Computed, TIMESTAMP
 from sqlalchemy.orm import relationship
 from .database import Base
 import enum
@@ -48,6 +48,7 @@ class TenantStatusEnum(str, enum.Enum):
     Pending = 'Pending'
 
 # --- MODEL DEFINITIONS ---
+
 class Tenant(Base):
     __tablename__ = "Tenants"
     tenant_id = Column(String(15), primary_key=True, index=True)
@@ -57,12 +58,35 @@ class Tenant(Base):
     phone_number = Column(String(20))
     id_card_front_path = Column(String(255))
     id_card_back_path = Column(String(255))
+    avatar_path = Column(String(255))
     tenant_status = Column(Enum(TenantStatusEnum), default=TenantStatusEnum.Pending)
     address = Column(Text)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("User", back_populates="tenant")
+    face_embedding = relationship("FaceEmbedding", back_populates="tenant", uselist=False, cascade="all, delete-orphan")
+    recognition_records = relationship("RecognitionRecord", back_populates="tenant", cascade="all, delete-orphan")
 
+class FaceEmbedding(Base):
+    __tablename__ = "FaceEmbeddings"
+    embedding_id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(String(15), ForeignKey("Tenants.tenant_id"), unique=True, index=True, nullable=False)
+    embedding = Column(LargeBinary, nullable=False)   # store bytes (pickle or np.tobytes)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime)
+
+    tenant = relationship("Tenant", back_populates="face_embedding")
+
+class RecognitionRecord(Base):
+    __tablename__ = "RecognitionRecords"
+    record_id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(String(15), ForeignKey("Tenants.tenant_id", ondelete="CASCADE"), nullable=False, index=True)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    image_path = Column(String(255))
+    status = Column(Enum("Check-in", "Check-out", name="status_enum"), nullable=False)
+    method = Column(Enum("Face Recognition", "Manual", name="method_enum"), nullable=False, default="Face Recognition")
+
+    tenant = relationship("Tenant", back_populates="recognition_records")
 class User(Base):
     __tablename__ = "Users"
     id = Column(Integer, primary_key=True, index=True)

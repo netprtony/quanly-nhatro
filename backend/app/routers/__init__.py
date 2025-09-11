@@ -15,6 +15,8 @@ from .report import router as report_router
 from .roomImage import router as room_image_router
 from .water import router as water_router
 from .notification import router as notification_router
+
+from .recognition_record import router as recognition_record_router
 __all__ = [
     "auth_router",
     "account_router",
@@ -32,5 +34,6 @@ __all__ = [
     "report_router",
     "room_image_router",
     "water_router",
-    notification_router
+    "notification_router",
+    "recognition_record_router"
 ]

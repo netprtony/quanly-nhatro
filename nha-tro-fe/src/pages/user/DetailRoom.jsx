@@ -10,6 +10,8 @@ import {
 } from "react-icons/fa";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Modal, Button, Form } from "react-bootstrap";
+import { Viewer } from "photo-sphere-viewer";
+import "photo-sphere-viewer/dist/photo-sphere-viewer.css";
 
 const ROOM_API = "http://localhost:8000/rooms";
 const ROOM_IMAGE_API = "http://localhost:8000/room-images";
@@ -26,6 +28,8 @@ export default function DetailRoom() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [fullName, setFullName] = useState("");
+  const [psv, setPsv] = useState(null);
+
   useEffect(() => {
     fetch(`${ROOM_API}/${roomId}`)
       .then((res) => res.json())
@@ -64,6 +68,36 @@ export default function DetailRoom() {
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    // Clean up PSV instance when modal đóng
+    return () => {
+      if (psv) {
+        psv.destroy();
+        setPsv(null);
+      }
+    };
+  }, [lightboxImg]);
+
+  useEffect(() => {
+    // Khi lightboxImg là ảnh 360 thì khởi tạo PSV
+    if (lightboxImg && is360Image(lightboxImg)) {
+      const container = document.getElementById("psv-container");
+      if (container) {
+        const viewer = new Viewer({
+          container,
+          panorama: lightboxImg,
+          navbar: true,
+        });
+        setPsv(viewer);
+      }
+    }
+  }, [lightboxImg]);
+
+  // Hàm kiểm tra ảnh 360 (tuỳ quy ước, ví dụ tên file chứa '360')
+  function is360Image(url) {
+    return url && url.toLowerCase().includes("360");
+  }
 
   if (!room) {
     return (
@@ -178,7 +212,7 @@ export default function DetailRoom() {
                       <span className="fw-bold me-2" style={{ color: "#ffffffff" }}>
                         Loại phòng:
                       </span>
-                      <span  style={{ color: "#ffffffff" }}>{room.room_type.type_name}</span>
+                      <span style={{ color: "#ffffffff" }}>{room.room_type.type_name}</span>
                     </div>
                     <div className="d-flex align-items-center">
                       <FaRulerCombined className="me-2" style={{ color: "#f9bc60" }} />
@@ -273,16 +307,30 @@ export default function DetailRoom() {
         >
           <div className="modal-dialog modal-dialog-centered modal-xl">
             <div className="modal-content bg-transparent border-0">
-              <img
-                src={lightboxImg}
-                alt="Zoom"
-                className="img-fluid rounded"
-                style={{
-                  maxHeight: "85vh",
-                  objectFit: "contain",
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.6)",
-                }}
-              />
+              {is360Image(lightboxImg) ? (
+                <div
+                  id="psv-container"
+                  style={{
+                    width: "100%",
+                    height: "85vh",
+                    borderRadius: "12px",
+                    background: "#000",
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <img
+                  src={lightboxImg}
+                  alt="Zoom"
+                  className="img-fluid rounded"
+                  style={{
+                    maxHeight: "85vh",
+                    objectFit: "contain",
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.6)",
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              )}
             </div>
           </div>
         </div>
