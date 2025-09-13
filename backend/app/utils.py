@@ -7,6 +7,9 @@ from . import schemas
 from fastapi import Depends, HTTPException, status
 from .models import User
 from fastapi.security import OAuth2PasswordBearer
+import cv2
+import numpy as np
+import mediapipe as mp
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -129,3 +132,34 @@ def num2words_vnd(number) -> str:
     result = " ".join(parts)
     result = result[0].upper() + result[1:] + " đồng"
     return result
+
+def detect_and_crop_face(image: np.ndarray) -> np.ndarray:
+    """
+    Detects the largest face in the image using MediaPipe and returns the cropped face region.
+    If no face is found, returns None.
+    """
+    mp_face_detection = mp.solutions.face_detection
+    with mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5) as face_detection:
+        # Convert image to RGB
+        img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        results = face_detection.process(img_rgb)
+        if not results.detections:
+            return None
+
+        # Get bounding box of the first (largest) detected face
+        h, w, _ = image.shape
+        face = results.detections[0]
+        bbox = face.location_data.relative_bounding_box
+        x_min = int(bbox.xmin * w)
+        y_min = int(bbox.ymin * h)
+        box_width = int(bbox.width * w)
+        box_height = int(bbox.height * h)
+
+        # Ensure bounding box is within image bounds
+        x_min = max(0, x_min)
+        y_min = max(0, y_min)
+        x_max = min(w, x_min + box_width)
+        y_max = min(h, y_min + box_height)
+
+        cropped_face = image[y_min:y_max, x_min:x_max]
+        return cropped_face

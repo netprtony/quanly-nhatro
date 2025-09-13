@@ -10,6 +10,7 @@ import DetailRoom from "./pages/user/DetailRoom";
 import PaymentHistory from "./pages/user/PaymentHistory";
 import Contract from "./pages/user/Contract";
 import Invoice from "./pages/user/Invoice";
+import AttendanceScreenCheckOut from "./pages/AttendanceScreenCheckOut";
 
 import TenantsReport from "./pages/admin/Tenants_report";
 import RoomsReport from "./pages/admin/Rooms_report";
@@ -58,7 +59,7 @@ function App() {
           </GuestRoute>
         }
       />
-
+     
       {/* ----------- CLIENT LAYOUT ----------- */}
       <Route path="/" element={<Layout />}>
         <Route index element={<Home />} />
@@ -68,10 +69,11 @@ function App() {
         <Route path="/history-payment" element={<PaymentHistory />} />
         <Route path="/contracts" element={<Contract />} />
         <Route path="/invoices" element={<Invoice />} />
+        
         {/* <Route path="/reservations" element={<Reservation />} /> */}
         {/* Thêm các route người dùng khác ở đây nếu cần */}
       </Route>
-
+      <Route path="/attendance-checkout" element={<AttendanceScreenCheckOut />} />
       {/* ----------- ADMIN LAYOUT ----------- */}
       <Route
         path="/admin"

@@ -2,7 +2,7 @@ from datetime import datetime
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..database import get_db
-from app.face_recognition.detector import InsightFaceWrapper, find_best_match
+from backend.app.face_recognition.FaceDetector import InsightFaceWrapper, find_best_match
 from app.face_recognition.embedding import embeddings_from_image, mean_embedding, serialize_embedding, deserialize_embedding
 from app.models import FaceEmbedding
 

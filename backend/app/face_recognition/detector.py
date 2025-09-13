@@ -3,15 +3,20 @@ import cv2
 import numpy as np
 import onnxruntime as ort
 from numpy.linalg import norm
-
+import os
 
 class InsightFaceWrapper:
-    def __init__(self, model_path="backend/insightface_model/buffalo_sc/w600k_mbf.onnx", providers=None):
+    def __init__(self, model_path=None, providers=None):
         if providers is None:
             providers = ["CPUExecutionProvider"]
+        PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+        if model_path is None:
+            model_path = os.path.join(PROJECT_ROOT, "backend", "app", "face_recognition", "insightface_model", "buffalo_sc", "w600k_mbf.onnx")
+        if not os.path.isfile(model_path):
+            raise FileNotFoundError(f"Model file not found: {model_path}")
         try:
             self.session = ort.InferenceSession(model_path, providers=providers)
-            self.input_name = self.session.get_inputs()[0].name  # <-- Lấy tên input thực tế
+            self.input_name = self.session.get_inputs()[0].name
             self.detector = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
         except Exception as e:
             logging.exception("Fail to init Face Recognition model")
