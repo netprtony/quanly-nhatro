@@ -8,6 +8,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 const TENANT_URL = "http://localhost:8000/tenants/";
 const CCCD_UPLOAD_API = "http://localhost:8000/tenants/upload-cccd";
+const AVATAR_UPLOAD_API = "http://localhost:8000/tenants/upload-avatar";
 const USER_API = "http://localhost:8000/accounts/";
 
 export default function Tenants() {
@@ -23,6 +24,7 @@ export default function Tenants() {
     date_of_birth: "",
     id_card_front_path: "",
     id_card_back_path: "",
+    avatar_path: "",
     is_rent: true,
   });
 
@@ -32,6 +34,7 @@ export default function Tenants() {
   const [tenantToDelete, setTenantToDelete] = useState(null);
   const [frontFile, setFrontFile] = useState(null);
   const [backFile, setBackFile] = useState(null);
+  const [avatarFile, setAvatarFile] = useState(null);
   const [viewCCCD, setViewCCCD] = useState(null); // {src, alt}
 
   // Bộ lọc nâng cao, tìm kiếm, phân trang, sort
@@ -55,17 +58,53 @@ export default function Tenants() {
   ];
 
   const columns = [
+    // Thêm cột ảnh đại diện trước cột ID
+    {
+      label: "Ảnh đại diện",
+      accessor: "avatar_path",
+      render: (value, tenant) =>
+        value ? (
+          <img
+            src={value.startsWith("/") ? value : `/avatar/${value}`}
+            alt="Avatar"
+            style={{
+              width: 40,
+              height: 40,
+              objectFit: "cover",
+              borderRadius: "50%",
+              border: "1px solid #eee",
+              cursor: "pointer",
+            }}
+            onClick={() =>
+              setViewCCCD({
+                src: value.startsWith("/") ? value : `/avatar/${value}`,
+                alt: `Avatar - ${tenant.full_name}`,
+              })
+            }
+          />
+        ) : (
+          <span className="text-muted" style={{ fontSize: 12 }}>
+            Không có
+          </span>
+        ),
+    },
     { label: "ID", accessor: "tenant_id" },
     { label: "Họ tên", accessor: "full_name" },
     { label: "Số điện thoại", accessor: "phone_number" },
-    { label: "Giới tính", accessor: "gender",
+    {
+      label: "Giới tính",
+      accessor: "gender",
       render: (value) => {
         if (value === "Male") return "Nam";
         if (value === "Female") return "Nữ";
         return "Khác";
       },
     },
-    { label: "Ngày sinh", accessor: "date_of_birth", render: (value) => value ? new Date(value).toLocaleDateString("vi-VN") : "" },
+    {
+      label: "Ngày sinh",
+      accessor: "date_of_birth",
+      render: (value) => (value ? new Date(value).toLocaleDateString("vi-VN") : ""),
+    },
     { label: "Địa chỉ", accessor: "address" },
     // Thêm cột hình ảnh CCCD
     {
@@ -241,19 +280,49 @@ export default function Tenants() {
     return data.image_path || "";
   };
 
+  // Hàm upload avatar, trả về đường dẫn ảnh
+  const uploadAvatar = async (file, tenantId) => {
+    if (!file || !tenantId) return "";
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await fetch(`${AVATAR_UPLOAD_API}?tenant_id=${tenantId}`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        // Lấy thông báo lỗi từ backend (FastAPI HTTPException)
+        const data = await res.json();
+        throw new Error(data.detail || "Lỗi upload avatar");
+      }
+      const data = await res.json();
+      return data.avatar_path || "";
+    } catch (err) {
+      toast.error("Upload avatar thất bại: " + err.message);
+      return "";
+    }
+  };
+
   // CRUD
   const createTenant = async () => {
     try {
       let frontPath = form.id_card_front_path;
       let backPath = form.id_card_back_path;
+      let avatarPath = form.avatar_path;
       const tenantId = form.tenant_id;
       if (frontFile) frontPath = await uploadCCCD(frontFile, tenantId, "front");
       if (backFile) backPath = await uploadCCCD(backFile, tenantId, "back");
+      if (avatarFile) avatarPath = await uploadAvatar(avatarFile, tenantId);
 
       const res = await fetch(TENANT_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, id_card_front_path: frontPath, id_card_back_path: backPath }),
+        body: JSON.stringify({
+          ...form,
+          id_card_front_path: frontPath,
+          id_card_back_path: backPath,
+          avatar_path: avatarPath,
+        }),
       });
       if (!res.ok) throw new Error(await res.text());
       await fetchTenants();
@@ -261,6 +330,7 @@ export default function Tenants() {
       setShowModal(false);
       setFrontFile(null);
       setBackFile(null);
+      setAvatarFile(null);
     } catch (err) {
       toast.error("Thêm khách thuê thất bại! " + err.message);
     }
@@ -270,14 +340,21 @@ export default function Tenants() {
     try {
       let frontPath = form.id_card_front_path;
       let backPath = form.id_card_back_path;
+      let avatarPath = form.avatar_path;
       const tenantId = form.tenant_id;
       if (frontFile) frontPath = await uploadCCCD(frontFile, tenantId, "front");
       if (backFile) backPath = await uploadCCCD(backFile, tenantId, "back");
+      if (avatarFile) avatarPath = await uploadAvatar(avatarFile, tenantId);
 
       const res = await fetch(`${TENANT_URL}${editingTenant.tenant_id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, id_card_front_path: frontPath, id_card_back_path: backPath }),
+        body: JSON.stringify({
+          ...form,
+          id_card_front_path: frontPath,
+          id_card_back_path: backPath,
+          avatar_path: avatarPath,
+        }),
       });
       if (!res.ok) throw new Error(await res.text());
       await fetchTenants();
@@ -285,6 +362,7 @@ export default function Tenants() {
       setShowModal(false);
       setFrontFile(null);
       setBackFile(null);
+      setAvatarFile(null);
     } catch (err) {
       toast.error("Cập nhật khách thuê thất bại! " + err.message);
     }
@@ -315,10 +393,12 @@ export default function Tenants() {
       date_of_birth: "",
       id_card_front_path: "",
       id_card_back_path: "",
+      avatar_path: "",
       is_rent: true,
     });
     setEditingTenant(null);
     setUnsavedChanges(false);
+    setAvatarFile(null);
     setShowModal(true);
   };
 
@@ -332,10 +412,12 @@ export default function Tenants() {
       date_of_birth: tenant.date_of_birth || "",
       id_card_front_path: tenant.id_card_front_path || "",
       id_card_back_path: tenant.id_card_back_path || "",
-      tenant_status: tenant.tenant_status || "Pending", // Sửa lại dòng này
+      avatar_path: tenant.avatar_path || "",
+      tenant_status: tenant.tenant_status || "Pending",
     });
     setEditingTenant(tenant);
     setUnsavedChanges(false);
+    setAvatarFile(null);
     setShowModal(true);
   };
 
@@ -512,14 +594,33 @@ export default function Tenants() {
         >
           <form>
             <div className="row g-3">
+              {/* Thêm trường upload avatar trước trường mã khách thuê */}
+              <div className="col-md-6">
+                <label className="form-label">Ảnh đại diện</label>
+                {form.avatar_path && (
+                  <div className="mb-2">
+                    <img
+                      src={form.avatar_path.startsWith("/") ? form.avatar_path : `/avatar/${form.avatar_path}`}
+                      alt="Avatar"
+                      style={{ maxWidth: 80, maxHeight: 80, borderRadius: "50%", border: "1px solid #eee" }}
+                    />
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="form-control"
+                  onChange={e => setAvatarFile(e.target.files[0])}
+                />
+              </div>
               <div className="col-md-6">
                 <label className="form-label">Mã khách thuê/CCCD</label>
-               <input
+                <input
                   type="text"
                   className={`form-control ${errorCCCD ? "is-invalid" : ""}`}
                   value={form.tenant_id}
                   onChange={handleChangeCCCD}
-                  onBlur={handleBlurCCCD} // chỉ check khi rời khỏi ô
+                  onBlur={handleBlurCCCD}
                   required
                   disabled={!!editingTenant}
                 />

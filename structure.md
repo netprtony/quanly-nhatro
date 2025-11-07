@@ -1,6 +1,6 @@
 # File Tree: NhaTroBaoBao
 
-Generated on: 9/6/2025, 12:10:14 PM
+Generated on: 9/11/2025, 11:26:08 AM
 Root path: `d:\NhaTroBaoBao`
 
 ```
@@ -27,6 +27,13 @@ Root path: `d:\NhaTroBaoBao`
 │   │   └── invoice_template.docx
 │   ├── app/
 │   │   ├── __pycache__/ 🚫 (auto-hidden)
+│   │   ├── face_recognition/
+│   │   │   ├── __pycache__/ 🚫 (auto-hidden)
+│   │   │   ├── __init__.py
+│   │   │   ├── detector.py
+│   │   │   ├── embedding.py
+│   │   │   ├── recognition.py
+│   │   │   └── utils.py
 │   │   ├── routers/
 │   │   │   ├── __pycache__/ 🚫 (auto-hidden)
 │   │   │   ├── __init__.py
@@ -36,11 +43,13 @@ Root path: `d:\NhaTroBaoBao`
 │   │   │   ├── contract.py
 │   │   │   ├── device.py
 │   │   │   ├── electricity.py
+│   │   │   ├── face_recognition.py
 │   │   │   ├── invoice.py
 │   │   │   ├── invoice_detail.py
 │   │   │   ├── notification.py
 │   │   │   ├── payment.py
 │   │   │   ├── protected.py
+│   │   │   ├── recognition_record.py
 │   │   │   ├── report.py
 │   │   │   ├── reservation.py
 │   │   │   ├── room.py
@@ -59,6 +68,7 @@ Root path: `d:\NhaTroBaoBao`
 │   │   │   ├── invoice_detail.py
 │   │   │   ├── notification.py
 │   │   │   ├── payment.py
+│   │   │   ├── recognition_record.py
 │   │   │   ├── reservation.py
 │   │   │   ├── room.py
 │   │   │   ├── roomImage.py
@@ -80,6 +90,11 @@ Root path: `d:\NhaTroBaoBao`
 │   │   └── binlog_20250831_233225.txt
 │   ├── exported_contracts/
 │   │   └── contract_1.docx
+│   ├── insightface_model/
+│   │   ├── buffalo_sc/
+│   │   │   ├── det_500m.onnx
+│   │   │   └── w600k_mbf.onnx
+│   │   └── buffalo_sc.zip
 │   ├── script_db/
 │   │   ├── backup_20250827_211101.sql
 │   │   └── data.sql
@@ -87,12 +102,24 @@ Root path: `d:\NhaTroBaoBao`
 │   ├── .env.docker 🚫 (auto-hidden)
 │   ├── Dockerfile
 │   ├── requirements.txt
+│   ├── requrements.txt
 │   ├── runtime.txt
 │   └── start.sh
 ├── nha-tro-fe/
 │   ├── dist/ 🚫 (auto-hidden)
 │   ├── node_modules/ 🚫 (auto-hidden)
 │   ├── public/
+│   │   ├── avatar/
+│   │   │   ├── 079203029607_avatar.png
+│   │   │   ├── 079203029608_avatar.jpg
+│   │   │   ├── 079203029609_avatar.jpg
+│   │   │   ├── 079203029610_avatar.jpg
+│   │   │   ├── 079203029611_avatar.jpg
+│   │   │   ├── 079203029612_avatar.jpg
+│   │   │   ├── 079203029613_avatar.jpg
+│   │   │   ├── 079203029614_avatar.jpg
+│   │   │   ├── 079203029615_avatar.jpg
+│   │   │   └── 079203029616_avatar.jpg
 │   │   ├── cccd/
 │   │   │   ├── 079203029606_front_download.jpg
 │   │   │   ├── 079203029607_back_back_079203029607.jpg
@@ -182,6 +209,7 @@ Root path: `d:\NhaTroBaoBao`
 │   │       ├── 1c801685-26f7-4949-b6b1-ce324e673d44_1755743014.jpg
 │   │       ├── 2daf357b-a8ec-4cab-9e04-f2b268631c6e_1756181830 (1).jpg
 │   │       ├── 2daf357b-a8ec-4cab-9e04-f2b268631c6e_1756181830.jpg
+│   │       ├── 360istockphoto-2150568859-1024x1024.jpg
 │   │       ├── download (1).jpg
 │   │       ├── download (2).jpg
 │   │       ├── download.jpg
@@ -229,6 +257,7 @@ Root path: `d:\NhaTroBaoBao`
 │   │   │   ├── fonts/
 │   │   │   │   └── MuseoSansCyrl-500.otf
 │   │   │   └── style/
+│   │   │       ├── AttendanceScreen.css
 │   │   │       ├── Home.css
 │   │   │       ├── Modal.css
 │   │   │       └── ModalComfirm.css
@@ -275,6 +304,7 @@ Root path: `d:\NhaTroBaoBao`
 │   │   │   │   ├── Utility_report.jsx
 │   │   │   │   └── Waters.jsx
 │   │   │   ├── user/
+│   │   │   │   ├── AttendanceScreen.jsx
 │   │   │   │   ├── Contract.jsx
 │   │   │   │   ├── DetailRoom.jsx
 │   │   │   │   ├── Home.jsx
