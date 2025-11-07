@@ -27,7 +27,7 @@ __pycache__
 *.pyc
 *.pyo
 *.pyd
-
+backend/.env.docker
 backend/app/__pycache__
 backend/backups/*.sql
 backend/backups/*.txt

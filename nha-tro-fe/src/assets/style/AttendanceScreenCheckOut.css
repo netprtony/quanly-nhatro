@@ -1,0 +1,461 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+.attendance-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: 600px;
+  height: 1024px;
+  background: linear-gradient(135deg, #7C449C 0%, #7CC444 100%);
+  background-image: url('https://www.transparenttextures.com/patterns/asfalt-light.png');
+  background-blend-mode: overlay;
+  font-family: 'Roboto', Arial, sans-serif;
+  transform: rotate(0deg);
+  transform-origin: center;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-left: -300px;
+  margin-top: -512px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  border-radius: 15px;
+  overflow: hidden;
+}
+
+.camera-section {
+  position: relative;
+  width: 100%;
+  height: 800px;
+  margin: 0;
+  background: #fff;
+  border-bottom: 2px solid #7C449C;
+}
+
+.camera-feed {
+  width: 100%;
+  height: 100%;
+  border-radius: 15px 15px 0 0;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.recognition-frame {
+  position: absolute;
+  top: 5%;
+  left: 5%;
+  width: 90%;
+  height: 90%;
+  border: 4px solid #7C449C;
+  border-radius: 12px;
+  box-shadow: 0 0 12px rgba(124, 68, 156, 0.4);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.recognition-frame.success {
+  border-color: #7CC444;
+  box-shadow: 0 0 15px rgba(124, 196, 68, 0.5);
+}
+
+.recognition-frame.fail {
+  border-color: #f5222d;
+  box-shadow: 0 0 15px rgba(245, 34, 45, 0.5);
+}
+
+.recognition-frame.recognizing {
+  border-color: #7C449C;
+  box-shadow: 0 0 20px rgba(124, 68, 156, 0.6);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 12px rgba(124, 68, 156, 0.4); }
+  50% { box-shadow: 0 0 20px rgba(124, 68, 156, 0.6); }
+  100% { box-shadow: 0 0 12px rgba(124, 68, 156, 0.4); }
+}
+
+.spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 50px;
+  height: 50px;
+  border: 5px solid #7CC444;
+  border-top: 5px solid transparent parallelism;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  transform: translate(-50%, -50%);
+}
+
+.spinner.small {
+  width: 24px;
+  height: 24px;
+  border: 4px solid #fff;
+  border-top: 4px solid transparent;
+}
+
+@keyframes spin {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.status-section {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  background-color: #7C449C;
+}
+
+.status-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-message p {
+  font-size: 25px;
+  font-weight: 500;
+  color: #fff;
+  margin: 0;
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon {
+  font-size: 24px;
+}
+
+.support-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  width: 90%;
+  padding: 6px;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+button {
+  padding: 12px 24px;
+  font-size: 24px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  touch-action: manipulation;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.login-btn {
+  background-color: #7C449C;
+  color: #fff;
+  width: 100%;
+  font-weight: 500;
+}
+
+.login-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 600px;
+  height: 1024px;
+  background: rgba(124, 68, 156, 0.7);
+  backdrop-filter: blur(3px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transform-origin: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 25px;
+  border-radius: 16px;
+  width: 85%;
+  max-width: 500px;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  animation: fadeIn 0.3s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.form-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  font-size: 18px;
+  color: #7C449C;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #7C449C;
+  border-radius: 12px;
+  font-size: 2.2rem;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+}
+
+.form-group input:focus {
+  border-color: #7CC444;
+  outline: none;
+  box-shadow: 0 0 6px rgba(124, 196, 68, 0.4);
+}
+
+.form-group input.highlight {
+  background-color: #ffe6e6;
+  border-color: #f5222d;
+  animation: shake 0.3s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.error-message {
+  color: #f5222d;
+  font-size: 16px;
+  margin-top: 8px;
+  text-align: left;
+  font-weight: 500;
+}
+
+.modal-content button {
+  width: 100%;
+  margin-top: 15px;
+  padding: 12px;
+  font-size: 2.2rem;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.submit-btn {
+  background-color: #7CC444;
+  color: #fff;
+  font-weight: 500;
+}
+
+.numeric-keyboard {
+  background: linear-gradient(180deg, #ffffff 0%, #f0f0f0 100%);
+  padding: 20px;
+  border-top: 2px solid #7C449C;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.keyboard-row {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  width: 100%;
+  max-width: 300px;
+}
+
+.key-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.keyboard-key {
+  font-size: 1.8rem;
+  padding: 12px;
+  background: #7C449C;
+  border: 2px solid #5e3475;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #fff;
+  font-weight: 500;
+  min-width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+.keyboard-key:hover {
+  background: #7CC444;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
+}
+
+.keyboard-key:active {
+  background: #5e3475;
+  transform: scale(0.95);
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.special-key {
+  background: #f5222d;
+  color: #fff;
+  font-size: 1.8rem;
+  min-width: 80px;
+  height: 80px;
+  padding: 12px;
+  border: 2px solid #d32f2f;
+}
+
+.special-key.enter {
+  background: #7C449C;
+  border: 2px solid #5e3475;
+}
+
+.key-label {
+  font-size: 14px;
+  color: #7C449C;
+  margin-top: 6px;
+}
+
+.employee-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 15px;
+  border: 3px solid #7CC444;
+}
+
+.status-message {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.close-btn {
+  position: relative;
+  background: #7C449C;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #fff;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+  touch-action: manipulation;
+  padding: 10px;
+  border-radius: 8px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .close-btn:hover {
+    background-color: #7CC444;
+    transform: scale(1.1);
+  }
+}
+
+.close-btn:active {
+  transform: scale(0.95);
+  background-color: #5e3475;
+}
+
+@media (max-width: 599px) {
+  .attendance-container {
+    width: 100%;
+    height: 100vh;
+    margin: 0;
+    top: 0;
+    left: 0;
+    border-radius: 0;
+  }
+
+  .camera-section {
+    height: 80vh;
+  }
+
+  .support-buttons {
+    flex-direction: column;
+    gap: 15px;
+    padding: 15px;
+  }
+
+  .login-btn {
+    width: 100%;
+  }
+
+  .login-modal {
+    width: 100%;
+    height: 100vh;
+  }
+
+  .modal-content {
+    width: 90%;
+    max-width: none;
+    padding: 20px;
+  }
+
+  .keyboard-row {
+    gap: 8px;
+    max-width: 100%;
+  }
+
+  .keyboard-key {
+    min-width: 60px;
+    height: 60px;
+    padding: 8px;
+    font-size: 1.5rem;
+  }
+
+  .special-key {
+    min-width: 60px;
+    height: 60px;
+    padding: 8px;
+  }
+
+  .status-message p {
+    font-size: 24px;
+  }
+
+  .employee-avatar {
+    width: 80px;
+    height: 80px;
+  }
+}

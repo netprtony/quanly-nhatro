@@ -33,7 +33,7 @@ CREATE TABLE RecognitionRecords (
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     image_path VARCHAR(255),
     status ENUM('Check-in', 'Check-out') NOT NULL,
-    method ENUM('Face Recognition', 'Manual') NOT NULL DEFAULT 'Face Recognition',
+    method ENUM('face', 'manual') NOT NULL DEFAULT 'face',
     FOREIGN KEY (tenant_id) REFERENCES Tenants(tenant_id) ON DELETE CASCADE
 );
 -- Bảng người dùng hệ thống

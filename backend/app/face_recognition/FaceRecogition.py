@@ -22,8 +22,8 @@ def ml_search_algorithm(dataframe, feature_column, test_vector, employee_info='E
 class FaceRecognition:
     def __init__(self, threshold=0.5):
         self.threshold = threshold
-        self.faceApp = FaceAnalysis(name='buffalo_sc', root='insightface_model', providers=['CPUExecutionProvider'])
-        self.faceApp.prepare(ctx_id=0, det_size=(640, 640), det_thresh=0.5)
+        self.faceApp = FaceAnalysis(name='buffalo_sc')
+        self.faceApp.prepare(ctx_id=0, det_size=(640, 640), det_thresh=0.5, providers=['CPUExecutionProvider'])
 
     def compare_embeddings(self, embedding1, embedding2):
         """
